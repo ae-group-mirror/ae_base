@@ -23,7 +23,7 @@ base helper functions
 
 The functions :func:`deep_object` and :func:`deep_replace`
 is making your programmer life much easier when you need
-to determine or change a parts of deeply nested data/object
+to determine or change parts of deeply nested data/object
 structures.
 
 For to determine the value of an OS environment variable
@@ -39,15 +39,16 @@ The helper function :func:`sys_platform` are extending Python's
 :func:`os.name` and :func:`sys.platform` functions for the
 operating systems iOS and Android (not supported by Python).
 """
+import ast
 import getpass
 import os
 import platform
 import sys
 from operator import getitem
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -77,68 +78,108 @@ def app_name_guess() -> str:
     return app_name
 
 
-def deep_object(obj: object, key_str: str) -> object:
-    """ determine object in a deep nested object structure.
+def deep_object(obj: object, key_path: str, new_value: Union[Any, None] = UNSET) -> object:
+    """ determine object in a deep nested object structure and optionally assign a new value to it.
 
     :param obj:                 start object to search in (and its sub-objects).
-    :param key_str:             composed key string containing dict keys, tuple/list indexes and attribute names.
-                                key strings for dicts can alternatively be specified without the high commas
+    :param key_path:            composed key string containing dict keys, tuple/list/str indexes and attribute names.
+                                The dot (`.`) character is identifying attribute names. `[` and `]` are enclosing
+                                index values, like shown in the following examples::
+
+                                    class AClass:
+                                        str_attr_name = 'a_attr_val'
+                                        dict_attr = dict(a=3)
+
+                                    class BClass:
+                                        str_attr_name = 'b_b_b_b_b'
+                                        instance = AClass()
+
+                                    b = BClass()
+                                    assert deep_object(b, 'str_attr_name') == 'b_b_b_b_b'
+                                    assert deep_object(b, 'instance.str_attr_name') == 'a_attr_val'
+                                    assert deep_object(b, 'instance.dict_attr["a"]') == 3
+
+                                key path strings for dicts can alternatively be specified without the high commas
                                 (enclosing the key string), like e.g.::
 
                                     d = dict(a_str_key=1)
-                                    deep_object(d, '["a_str_key"]')     # with high commas returns 1
-                                    deep_object(d, '[a_str_key]')       # same result/return value
+                                    assert deep_object(d, '["a_str_key"]') == 1  # with high commas returns 1
+                                    assert deep_object(d, '[a_str_key]') == 1    # same result/return value
 
-                                When the first part of the key string is specifying an index you can also leave away
-                                the opening square bracket::
+                                When the first part of the key path string is specifying an index you can also
+                                leave away the opening square bracket::
 
-                                    deep_object(d, 'a_str_key]')        # again - the same return 1
+                                    assert deep_object(d, 'a_str_key]') == 1     # again - the same return 1
 
-    :return:                    specified object or UNSET if not found/exists.
+    :param new_value:           optional new value for the found object. Specified/Found object has to be
+                                a mutable object (list, dict or object). The old value will be returned.
+
+    :return:                    specified object/value (old value if :paramref:`~deep_object.new_value` got passed)
+                                or UNSET if not found/exists (key path string is invalid).
     """
-    if key_str[0] == '[':
-        key_str = key_str[1:]       # for to support fully specified indexes (with the leading square bracket)
+    if key_path[0] == '[':
+        key_path = key_path[1:]       # for to support fully specified indexes (starting with a square bracket)
 
     get_func = getitem if isinstance(obj, (dict, list, tuple)) else getattr
-    while key_str:
+    while key_path and obj != UNSET:
         idx = 0
-        for char in key_str:
-            if char in '.[]':
+        for char in key_path:
+            if char in ('.', '[', ']'):     # == `char in '.[]'` - keep strings separate for speedup
                 break
             idx += 1
         else:
             char = ""
 
+        last_obj = obj
         try:
-            key = int(key_str[:idx]) if isinstance(obj, (list, str, tuple)) else key_str[:idx].strip('\'"')
+            key = ast.literal_eval(key_path[:idx])
+        except (SyntaxError, ValueError):
+            key = key_path[:idx]
+        try:
             obj = get_func(obj, key)                                    # type: ignore
         except (AttributeError, IndexError, KeyError, ValueError):
-            return UNSET
-
-        if not char:
-            break
+            obj = UNSET
 
         if char == ']':
             idx += 1
-        get_func = getitem if key_str[idx: idx + 1] == '[' else getattr
-        key_str = key_str[idx + 1:]
+            char = key_path[idx: idx + 1]
+
+        if idx >= len(key_path):
+            if new_value != UNSET:
+                if isinstance(last_obj, (list, dict)):
+                    last_obj[key] = new_value           # type: ignore # mypy does not recognize correctly list/dict
+                else:
+                    setattr(last_obj, key, new_value)  # type: ignore # raise if last_obj is a str/tuple then key is int
+            break
+
+        get_func = getitem if char == '[' else getattr
+        key_path = key_path[idx + 1:]
 
     return obj
 
 
-def deep_replace(data: DeepDataType, replace_with: Callable[[DeepDataType, Any, Any], Any]):
-    """ inplace replace values within the passed (nested) data structure.
+def deep_replace(data: DeepDataType, replace_with: Callable[[DeepDataType, Any, Any], Any],
+                 immutable_types: Tuple[Type, ...] = (tuple, )):
+    """ replace values within the passed (nested) data structure.
 
-    :param data:                list or dict data struct for to be searched and replaced
-    :param replace_with:        called for each item with the 3 arguments data-structure, key in data-structure, value
+    :param data:                list or dict data structure for to be deep searched and replaced. Can
+                                contain any combination of deep nested objects. The sub-structure-types dict and list
+                                as well as the immutable types specified by :paramref:`~deep_replace.immutable_types`
+                                will be recursively deep searched (top down) by passing their items one by one
+                                to the function specified by :paramref:`~deep_replace.replace_with`.
+    :param replace_with:        called for each item with 3 arguments (data-structure, key in data-structure, value),
                                 and if the return value is not equal to :data:`UNSET` then it will be used for
                                 to overwrite the value in the data-structure.
+    :param immutable_types:     tuple of immutable iterable types which will be treated as replaceable items.
+                                By default only the items of a tuple are replaceable. For to also
+                                allow the replacement of single characters in a string pass the argument value
+                                `(tuple, str)` into this parameter.
     :return:
     """
     if isinstance(data, dict):
         iter_func = data.items()
     elif isinstance(data, list):
-        iter_func = enumerate(data)             # type: ignore
+        iter_func = enumerate(data)             # type: ignore # we treat them like dicts with the index as the key
     else:
         raise ValueError(f"deep_replace(): invalid data type {type(data)} (allowed={DeepDataType})")
 
@@ -148,11 +189,17 @@ def deep_replace(data: DeepDataType, replace_with: Callable[[DeepDataType, Any, 
         if new_value != UNSET:
             replace_items.append((key, new_value))
         elif isinstance(value, (dict, list)):
-            deep_replace(value, replace_with)
-        elif isinstance(value, tuple):
+            deep_replace(value, replace_with, immutable_types=immutable_types)
+        elif isinstance(value, immutable_types):
+            type_converter = type(value)
+            if type_converter is str:   # for string immutables: prevent recursion; ensure correct conversion from list
+                corr_immutable_types = tuple([typ for typ in immutable_types if typ is not str])
+                type_converter = lambda v: "".join(v)   # type: ignore # noqa: E731
+            else:
+                corr_immutable_types = immutable_types
             value = list(value)
-            deep_replace(value, replace_with)
-            replace_items.append((key, tuple(value)))
+            deep_replace(value, replace_with, immutable_types=corr_immutable_types)
+            replace_items.append((key, type_converter(value)))
 
     for key, new_value in replace_items:
         data[key] = new_value

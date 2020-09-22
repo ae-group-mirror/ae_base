@@ -1,4 +1,4 @@
-""" ae.system unit tests """
+""" ae.base unit tests """
 import pytest
 import os
 import sys
@@ -14,11 +14,11 @@ class TestHelpers:
         assert app_name_guess() != 'main'
         assert app_name_guess() == 'ae_base'
 
-    def test_deep_object(self):
+    def test_deep_object_get(self):
         class TstA:
             """ test class """
             att = 'a_att_value'
-            dic = dict(a_key='a_dict_val', a_dict=dict(a_key='a_a_dict_val'))
+            dic = dict(a_key='a_dict_val', a_dict={'a_key': 'a_a_dict_val', 33: 'a_a_num_key_val'})
             lis = ['a_list_val']
 
         class TstB:
@@ -36,8 +36,9 @@ class TestHelpers:
         assert deep_object(a, "dic['a_key']") == 'a_dict_val'
         assert deep_object(a, 'dic["a_key"]') == 'a_dict_val'
         assert deep_object(a, 'dic[a_key]') == 'a_dict_val'
-        assert deep_object(a, "dic['a_dict']") == dict(a_key='a_a_dict_val')
+        assert deep_object(a, "dic['a_dict']") == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(a, "dic['a_dict']['a_key']") == 'a_a_dict_val'
+        assert deep_object(a, "dic['a_dict'][33]") == 'a_a_num_key_val'
         assert deep_object(a, "lis[0]") == 'a_list_val'
 
         assert deep_object(b, 'att') == 'b_att_value'
@@ -45,8 +46,9 @@ class TestHelpers:
         assert deep_object(b, 'a_att.att') == 'a_att_value'
         assert deep_object(b, 'a_att.att[-1]') == 'e'
         assert deep_object(b, "a_att.dic['a_key']") == 'a_dict_val'
-        assert deep_object(b, "a_att.dic['a_dict']") == dict(a_key='a_a_dict_val')
+        assert deep_object(b, "a_att.dic['a_dict']") == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(b, "a_att.dic['a_dict']['a_key']") == 'a_a_dict_val'
+        assert deep_object(b, "a_att.dic['a_dict'][33]") == 'a_a_num_key_val'
         assert deep_object(b, "a_att.lis[0]") == 'a_list_val'
 
         assert deep_object(c, '[0].att') == 'a_att_value'
@@ -54,64 +56,125 @@ class TestHelpers:
         assert isinstance(deep_object(c, '0]'), TstA)
         assert deep_object(c, '0].att[-1]') == 'e'
         assert deep_object(c, "0].dic['a_key']") == 'a_dict_val'
-        assert deep_object(c, "0].dic['a_dict']") == dict(a_key='a_a_dict_val')
+        assert deep_object(c, "0].dic['a_dict']") == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(c, "0].dic['a_dict']['a_key']") == 'a_a_dict_val'
+        assert deep_object(c, "0].dic['a_dict'][33]") == 'a_a_num_key_val'
         assert deep_object(c, "0].lis[0]") == 'a_list_val'
 
         assert deep_object(c, '1].a_att.att') == 'a_att_value'
         assert isinstance(deep_object(c, '1].a_att'), TstA)
         assert deep_object(c, '1].a_att.att[-1]') == 'e'
         assert deep_object(c, "1].a_att.dic['a_key']") == 'a_dict_val'
-        assert deep_object(c, "1].a_att.dic['a_dict']") == dict(a_key='a_a_dict_val')
+        assert deep_object(c, "1].a_att.dic['a_dict']") == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(c, "1].a_att.dic['a_dict']['a_key']") == 'a_a_dict_val'
+        assert deep_object(c, "1].a_att.dic['a_dict'][33]") == 'a_a_num_key_val'
         assert deep_object(c, "1].a_att.lis[0]") == 'a_list_val'
 
         assert deep_object(d, "'a'].att") == 'a_att_value'
         assert isinstance(deep_object(d, "'a']"), TstA)
         assert deep_object(d, "'a'].att[-1]") == 'e'
         assert deep_object(d, "'a'].dic['a_key']") == 'a_dict_val'
-        assert deep_object(d, "'a'].dic['a_dict']") == dict(a_key='a_a_dict_val')
+        assert deep_object(d, "'a'].dic['a_dict']") == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(d, "'a'].dic['a_dict']['a_key']") == 'a_a_dict_val'
+        assert deep_object(d, "'a'].dic['a_dict'][33]") == 'a_a_num_key_val'
         assert deep_object(d, "'a'].lis[0]") == 'a_list_val'
 
-        assert deep_object(d, "a'].att") == 'a_att_value'
-        assert isinstance(deep_object(d, "a']"), TstA)
-        assert deep_object(d, "a'].att[-1]") == 'e'
-        assert deep_object(d, "a'].dic['a_key']") == 'a_dict_val'
-        assert deep_object(d, "a'].dic['a_dict']") == dict(a_key='a_a_dict_val')
-        assert deep_object(d, "a'].dic['a_dict']['a_key']") == 'a_a_dict_val'
-        assert deep_object(d, "a'].lis[0]") == 'a_list_val'
-
         assert deep_object(d, "a].att") == 'a_att_value'
-        assert isinstance(deep_object(d, "a']"), TstA)
+        assert isinstance(deep_object(d, "a]"), TstA)
         assert deep_object(d, "a].att[-1]") == 'e'
         assert deep_object(d, "a].dic['a_key']") == 'a_dict_val'
-        assert deep_object(d, "a].dic['a_dict']") == dict(a_key='a_a_dict_val')
+        assert deep_object(d, "a].dic['a_dict']") == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(d, "a].dic['a_dict']['a_key']") == 'a_a_dict_val'
+        assert deep_object(d, "a].dic['a_dict'][33]") == 'a_a_num_key_val'
         assert deep_object(d, "a].lis[0]") == 'a_list_val'
 
         assert deep_object(d, 'b].att') == 'b_att_value'
         assert deep_object(d, 'b].a_att.att') == 'a_att_value'
         assert deep_object(d, 'b].a_att.att[-1]') == 'e'
         assert deep_object(d, "b].a_att.dic['a_key']") == 'a_dict_val'
-        assert deep_object(d, "b].a_att.dic['a_dict']") == dict(a_key='a_a_dict_val')
+        assert deep_object(d, "b].a_att.dic['a_dict']") == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(d, "b].a_att.dic['a_dict']['a_key']") == 'a_a_dict_val'
+        assert deep_object(d, "b].a_att.dic['a_dict'][33]") == 'a_a_num_key_val'
         assert deep_object(d, "b].a_att.lis[0]") == 'a_list_val'
 
         assert deep_object(d, 'c][0].att') == 'a_att_value'
         assert deep_object(d, 'c][0].att') == 'a_att_value'
         assert deep_object(d, 'c][0].att[-1]') == 'e'
         assert deep_object(d, "c][0].dic['a_key']") == 'a_dict_val'
-        assert deep_object(d, "c][0].dic['a_dict']") == dict(a_key='a_a_dict_val')
+        assert deep_object(d, "c][0].dic['a_dict']") == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(d, "c][0].dic['a_dict']['a_key']") == 'a_a_dict_val'
+        assert deep_object(d, "c][0].dic['a_dict'][33]") == 'a_a_num_key_val'
         assert deep_object(d, "c][0].lis[0]") == 'a_list_val'
 
         assert deep_object(a, "invalid_attr") == UNSET
         assert deep_object(a, "[invalid_key]") == UNSET
-        assert deep_object(c, "[invalid_idx]") == UNSET
+        with pytest.raises(TypeError):
+            deep_object(c, "[invalid_idx]")
         assert deep_object(d, "[invalid_key]") == UNSET
 
-    def test_deep_replace(self):
+    def test_deep_object_set(self):
+        class TstA:
+            """ test class """
+            att = 'a_att_value'
+            dic = dict(a_key='a_dict_val', a_dict={'a_key': 'a_a_dict_val', 33: 'a_a_num_key_val'})
+            lis = ['a_list_val']
+
+        class TstB:
+            """ test class """
+            att = 'b_att_value'
+            a_att = TstA()
+
+        a = TstA()
+        b = TstB()
+
+        assert deep_object(a, 'att', new_value='a_att_new_value') == 'a_att_value'
+        assert deep_object(a, 'att') == 'a_att_new_value'
+
+        assert deep_object(a, "dic['a_key']", new_value='a_dict_new_val') == 'a_dict_val'
+        assert deep_object(a, 'dic["a_key"]') == 'a_dict_new_val'
+
+        assert deep_object(a, "dic[99]", new_value='new_dict_item_with_int_key') == UNSET
+        assert deep_object(a, "dic[99]") == 'new_dict_item_with_int_key'
+
+        assert deep_object(a, "dic['a_dict']", {'a_key': 'a_a_dict_new_val', 33: 'a_a_num_key_val'}
+                           ) == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
+        assert deep_object(a, "dic['a_dict']['a_key']", new_value='a_a_dict_newer_val') == 'a_a_dict_new_val'
+        assert deep_object(a, "dic['a_dict']['a_key']") == 'a_a_dict_newer_val'
+        assert deep_object(a, "dic['a_dict'][33]", new_value='new_dict_with_int_key') == 'a_a_num_key_val'
+        assert deep_object(a, "dic['a_dict'][33]") == 'new_dict_with_int_key'
+
+        assert deep_object(a, "lis[0]", new_value='a_list_new_val') == 'a_list_val'
+        assert deep_object(a, "lis[0]") == 'a_list_new_val'
+
+        assert deep_object(b, 'att', new_value='b_att_new_value') == 'b_att_value'
+        assert deep_object(b, 'att') == 'b_att_new_value'
+
+        assert deep_object(b, 'a_att.att', new_value='xxx') == 'a_att_value'
+        assert deep_object(b, 'a_att.att') == 'xxx'
+        assert deep_object(b, 'a_att.att[-1]') == 'x'
+
+        assert deep_object(b, "a_att.dic['a_dict']['a_key']") == 'a_a_dict_newer_val'
+        assert deep_object(b, "a_att.lis[0]") == 'a_list_new_val'
+
+    def test_deep_object_dict_keys(self):
+        d = dict()
+
+        assert 123 not in d
+        assert deep_object(d, '[123]', new_value="int_key_val") == UNSET
+        assert deep_object(d, '[123]') == "int_key_val"
+        assert 123 in d
+
+        assert "123" not in d
+        assert deep_object(d, '["123"]', new_value="str_key_val") == UNSET
+        assert deep_object(d, '["123"]') == "str_key_val"
+        assert "123" in d
+
+        assert (1, "2") not in d
+        assert deep_object(d, '[(1, "2")]', new_value="tuple_key_val") == UNSET
+        assert deep_object(d, '[(1, "2")]') == "tuple_key_val"
+        assert (1, "2") in d
+
+    def test_deep_replace_data(self):
         sub = ['b_list_0', 'search_index_value', 'search_key_value3']
         data = dict(
             a_str='a_str',
@@ -144,9 +207,26 @@ class TestHelpers:
         for _k, _v in data.items():
             assert _v == 'WIPED'
 
+    def test_deep_replace_exeption(self):
         with pytest.raises(ValueError):
             deep_replace(cast(list, ('tuple', 'are', 'only', 'replace', 'in', 'deeper', 'data')),
                          lambda d, k, v: 'replacing all')
+
+    def test_deep_replace_immutable(self):
+        tst_str = "AbCbE"
+        tst_tuple = (3, '0', 1)
+        tst_list = [tst_str, tst_tuple]
+        tst_dict = dict(l=tst_list)
+
+        deep_replace(tst_dict, lambda _d, k, v: 'd' if v == 'b' and k == 3 else UNSET)
+        assert tst_list[0][3] == 'b'
+        deep_replace(tst_dict, lambda _d, k, v: 'd' if v == 'b' and k == 3 else UNSET, immutable_types=(str,))
+        assert tst_list[0][3] == 'd'
+
+        deep_replace(tst_dict, lambda _d, k, v: 2 if v == '0' else UNSET, immutable_types=(str,))
+        assert tst_list[1][1] == '0'
+        deep_replace(tst_dict, lambda _d, k, v: 2 if v == '0' else UNSET)
+        assert tst_list[1][1] == 2
 
     def test_env_var_unconverted(self):
         ev = 'PATH'
