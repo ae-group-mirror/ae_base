@@ -4,8 +4,9 @@ import os
 import sys
 from typing import cast
 
-from ae.base import UNSET, app_name_guess, deep_object, deep_replace, env_str, norm_line_sep, \
-    sys_env_dict, sys_env_text, sys_host_name, sys_platform, sys_user_name
+from ae.base import UNSET, app_name_guess, base_app_instance, deep_assignment, deep_object, deep_replace, env_str, \
+    norm_line_sep, \
+    norm_name, sys_env_dict, sys_env_text, sys_host_name, sys_platform, sys_user_name, AppBase
 
 
 class TestHelpers:
@@ -13,6 +14,73 @@ class TestHelpers:
         assert app_name_guess()     # app.exe name in pytest returning '_jb_pytest_runner'(PyCharm)/'__main__'(console)
         assert app_name_guess() != 'main'
         assert app_name_guess() == 'ae_base'
+
+    def test_base_app_instance(self):
+        app = base_app_instance()
+        assert hasattr(app, 'dpo')
+        assert hasattr(app, 'vpo')
+        assert hasattr(app, 'font_size')
+
+    def test_deep_assignment(self):
+        tst_str = "bCd"
+        tst_tup = (0, "1", 2.3)
+
+        dic = dict(str_item=tst_str, tup_item=tst_tup)
+
+        deep_assignment(tst_str, 0, "_", mutable_parent=dic)    # works because `tst_str is dic['str_item']`
+        assert tst_str[0] == 'b'
+        assert dic['str_item'][0] == '_'
+        deep_assignment(dic['str_item'], 0, "B", mutable_parent=dic)
+        assert dic['str_item'][0] == 'B'
+        deep_assignment(dic['str_item'], 2, 'D', mutable_parent=dic)
+        assert dic['str_item'][2] == 'D'
+        assert dic['str_item'] == "BCD"
+        assert deep_object(dic, 'str_item') == "BCD"
+        deep_assignment(dic, 'str_item', tst_str)
+        assert dic['str_item'] == tst_str
+
+        assert dic['tup_item'][1] == "1"
+        deep_assignment(dic['tup_item'], 1, 1, mutable_parent=dic)
+        assert dic['tup_item'][1] == 1
+        assert deep_object(dic, "['tup_item'][1]") == 1
+        deep_assignment(dic, "tup_item", "new_string")
+        assert dic['tup_item'] == "new_string"
+        assert deep_object(dic, "['tup_item']") == "new_string"
+
+        lst = ['a', tst_str, tst_tup]
+
+        deep_assignment(lst[1], 0, "_", mutable_parent=lst)
+        assert lst[1][0] == "_"
+        deep_assignment(lst[1], 0, "x", mutable_parent=lst)
+        assert lst[1][0] == "x"
+        deep_assignment(lst[1], 1, 'y', mutable_parent=lst)
+        deep_assignment(lst[1], 2, 'z', mutable_parent=lst)
+        assert lst[1] == "xyz"
+        assert deep_object(lst, "[1]") == "xyz"
+
+        deep_assignment(lst[2], 1, "Y", mutable_parent=lst)
+        assert lst[2][1] == "Y"
+        assert deep_object(lst, "[2][1]") == "Y"
+
+        deep_assignment(lst, 2, "new_string")
+        assert lst[2] == "new_string"
+        assert deep_object(lst, "2]") == "new_string"
+
+    def test_deep_assignment_exception(self):
+        tst_str = "bCd"
+        tst_tup = (0, "1", 2.3)
+
+        dic = dict(str_item=tst_str, tup_item=tst_tup)
+        with pytest.raises(TypeError):
+            deep_assignment(dic['str_item'], 0, "_")
+        with pytest.raises(TypeError):
+            deep_assignment(dic['tup_item'], 1, 1)
+
+        lst = ['a', tst_str, tst_tup]
+        with pytest.raises(TypeError):
+            deep_assignment(lst[1], 0, "_")
+        with pytest.raises(TypeError):
+            deep_assignment(lst[2], 1, "Y")
 
     def test_deep_object_get(self):
         class TstA:
@@ -118,6 +186,7 @@ class TestHelpers:
             att = 'a_att_value'
             dic = dict(a_key='a_dict_val', a_dict={'a_key': 'a_a_dict_val', 33: 'a_a_num_key_val'})
             lis = ['a_list_val']
+            tup = (0, "1", 2.3)
 
         class TstB:
             """ test class """
@@ -140,11 +209,14 @@ class TestHelpers:
                            ) == {33: 'a_a_num_key_val', 'a_key': 'a_a_dict_val'}
         assert deep_object(a, "dic['a_dict']['a_key']", new_value='a_a_dict_newer_val') == 'a_a_dict_new_val'
         assert deep_object(a, "dic['a_dict']['a_key']") == 'a_a_dict_newer_val'
+        assert deep_object(b, "a_att.dic['a_dict']['a_key']") == 'a_a_dict_newer_val'
+
         assert deep_object(a, "dic['a_dict'][33]", new_value='new_dict_with_int_key') == 'a_a_num_key_val'
         assert deep_object(a, "dic['a_dict'][33]") == 'new_dict_with_int_key'
 
         assert deep_object(a, "lis[0]", new_value='a_list_new_val') == 'a_list_val'
         assert deep_object(a, "lis[0]") == 'a_list_new_val'
+        assert deep_object(b, "a_att.lis[0]") == 'a_list_new_val'
 
         assert deep_object(b, 'att', new_value='b_att_new_value') == 'b_att_value'
         assert deep_object(b, 'att') == 'b_att_new_value'
@@ -153,8 +225,29 @@ class TestHelpers:
         assert deep_object(b, 'a_att.att') == 'xxx'
         assert deep_object(b, 'a_att.att[-1]') == 'x'
 
-        assert deep_object(b, "a_att.dic['a_dict']['a_key']") == 'a_a_dict_newer_val'
-        assert deep_object(b, "a_att.lis[0]") == 'a_list_new_val'
+    def test_deep_object_set_immutable(self):
+        tst_str = "bCd"
+        tst_tup = (0, "1", 2.3)
+
+        class Tst:
+            """ test class """
+            dic_att = dict(str_item=tst_str, tup_item=tst_tup)
+
+        dic = dict(str_item=tst_str, tup_item=tst_tup)
+        obj = Tst()
+
+        assert deep_object(dic, "str_item[0]", new_value="B") == 'b'
+        assert deep_object(dic, "str_item[0]") == 'B'
+        assert deep_object(dic, "str_item", new_value=tst_str) == 'BCd'
+        assert dic['str_item'] == tst_str
+
+        assert deep_object(obj, "dic_att[str_item][2]") == 'd'
+        assert deep_object(obj, "dic_att['str_item'][2]", new_value='D') == "d"
+        assert obj.dic_att['str_item'][2] == "D"
+
+        assert deep_object(dic, "tup_item[1]", new_value=1) == "1"
+        assert dic['tup_item'][1] == 1
+        assert deep_object(dic, "tup_item][1]") == 1
 
     def test_deep_object_dict_keys(self):
         d = dict()
@@ -207,7 +300,7 @@ class TestHelpers:
         for _k, _v in data.items():
             assert _v == 'WIPED'
 
-    def test_deep_replace_exeption(self):
+    def test_deep_replace_exception(self):
         with pytest.raises(ValueError):
             deep_replace(cast(list, ('tuple', 'are', 'only', 'replace', 'in', 'deeper', 'data')),
                          lambda d, k, v: 'replacing all')
@@ -255,6 +348,15 @@ class TestHelpers:
     def test_norm_line_sep(self):
         assert norm_line_sep('a\r\nb') == 'a\nb'
         assert norm_line_sep('a\rb') == 'a\nb'
+
+    def test_norm_name(self):
+        assert norm_name("AnyCamelCaseName") == "ANY_CAMEL_CASE_NAME"
+        assert norm_name("any_name") == "ANY_NAME"
+        assert norm_name("@special/chars!included") == "_SPECIAL_CHARS_INCLUDED"
+
+        assert norm_name("NoUnderScoreOnToLower", to_lower=True) == "nounderscoreontolower"
+
+        assert norm_name("NoUnderScoreOnNone", to_lower=None) == "NoUnderScoreOnNone"
 
     def test_sys_env_dict(self):
         assert sys_env_dict().get('python_ver')
@@ -333,3 +435,17 @@ class TestHelpers:
     def test_sys_user_name(self):
         print(sys_user_name())
         assert sys_user_name()
+
+
+class TestAppBase:
+    def test_app_base_instance(self, capsys):
+        app = AppBase()
+        assert app
+
+        tst_out = "test run printout test"
+        app.dpo(tst_out + "dpo")
+        app.vpo(tst_out + "vpo")
+        out, err = capsys.readouterr()
+        assert tst_out in out
+        assert tst_out + "dpo" in out
+        assert tst_out + "vpo" in out
