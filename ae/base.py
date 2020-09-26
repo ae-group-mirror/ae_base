@@ -12,7 +12,7 @@ Generic ISO format strings for `date` and `datetime` values
 are provided by the constants :data:`DATE_ISO` and
 :data:`DATE_TIME_ISO`.
 
-The :data:`UNSET` object is useful in cases where `None`
+The :data:`UNSET` constant is useful in cases where `None`
 is a valid data value and another special value is needed
 for to specify that e.g. an argument or attribute has
 no (valid) value.
@@ -21,22 +21,24 @@ no (valid) value.
 base helper functions
 ---------------------
 
-The functions :func:`deep_assignment`, :func:`deep_object`
-and :func:`deep_replace` is making your programmer life much
-easier when you need to determine or change parts of deeply
-nested data/object structures.
-
 For to determine the value of an OS environment variable
 with automatic variable name conversion you can use the
 function :func:`env_str`.
 
+The :func:`round_traditional` function get provided by this
+module for traditional rounding of float values. The function
+signature is fully compatible to Python's :func:`round` function.
+
 :func:`norm_line_sep` is converting any combination of line
-separators (`\r\n` or `\r`) in any string to a single new-line
-character (`\n`).
+separators of a string to a single new-line character.
 
 Use the function :func:`norm_name` for to convert any string
 into a name that can be used e.g. as file name or as
 method/attribute name.
+
+:func:`camel_to_snake` and :func:`snake_to_camel` does
+also small and very useful name conversions of class and
+method names.
 
 Other helper functions provided by this namespace portion for to
 determine the values of the most important system environment
@@ -47,54 +49,35 @@ The helper function :func:`sys_platform` are extending Python's
 :func:`os.name` and :func:`sys.platform` functions for the
 operating systems iOS and Android (not supported by Python).
 
-
-lightweight base app class
-==========================
-
-This namespace portion is providing a very lightweight substitute
-of an app base class (:class:`AppBase`) that can be used as a fallback
-for other namespace portions if the features of the class
-:class:`ae.core.AppBase` (declared in the module :mod:`ae.core`) are not
-needed in your Python app.
-
-The app base class that get normally determined via the helper function
-:func:`ae.core.main_app_instance`. For to make the implementation of the
-fallback easier the helper function :func:`~ae.base.base_app_instance`
-can be used in the following manner::
-
-    try:
-        from ae.core import main_app_instance
-    except ImportError:
-        from ae.base import base_app_instance as main_app_instance
-
-With this code block you can implement other modules/portions that
-will automatically use the :class:`AppBase` substitute if the module
-:mod:`ae.core` is not required by the importing app code/project.
+For to encode unicode strings to other codecs the functions
+:func:`force_encoding` and :func:`to_ascii` can be used.
 """
-import ast
 import getpass
 import os
 import platform
 import sys
-from operator import getitem
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+import unicodedata
+
+from typing import Any, AnyStr, Dict, Optional, cast
 
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
 DATE_TIME_ISO: str = '%Y-%m-%d %H:%M:%S.%f'     #: ISO string format for datetime values
 
+DEF_ENCODE_ERRORS: str = 'backslashreplace'     #: default encode error handling for UnicodeEncodeErrors
+DEF_ENCODING: str = 'ascii'
+""" encoding for :func:`force_encoding` that will always work independent from destination (console, file sys, ...).
+"""
 
-DeepDataType = Union[dict, list]
+NAME_PARTS_SEP = '_'                            #: name parts separator character, e.g. for :func:`norm_name`
 
 
-class _UNSET:
-    """ class for singleton UNSET object (using only object() does not provide proper representation string). """
-
-
-UNSET = _UNSET()                                #: used for attributes/arguments if `None` is needed as a valid value
+# using only object() does not provide proper representation string, hopefully  UNSET = _UNSET() is not needed
+class UNSET:
+    """ (singleton) UNSET (type) object used for attributes/arguments if `None` is needed as a valid value. """
 
 
 def app_name_guess() -> str:
@@ -110,169 +93,19 @@ def app_name_guess() -> str:
     return app_name
 
 
-def base_app_instance() -> 'AppBase':
-    """ lightweight substitute for :func:`ae.core.main_app_instance`.
+def camel_to_snake(name: str) -> str:
+    """ convert name from CamelCase to snake_case.
 
-    This method can be used as lightweight substitute if your app is not including/requiring the :mod:`ae.core`
-    portion of the `ae` namespace.
-
-    :return:                    instance of :class:`AppBase` as lightweight replacement of :class:`ae.core.AppBase`.
+    :param name:                name string in snake case format.
+    :return:                    name in camel case.
     """
-    return _APP_BASE
-
-
-def deep_assignment(obj: Any, key_or_attr: Union[str, int, tuple], new_value: Any,
-                    mutable_parent: Optional[Any] = None):
-    """ helper function for to set any (possibly immutable sub-) object attribute of list/dict item to a new value.
-
-    :param obj:                 object to change. If immutable - like a str or tuple object - then a mutable object
-                                situated higher in the same deep nested data structure has to be passed into the
-                                optional argument :paramref:`~deep_assignment.mutable_parent`.
-    :param key_or_attr:         dict/list/tuple/str key/index or attribute name to identify the element within
-                                :paramref:`~deep_assignment.obj` to be changed.
-    :param new_value:           value to be assigned to the item/attribute of :paramref:`~deep_assignment.obj`.
-    :param mutable_parent:      mutable object which is situated in the same deep nested data structure anywhere
-                                above of the immutable object (specified by :paramref:`~deep_assignment.obj`).
-    """
-    try:    # catch exception if obj is immutable (like e.g. str or tuple)
-        if isinstance(obj, (list, dict)):
-            obj[key_or_attr] = new_value            # type: ignore # mypy does not recognize correctly list/dict
+    str_parts = list()
+    for char in name:
+        if char.isupper():
+            str_parts.append(NAME_PARTS_SEP + char)
         else:
-            setattr(obj, key_or_attr, new_value)    # type: ignore
-    except (AttributeError, IndexError, KeyError, TypeError, ValueError):
-        if not mutable_parent:
-            raise
-        deep_replace(mutable_parent,
-                     lambda d, k, v: new_value if (d == obj or d == list(obj)) and k == key_or_attr else UNSET,
-                     immutable_types=(str, tuple))
-
-
-def deep_object(obj: Any, key_path: str, new_value: Union[Any, None] = UNSET) -> Any:
-    """ determine object in a deep nested object structure and optionally assign a new value to it.
-
-    :param obj:                 start object to search in (and its sub-objects).
-    :param key_path:            composed key string containing dict keys, tuple/list/str indexes and attribute names.
-                                The dot (`.`) character is identifying attribute names. `[` and `]` are enclosing
-                                index values, like shown in the following examples::
-
-                                    class AClass:
-                                        str_attr_name = 'a_attr_val'
-                                        dict_attr = dict(a=3)
-
-                                    class BClass:
-                                        str_attr_name = 'b_b_b_b_b'
-                                        a_obj = AClass()
-
-                                    b = BClass()
-                                    assert deep_object(b, 'str_attr_name') == 'b_b_b_b_b'
-                                    assert deep_object(b, 'a_obj.str_attr_name') == 'a_attr_val'
-                                    assert deep_object(b, 'a_obj.dict_attr["a"]') == 3
-
-                                key path strings for dicts can alternatively be specified without the high commas
-                                (enclosing the key string), like e.g.::
-
-                                    d = dict(a_str_key=1)
-                                    assert deep_object(d, '["a_str_key"]') == 1  # with high commas returns 1
-                                    assert deep_object(d, '[a_str_key]') == 1    # same result/return value
-
-                                When the first part of the key path string is specifying an index you can also
-                                leave away the opening square bracket::
-
-                                    assert deep_object(d, 'a_str_key]') == 1     # again - the same return 1
-
-    :param new_value:           optional new value for the found object. Specified/Found object has to be
-                                a mutable object (list, dict or object). The old value will be returned.
-
-    :return:                    specified object/value (old value if :paramref:`~deep_object.new_value` got passed)
-                                or UNSET if not found/exists (key path string is invalid).
-    """
-    if key_path[0] == '[':
-        key_path = key_path[1:]       # for to support fully specified indexes (starting with a square bracket)
-
-    last_writable_obj = None
-    get_func = getitem if isinstance(obj, (dict, list, tuple)) else getattr
-    while key_path and obj != UNSET:
-        idx = 0
-        for char in key_path:
-            if char in ('.', '[', ']'):     # == `char in '.[]'` - keep strings separate for speedup
-                break
-            idx += 1
-        else:
-            char = ""
-
-        if isinstance(obj, (dict, list)):
-            last_writable_obj = obj
-        last_obj = obj
-
-        try:
-            key = ast.literal_eval(key_path[:idx])
-        except (SyntaxError, ValueError):
-            key = key_path[:idx]
-        try:
-            obj = get_func(obj, key)                                    # type: ignore
-        except (AttributeError, IndexError, KeyError, ValueError):
-            obj = UNSET
-
-        if char == ']':
-            idx += 1
-            char = key_path[idx: idx + 1]
-
-        if idx >= len(key_path):
-            if new_value != UNSET:
-                deep_assignment(last_obj, key, new_value, mutable_parent=last_writable_obj)
-            break
-
-        get_func = getitem if char == '[' else getattr
-        key_path = key_path[idx + 1:]
-
-    return obj
-
-
-def deep_replace(data: DeepDataType, replace_with: Callable[[DeepDataType, Any, Any], Any],
-                 immutable_types: Tuple[Type, ...] = (tuple, )):
-    """ replace values within the passed (nested) data structure.
-
-    :param data:                list or dict data structure for to be deep searched and replaced. Can contain any
-                                combination of deep nested list/dict objects. The sub-structure-types dict and list
-                                as well as the immutable types specified by :paramref:`~deep_replace.immutable_types`
-                                will be recursively deep searched (top down) by passing their items one by one
-                                to the function specified by :paramref:`~deep_replace.replace_with`.
-    :param replace_with:        called for each item with 3 arguments (data-structure, key in data-structure, value),
-                                and if the return value is not equal to :data:`UNSET` then it will be used for
-                                to overwrite the value in the data-structure.
-    :param immutable_types:     tuple of immutable iterable types which will be treated as replaceable items.
-                                Each of the immutable types passed in this tuple has to be convertible to a list object.
-                                By default only the items of a tuple are replaceable. For to also
-                                allow the replacement of single characters in a string pass the argument value
-                                `(tuple, str)` into this parameter.
-    """
-    if isinstance(data, dict):
-        iter_func = data.items()
-    elif isinstance(data, list):
-        iter_func = enumerate(data)             # type: ignore # we treat them like dicts with the index as the key
-    else:
-        raise ValueError(f"deep_replace(): invalid data type {type(data)} (allowed={DeepDataType})")
-
-    replace_items = list()
-    for key, value in iter_func:
-        new_value = replace_with(data, key, value)
-        if new_value != UNSET:
-            replace_items.append((key, new_value))
-        elif isinstance(value, (dict, list)):
-            deep_replace(value, replace_with, immutable_types=immutable_types)
-        elif isinstance(value, immutable_types):
-            type_converter = type(value)
-            if type_converter is str:   # for string immutables: prevent recursion; ensure correct conversion from list
-                corr_immutable_types = tuple([typ for typ in immutable_types if typ is not str])
-                type_converter = lambda v: "".join(v)   # type: ignore # noqa: E731
-            else:
-                corr_immutable_types = immutable_types
-            value = list(value)
-            deep_replace(value, replace_with, immutable_types=corr_immutable_types)
-            replace_items.append((key, type_converter(value)))
-
-    for key, new_value in replace_items:
-        data[key] = new_value
+            str_parts.append(char)
+    return "".join(str_parts)
 
 
 def env_str(name: str, convert_name: bool = False) -> Optional[str]:
@@ -285,69 +118,104 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     :return:                    string value of OS environment variable if found, else None.
     """
     if convert_name:
-        name = norm_name(name)
+        name = norm_name(camel_to_snake(name)).upper()
     return os.environ.get(name)
 
 
-def norm_line_sep(text: str) -> str:
-    """ convert any combination of line separators of the passed :paramref:`~norm_line_sep.text` to new-line characters.
+def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
+    """ force/ensure the encoding of text (str or bytes) without any UnicodeDecodeError/UnicodeEncodeError.
 
-    :param text:                string containing any combination of line separators (`\r\n` or `\r`).
-    :return:                    normalized/converted string with only new-line (`\n`) line separator characters.
+    :param text:        text as str/bytes.
+    :param encoding:    encoding (def= :data:`DEF_ENCODING`).
+    :param errors:      encode error handling (def= :data:`DEF_ENCODE_ERRORS`).
+
+    :return:            text as str (with all characters checked/converted/replaced for to be encode-able).
+    """
+    enc_str: bytes = cast(str, text).encode(encoding=encoding, errors=errors) if isinstance(text, str) else text
+    return enc_str.decode(encoding=encoding)
+
+
+def norm_line_sep(text: str) -> str:
+    """ convert any combination of line separators in the passed :paramref:`~norm_line_sep.text` to new-line characters.
+
+    :param text:                string containing any combination of line separators ('\\\\r\\\\n' or '\\\\r').
+    :return:                    normalized/converted string with only new-line ('\\\\n') line separator characters.
     """
     return text.replace('\r\n', '\n').replace('\r', '\n')
 
 
-def norm_name(name: str, to_lower: Optional[bool] = False) -> str:
+def norm_name(name: str) -> str:
     """ normalize name for to contain only alpha-numeric and underscore chars (e.g. for a variable-/method-/file-name).
 
     :param name:                any string to be converted into a valid variable/method/file/... name.
-    :param to_lower:            By default (`False`) the resulting name will only contain upper-case characters
-                                and upper-case characters in the passed :paramref:`~norm_name.name` argument
-                                will be preceded by an underscore character (excluding the first character).
-                                Pass `True` to get only lower-case characters in the returned normalized name.
-                                Pass `None` for to not change the case of the characters.
-    :return:                    normalized/converted name string.
+    :return:                    cleaned/normalized/converted name string.
     """
     str_parts = list()
-    for idx, char in enumerate(name):
-        if idx != 0 and char.isupper() and to_lower is False:
-            str_parts.append('_' + char)
-        elif char.isalnum():
-            if to_lower and char.isupper():
-                char = char.lower()
-            elif to_lower is False and char.islower():
-                char = char.upper()
+    for char in name:
+        if char.isalnum():
             str_parts.append(char)
         else:
             str_parts.append('_')
-    return ''.join(str_parts)
+    return "".join(str_parts)
 
 
-def sys_env_dict(file: str = __file__) -> Dict[str, Any]:
+def round_traditional(num_value: float, num_digits: int = 0) -> float:
+    """ round numeric value traditional.
+
+    Needed because python round() is working differently, e.g. round(0.075, 2) == 0.07 instead of 0.08
+    inspired by https://stackoverflow.com/questions/31818050/python-2-7-round-number-to-nearest-integer.
+
+    :param num_value:   float value to be round.
+    :param num_digits:  number of digits to be round (def=0 - rounds to an integer value).
+
+    :return:        rounded value.
+    """
+    return round(num_value + 10 ** (-len(str(num_value)) - 1), num_digits)
+
+
+def snake_to_camel(name: str, back_convertible: bool = False) -> str:
+    """ convert name from snake_case to CamelCase.
+
+    :param name:                name string composed of parts separated by an underscore character
+                                (:data:`NAME_PARTS_SEP`).
+    :param back_convertible:    pass `True` to have lower-case character at the begin of the returned name
+                                if the snake name has no leading underscore character (and for to allow
+                                the conversion between snake and camel case without information loss).
+    :return:                    name in camel case.
+    """
+    ret = "".join(part.capitalize() for part in name.split(NAME_PARTS_SEP))
+    if back_convertible and name[0] != NAME_PARTS_SEP:
+        ret = ret[0].lower() + ret[1:]
+    return ret
+
+
+def sys_env_dict() -> Dict[str, Any]:
     """ returns dict with python system run-time environment values.
 
-    :param file:                optional file name (def=__file__/base.py).
     :return:                    python system run-time environment values like python_ver, argv, cwd, executable,
-                                __file__, frozen and bundle_dir.
+                                frozen and bundle_dir (if bundled with pyinstaller).
     """
     sed: Dict[str, Any] = dict()
+
     sed['python_ver'] = sys.version
+    sed['platform'] = sys_platform()
     sed['argv'] = sys.argv
     sed['executable'] = sys.executable
     sed['cwd'] = os.getcwd()
-    sed['__file__'] = file
     sed['frozen'] = getattr(sys, 'frozen', False)
     if getattr(sys, 'frozen', False):
         sed['bundle_dir'] = getattr(sys, '_MEIPASS', '*#ERR#*')
+    sed['app_name_guess'] = app_name_guess()
+    sed['user_name'] = sys_user_name()
+    sed['host_name'] = sys_host_name()
+
     return sed
 
 
-def sys_env_text(file: str = __file__, ind_ch: str = " ", ind_len: int = 18, key_ch: str = "=", key_len: int = 12,
+def sys_env_text(ind_ch: str = " ", ind_len: int = 18, key_ch: str = "=", key_len: int = 12,
                  extra_sys_env_dict: Optional[Dict[str, str]] = None) -> str:
     """ compile formatted text block with system environment info.
 
-    :param file:                main module file name (def=__file__/base.py).
     :param ind_ch:              indent character (def=" ").
     :param ind_len:             indent depths (def=18 characters).
     :param key_ch:              key-value separator character (def=" =").
@@ -355,11 +223,13 @@ def sys_env_text(file: str = __file__, ind_ch: str = " ", ind_len: int = 18, key
     :param extra_sys_env_dict:  dict with additional system info items.
     :return:                    text block with system environment info.
     """
-    sed = sys_env_dict(file=file)
+    sed = sys_env_dict()
     if extra_sys_env_dict:
         sed.update(extra_sys_env_dict)
+
     ind = ""
     text = "\n".join([f"{ind:{ind_ch}>{ind_len}}{key:{key_ch}<{key_len}}{val}" for key, val in sed.items()])
+
     return text
 
 
@@ -398,19 +268,14 @@ def sys_user_name() -> str:
     return getpass.getuser()
 
 
-class AppBase:
-    """ stub class for to simulate/substitute :class:`ae.core.AppBase` for small apps not using :mod:`ae.core`. """
-    font_size: float = 39
+def to_ascii(unicode_str: str) -> str:
+    """ converts unicode string into ascii representation.
 
-    @staticmethod
-    def dpo(*args, **kwargs):
-        """ print to console """
-        print(*args, **kwargs)
+    Useful for fuzzy string compare; inspired by MiniQuark's answer
+    in: https://stackoverflow.com/questions/517923/what-is-the-best-way-to-remove-accents-in-a-python-unicode-string
 
-    @staticmethod
-    def vpo(*args, **kwargs):
-        """ print to console """
-        print(*args, **kwargs)
-
-
-_APP_BASE = AppBase()
+    :param unicode_str:     string to convert.
+    :return:                converted string (replaced accents, diacritics, ... into normal ascii characters).
+    """
+    nfkd_form = unicodedata.normalize('NFKD', unicode_str)
+    return u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
