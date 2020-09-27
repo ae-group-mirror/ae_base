@@ -61,7 +61,7 @@ import unicodedata
 from typing import Any, AnyStr, Dict, Optional, cast
 
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -197,7 +197,7 @@ def sys_env_dict() -> Dict[str, Any]:
     """
     sed: Dict[str, Any] = dict()
 
-    sed['python_ver'] = sys.version
+    sed['python_ver'] = sys.version.replace('\n', ' ')
     sed['platform'] = sys_platform()
     sed['argv'] = sys.argv
     sed['executable'] = sys.executable
@@ -205,21 +205,21 @@ def sys_env_dict() -> Dict[str, Any]:
     sed['frozen'] = getattr(sys, 'frozen', False)
     if getattr(sys, 'frozen', False):
         sed['bundle_dir'] = getattr(sys, '_MEIPASS', '*#ERR#*')
-    sed['app_name_guess'] = app_name_guess()
     sed['user_name'] = sys_user_name()
     sed['host_name'] = sys_host_name()
+    sed['app_name_guess'] = app_name_guess()
 
     return sed
 
 
-def sys_env_text(ind_ch: str = " ", ind_len: int = 18, key_ch: str = "=", key_len: int = 12,
+def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_len: int = 15,
                  extra_sys_env_dict: Optional[Dict[str, str]] = None) -> str:
     """ compile formatted text block with system environment info.
 
-    :param ind_ch:              indent character (def=" ").
-    :param ind_len:             indent depths (def=18 characters).
-    :param key_ch:              key-value separator character (def=" =").
-    :param key_len:             key-name maximum length (def=12 characters).
+    :param ind_ch:              indent character (default=" ").
+    :param ind_len:             indent depths (default=12 characters).
+    :param key_ch:              key-value separator character (default="=").
+    :param key_len:             key-name maximum length (default=15 characters).
     :param extra_sys_env_dict:  dict with additional system info items.
     :return:                    text block with system environment info.
     """
