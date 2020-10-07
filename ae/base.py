@@ -58,10 +58,10 @@ import platform
 import sys
 import unicodedata
 
-from typing import Any, AnyStr, Dict, Optional, cast
+from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -122,14 +122,58 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     return os.environ.get(name)
 
 
+def file_content(file_path: str, encoding: Optional[str] = None) -> str:
+    """ returning content of the text file specified by file_path argument as string.
+
+    :param file_path:           file path/name to load into a string.
+    :param encoding:            encoding used to load and convert/interpret the file content.
+    :return:                    file content string or empty string if the file could not be found or opened.
+    """
+    try:
+        with open(file_path, encoding=encoding) as file_handle:
+            return file_handle.read()
+    except (FileNotFoundError, OSError, PermissionError):
+        return ""
+
+
+def file_lines(file_path: str, encoding: Optional[str] = None) -> Tuple[str, ...]:
+    """ returning lines of the text file specified by file_path argument as tuple.
+
+    :param file_path:           file path/name to parse/load.
+    :param encoding:            encoding used to load and convert/interpret the file content.
+    :return:                    tuple of the lines found in the specified file
+                                or empty tuple if the file could not be found or opened.
+    """
+    return tuple(norm_line_sep(file_content(file_path, encoding=encoding)).split("\n"))
+
+
+def file_write(text_or_lines: Union[str, List[str], Tuple[str]], file_path: str, encoding: Optional[str] = None
+               ) -> bool:
+    """ write the passed text string or list of line strings into the text file specified by file_path argument.
+
+    :param text_or_lines:       new file content either passed as string or list of line strings (will be
+                                concatenated with the line separator of the current OS: os.linesep).
+    :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
+    :param encoding:            encoding used to write/convert/interpret the file content to write.
+    :return:                    True if the content got written to the file, False on any file/OS error.
+    """
+    content = text_or_lines if isinstance(text_or_lines, str) else os.linesep.join(text_or_lines)
+    try:
+        with open(file_path, 'w', encoding=encoding) as file_handle:
+            file_handle.write(content)
+    except (FileNotFoundError, OSError, PermissionError):
+        return False
+    return True
+
+
 def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
     """ force/ensure the encoding of text (str or bytes) without any UnicodeDecodeError/UnicodeEncodeError.
 
-    :param text:        text as str/bytes.
-    :param encoding:    encoding (def= :data:`DEF_ENCODING`).
-    :param errors:      encode error handling (def= :data:`DEF_ENCODE_ERRORS`).
+    :param text:                text as str/bytes.
+    :param encoding:            encoding (def= :data:`DEF_ENCODING`).
+    :param errors:              encode error handling (def= :data:`DEF_ENCODE_ERRORS`).
 
-    :return:            text as str (with all characters checked/converted/replaced for to be encode-able).
+    :return:                    text as str (with all characters checked/converted/replaced for to be encode-able).
     """
     enc_str: bytes = cast(str, text).encode(encoding=encoding, errors=errors) if isinstance(text, str) else text
     return enc_str.decode(encoding=encoding)
@@ -165,10 +209,10 @@ def round_traditional(num_value: float, num_digits: int = 0) -> float:
     Needed because python round() is working differently, e.g. round(0.075, 2) == 0.07 instead of 0.08
     inspired by https://stackoverflow.com/questions/31818050/python-2-7-round-number-to-nearest-integer.
 
-    :param num_value:   float value to be round.
-    :param num_digits:  number of digits to be round (def=0 - rounds to an integer value).
+    :param num_value:           float value to be round.
+    :param num_digits:          number of digits to be round (def=0 - rounds to an integer value).
 
-    :return:        rounded value.
+    :return:                    rounded value.
     """
     return round(num_value + 10 ** (-len(str(num_value)) - 1), num_digits)
 
@@ -274,8 +318,8 @@ def to_ascii(unicode_str: str) -> str:
     Useful for fuzzy string compare; inspired by MiniQuark's answer
     in: https://stackoverflow.com/questions/517923/what-is-the-best-way-to-remove-accents-in-a-python-unicode-string
 
-    :param unicode_str:     string to convert.
-    :return:                converted string (replaced accents, diacritics, ... into normal ascii characters).
+    :param unicode_str:         string to convert.
+    :return:                    converted string (replaced accents, diacritics, ... into normal ascii characters).
     """
     nfkd_form = unicodedata.normalize('NFKD', unicode_str)
     return u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
