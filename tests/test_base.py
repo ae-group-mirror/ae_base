@@ -8,7 +8,7 @@ from typing import cast
 from ae.base import (
     app_name_guess, camel_to_snake, env_str, file_content, file_lines, file_write, force_encoding,
     norm_line_sep, norm_name, round_traditional, snake_to_camel,
-    sys_env_dict, sys_env_text, sys_host_name, sys_platform, sys_user_name, to_ascii)
+    sys_env_dict, sys_env_text, sys_host_name, sys_local_ip, sys_platform, sys_user_name, to_ascii)
 
 
 class TestHelpers:
@@ -174,6 +174,9 @@ class TestHelpers:
     def test_sys_host_name(self):
         print(sys_host_name())
         assert sys_host_name()
+
+    def test_sys_local_ip(self):
+        assert sys_local_ip() or sys_local_ip() == ""
 
     def test_sys_platform_android(self):
         try:
