@@ -5,10 +5,11 @@ import sys
 
 from typing import cast
 
+# noinspection PyProtectedMember
 from ae.base import (
     app_name_guess, camel_to_snake, env_str, file_content, file_lines, file_write, force_encoding,
     norm_line_sep, norm_name, round_traditional, snake_to_camel,
-    sys_env_dict, sys_env_text, sys_host_name, sys_local_ip, sys_platform, sys_user_name, to_ascii)
+    sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii)
 
 
 class TestHelpers:
@@ -133,6 +134,69 @@ class TestHelpers:
         assert norm_name("äáßñìÄÏÜ") == "äáßñìÄÏÜ"
         assert norm_name("@special/chars!:;-`¡'´") == "_special_chars________"
 
+    def test_os_host_name(self):
+        print(os_host_name())
+        assert os_host_name()
+
+    def test_os_local_ip(self):
+        assert os_local_ip() or os_local_ip() == ""
+
+    def test_os_platform_android(self):
+        try:
+            os.environ['ANDROID_ARGUMENT'] = 'tst'
+            assert _os_platform() == 'android'
+        finally:
+            os.environ.pop('ANDROID_ARGUMENT', None)
+
+        try:
+            os.environ['KIVY_BUILD'] = 'android'
+            assert _os_platform() == 'android'
+        finally:
+            os.environ.pop('KIVY_BUILD', None)
+
+    def test_os_platform_cygwin(self):
+        old_platform = sys.platform
+        try:
+            sys.platform = 'cygwin'
+            assert _os_platform() == 'cygwin'
+        finally:
+            sys.platform = old_platform
+
+    def test_os_platform_darwin(self):
+        old_platform = sys.platform
+        try:
+            sys.platform = 'darwin'
+            assert _os_platform() == 'darwin'
+        finally:
+            sys.platform = old_platform
+
+    def test_os_platform_freebsd(self):
+        old_platform = sys.platform
+        try:
+            sys.platform = 'freebsd'
+            assert _os_platform() == 'freebsd'
+        finally:
+            sys.platform = old_platform
+
+    def test_os_platform_ios(self):
+        try:
+            os.environ['KIVY_BUILD'] = 'ios'
+            assert _os_platform() == 'ios'
+        finally:
+            os.environ.pop('KIVY_BUILD', None)
+
+    def test_os_platform_win32(self):
+        old_platform = sys.platform
+        try:
+            sys.platform = 'win32'
+            assert _os_platform() == 'win32'
+        finally:
+            sys.platform = old_platform
+
+    def test_os_user_name(self):
+        print(os_user_name())
+        assert os_user_name()
+
     def test_round_traditional(self):
         assert round_traditional(1.01) == 1
         assert round_traditional(10.1, -1) == 10
@@ -170,69 +234,6 @@ class TestHelpers:
         ret = sys_env_text(extra_sys_env_dict=dict(test_add='TstAdd'))
         assert 'test_add' in ret
         assert 'TstAdd' in ret
-
-    def test_sys_host_name(self):
-        print(sys_host_name())
-        assert sys_host_name()
-
-    def test_sys_local_ip(self):
-        assert sys_local_ip() or sys_local_ip() == ""
-
-    def test_sys_platform_android(self):
-        try:
-            os.environ['ANDROID_ARGUMENT'] = 'tst'
-            assert sys_platform() == 'android'
-        finally:
-            os.environ.pop('ANDROID_ARGUMENT', None)
-
-        try:
-            os.environ['KIVY_BUILD'] = 'android'
-            assert sys_platform() == 'android'
-        finally:
-            os.environ.pop('KIVY_BUILD', None)
-
-    def test_sys_platform_cygwin(self):
-        old_platform = sys.platform
-        try:
-            sys.platform = 'cygwin'
-            assert sys_platform() == 'cygwin'
-        finally:
-            sys.platform = old_platform
-
-    def test_sys_platform_darwin(self):
-        old_platform = sys.platform
-        try:
-            sys.platform = 'darwin'
-            assert sys_platform() == 'darwin'
-        finally:
-            sys.platform = old_platform
-
-    def test_sys_platform_freebsd(self):
-        old_platform = sys.platform
-        try:
-            sys.platform = 'freebsd'
-            assert sys_platform() == 'freebsd'
-        finally:
-            sys.platform = old_platform
-
-    def test_sys_platform_ios(self):
-        try:
-            os.environ['KIVY_BUILD'] = 'ios'
-            assert sys_platform() == 'ios'
-        finally:
-            os.environ.pop('KIVY_BUILD', None)
-
-    def test_sys_platform_win32(self):
-        old_platform = sys.platform
-        try:
-            sys.platform = 'win32'
-            assert sys_platform() == 'win32'
-        finally:
-            sys.platform = old_platform
-
-    def test_sys_user_name(self):
-        print(sys_user_name())
-        assert sys_user_name()
 
     def test_to_ascii(self):
         assert to_ascii('äöü') == 'aou'

@@ -45,9 +45,10 @@ determine the values of the most important system environment
 variables for your application are :func:`sys_env_dict`
 and :func:`sys_env_text`.
 
-The helper function :func:`sys_platform` are extending Python's
-:func:`os.name` and :func:`sys.platform` functions for the
-operating systems iOS and Android (not supported by Python).
+The provided string :data:`os_platform` gets determined for most
+of the operating systems with the help of Python's
+:func:`os.name` and :func:`sys.platform` functions and additionally
+detects the operating systems iOS and Android (not supported by Python).
 
 For to encode unicode strings to other codecs the functions
 :func:`force_encoding` and :func:`to_ascii` can be used.
@@ -62,7 +63,7 @@ import unicodedata
 from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -204,6 +205,73 @@ def norm_name(name: str) -> str:
     return "".join(str_parts)
 
 
+def os_host_name() -> str:
+    """ determine the operating system host/machine name.
+
+    :return:                    machine name string.
+    """
+    return platform.node()
+
+
+def os_local_ip() -> str:
+    """ determine ip address of this system/machine in the local network (LAN or WLAN).
+
+    inspired by answers of SO users @dml and @fatal_error to the question: https://stackoverflow.com/questions/166506.
+
+    :return:                    ip address of this machine in the local network (WLAN or LAN/ethernet)
+                                or empty string if this machine is not connected to any network.
+    """
+    socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        socket1.connect(('10.255.255.255', 1))      # doesn't even have to be reachable
+        ip_address = socket1.getsockname()[0]
+    except (OSError, IOError):                      # pragma: no cover
+        # ConnectionAbortedError, ConnectionError, ConnectionRefusedError, ConnectionResetError inherit from OSError
+        socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            socket2.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            socket2.connect(('<broadcast>', 0))
+            ip_address = socket2.getsockname()[0]
+        except (OSError, IOError):
+            ip_address = ""
+        finally:
+            socket2.close()
+    finally:
+        socket1.close()
+
+    return ip_address
+
+
+def _os_platform() -> str:
+    """ determine the operating system where this code is running (used to initialize the :data:`os_platform` variable).
+
+    :return:                    operating system (extension) as string:
+
+                                * `'android'` for all Android systems.
+                                * `'cygwin'` for MS Windows with an installed Cygwin extension.
+                                * `'darwin'` for all Apple Mac OS X systems.
+                                * `'freebsd'` for all other BSD-based unix systems.
+                                * `'ios'` for all Apple iOS systems.
+                                * `'linux'` for all other unix systems (like Arch, Debian/Ubuntu, Suse, ...).
+                                * `'win32'` for MS Windows systems (w/o the Cygwin extension).
+
+    """
+    if env_str('ANDROID_ARGUMENT') is not None:  # p4a env variable; alternatively use ANDROID_PRIVATE
+        return 'android'
+    return env_str('KIVY_BUILD') or sys.platform    # KIVY_BUILD == 'android'/'ios' on Android/iOS
+
+
+os_platform = _os_platform()        #: operating system / platform string (see :func:`_os_platform`).
+
+
+def os_user_name() -> str:
+    """ determine the operating system user name.
+
+    :return:                    user name string.
+    """
+    return getpass.getuser()
+
+
 def round_traditional(num_value: float, num_digits: int = 0) -> float:
     """ round numeric value traditional.
 
@@ -243,15 +311,15 @@ def sys_env_dict() -> Dict[str, Any]:
     sed: Dict[str, Any] = dict()
 
     sed['python_ver'] = sys.version.replace('\n', ' ')
-    sed['platform'] = sys_platform()
+    sed['platform'] = os_platform
     sed['argv'] = sys.argv
     sed['executable'] = sys.executable
     sed['cwd'] = os.getcwd()
     sed['frozen'] = getattr(sys, 'frozen', False)
     if getattr(sys, 'frozen', False):
         sed['bundle_dir'] = getattr(sys, '_MEIPASS', '*#ERR#*')
-    sed['user_name'] = sys_user_name()
-    sed['host_name'] = sys_host_name()
+    sed['user_name'] = os_user_name()
+    sed['host_name'] = os_host_name()
     sed['app_name_guess'] = app_name_guess()
 
     return sed
@@ -276,70 +344,6 @@ def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_le
     text = "\n".join([f"{ind:{ind_ch}>{ind_len}}{key:{key_ch}<{key_len}}{val}" for key, val in sed.items()])
 
     return text
-
-
-def sys_host_name() -> str:
-    """ determine the operating system host/machine name.
-
-    :return:                    machine name string.
-    """
-    return platform.node()
-
-
-def sys_local_ip() -> str:
-    """ determine ip address of this system/machine in the local network (LAN or WLAN).
-
-    inspired by answers of SO users @dml and @fatal_error to the question: https://stackoverflow.com/questions/166506.
-
-    :return:                    ip address of this machine in the local network (WLAN or LAN/ethernet)
-                                or empty string if this machine is not connected to any network.
-    """
-    socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        socket1.connect(('10.255.255.255', 1))      # doesn't even have to be reachable
-        ip_address = socket1.getsockname()[0]
-    except (OSError, IOError):                      # pragma: no cover
-        # ConnectionAbortedError, ConnectionError, ConnectionRefusedError, ConnectionResetError inherit from OSError
-        socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            socket2.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            socket2.connect(('<broadcast>', 0))
-            ip_address = socket2.getsockname()[0]
-        except (OSError, IOError):
-            ip_address = ""
-        finally:
-            socket2.close()
-    finally:
-        socket1.close()
-
-    return ip_address
-
-
-def sys_platform() -> str:
-    """ determine the operating system where this code is running.
-
-    :return:                    operating system (extension) as string:
-
-                                * `'android'` for all Android systems.
-                                * `'cygwin'` for MS Windows with an installed Cygwin extension.
-                                * `'darwin'` for all Apple Mac OS X systems.
-                                * `'freebsd'` for all other BSD-based unix systems.
-                                * `'ios'` for all Apple iOS systems.
-                                * `'linux'` for all other unix systems (like Arch, Debian/Ubuntu, Suse, ...).
-                                * `'win32'` for MS Windows systems (w/o the Cygwin extension).
-
-    """
-    if env_str('ANDROID_ARGUMENT') is not None:  # p4a env variable; alternatively use ANDROID_PRIVATE
-        return 'android'
-    return env_str('KIVY_BUILD') or sys.platform    # KIVY_BUILD == 'android'/'ios' on Android/iOS
-
-
-def sys_user_name() -> str:
-    """ determine the operating system user name.
-
-    :return:                    user name string.
-    """
-    return getpass.getuser()
 
 
 def to_ascii(unicode_str: str) -> str:
