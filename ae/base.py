@@ -63,7 +63,7 @@ import unicodedata
 from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -124,18 +124,25 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     return os.environ.get(name)
 
 
-def file_content(file_path: str, encoding: Optional[str] = None) -> str:
+def file_content(file_path: str, encoding: Optional[str] = None, error_handling: str = 'ignore') -> Optional[str]:
     """ returning content of the text file specified by file_path argument as string.
 
     :param file_path:           file path/name to load into a string.
     :param encoding:            encoding used to load and convert/interpret the file content.
-    :return:                    file content string or empty string if the file could not be found or opened.
+    :param error_handling:      pass `'strict'` or `None` to get `None` instead of empty string return value on
+                                either decoding ValueError exception or
+                                any `OSError`, `FileNotFoundError` or `PermissionError` exception.
+                                The default value `'ignore'` will ignore any decoding errors (missing some characters)
+                                and will return an empty string on any file/os exception.
+    :return:                    file content string. If the file could not be decoded, found or opened,
+                                then return empty string or None (None only if `'strict'` got passed to the
+                                :paramref:'~file_content.error_handling` parameter).
     """
     try:
-        with open(file_path, encoding=encoding) as file_handle:
+        with open(file_path, encoding=encoding, errors=error_handling) as file_handle:
             return file_handle.read()
-    except (FileNotFoundError, OSError, PermissionError):
-        return ""
+    except (FileNotFoundError, OSError, PermissionError, ValueError):
+        return "" if error_handling == 'ignore' else None
 
 
 def file_lines(file_path: str, encoding: Optional[str] = None) -> Tuple[str, ...]:
@@ -146,7 +153,7 @@ def file_lines(file_path: str, encoding: Optional[str] = None) -> Tuple[str, ...
     :return:                    tuple of the lines found in the specified file
                                 or empty tuple if the file could not be found or opened.
     """
-    return tuple(norm_line_sep(file_content(file_path, encoding=encoding)).split("\n"))
+    return tuple(norm_line_sep(file_content(file_path, encoding=encoding) or "").split("\n"))
 
 
 def file_write(text_or_lines: Union[str, List[str], Tuple[str]], file_path: str, encoding: Optional[str] = None
@@ -163,7 +170,7 @@ def file_write(text_or_lines: Union[str, List[str], Tuple[str]], file_path: str,
     try:
         with open(file_path, 'w', encoding=encoding) as file_handle:
             file_handle.write(content)
-    except (FileNotFoundError, OSError, PermissionError):
+    except (FileExistsError, FileNotFoundError, OSError, PermissionError, ValueError):
         return False
     return True
 
