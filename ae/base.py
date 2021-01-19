@@ -53,6 +53,7 @@ detects the operating systems iOS and Android (not supported by Python).
 For to encode unicode strings to other codecs the functions
 :func:`force_encoding` and :func:`to_ascii` can be used.
 """
+import datetime
 import getpass
 import os
 import platform
@@ -63,7 +64,7 @@ import unicodedata
 from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -210,6 +211,16 @@ def norm_name(name: str) -> str:
         else:
             str_parts.append('_')
     return "".join(str_parts)
+
+
+def now_str(sep: str = "") -> str:
+    """ return the current timestamp as string (for to use as suffix for file and variable/attribute names).
+
+    :param sep:                 optional prefix and separator character (separating date from time and in time part
+                                the seconds from the microseconds).
+    :return:                    timestamp as string (length=20 + 3 * len(sep)).
+    """
+    return datetime.datetime.now().strftime("{sep}%Y%m%d{sep}%H%M%S{sep}%f".format(sep=sep))
 
 
 def os_host_name() -> str:
@@ -363,4 +374,4 @@ def to_ascii(unicode_str: str) -> str:
     :return:                    converted string (replaced accents, diacritics, ... into normal ascii characters).
     """
     nfkd_form = unicodedata.normalize('NFKD', unicode_str)
-    return u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])

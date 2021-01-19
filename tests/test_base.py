@@ -8,7 +8,7 @@ from typing import cast
 # noinspection PyProtectedMember
 from ae.base import (
     app_name_guess, camel_to_snake, env_str, file_content, file_lines, file_write, force_encoding,
-    norm_line_sep, norm_name, round_traditional, snake_to_camel,
+    norm_line_sep, norm_name, now_str, round_traditional, snake_to_camel,
     sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii)
 
 
@@ -133,6 +133,10 @@ class TestHelpers:
         assert norm_name("any_name") == "any_name"
         assert norm_name("äáßñìÄÏÜ") == "äáßñìÄÏÜ"
         assert norm_name("@special/chars!:;-`¡'´") == "_special_chars________"
+
+    def test_now_str(self):
+        assert len(now_str()) == 20
+        assert len(now_str("_")) == 23
 
     def test_os_host_name(self):
         print(os_host_name())
