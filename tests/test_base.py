@@ -7,7 +7,7 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    app_name_guess, camel_to_snake, env_str, file_content, file_lines, file_write, force_encoding,
+    app_name_guess, camel_to_snake, duplicates, env_str, file_content, file_lines, file_write, force_encoding,
     norm_line_sep, norm_name, now_str, round_traditional, snake_to_camel,
     sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii)
 
@@ -25,6 +25,10 @@ class TestHelpers:
         assert camel_to_snake("_under_score") == "_under_score"
         assert camel_to_snake("any_name") == "any_name"
         assert camel_to_snake("@special/chars!") == "@special/chars!"
+
+    def test_duplicates(self):
+        lst = ['a', 3, 'bb', 3, 'ccc', 3]
+        assert duplicates(lst) == [3, 3]
 
     def test_env_var_unconverted(self):
         ev = 'PATH'

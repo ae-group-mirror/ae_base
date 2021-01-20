@@ -61,10 +61,10 @@ import socket
 import sys
 import unicodedata
 
-from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, AnyStr, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.1.9'
+__version__ = '0.1.10'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -109,6 +109,26 @@ def camel_to_snake(name: str) -> str:
         else:
             str_parts.append(char)
     return "".join(str_parts)
+
+
+def duplicates(values: Iterable) -> list:
+    """ determine all duplicates in the passed iterable.
+
+    Inspired by Ritesh Kumars answer to https://stackoverflow.com/questions/9835762.
+
+    :param values:              iterable (list, tuple, str, ...) to search for duplicate items.
+    :return:                    list of the duplicate items found (can contain the same duplicate multiple times).
+    """
+    seen_set: set = set()
+    seen_add = seen_set.add
+    dup_list: list = list()
+    dup_add = dup_list.append
+    for item in values:
+        if item in seen_set:
+            dup_add(item)
+        else:
+            seen_add(item)
+    return dup_list
 
 
 def env_str(name: str, convert_name: bool = False) -> Optional[str]:
