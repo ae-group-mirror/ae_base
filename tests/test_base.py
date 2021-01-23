@@ -7,7 +7,7 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    app_name_guess, camel_to_snake, duplicates, env_str, file_content, file_lines, file_write, force_encoding,
+    app_name_guess, camel_to_snake, duplicates, env_str, force_encoding,
     norm_line_sep, norm_name, now_str, round_traditional, snake_to_camel,
     sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii)
 
@@ -53,47 +53,6 @@ class TestHelpers:
         vv = "test variable value"
         os.environ['NON_ALPHA_NUM_CHARS_69'] = vv
         assert env_str(ev, convert_name=True) == vv
-
-    def test_file_content(self):
-        text = "line1\nline2\rline3\r\n"
-        fnm = "tests/tst_content.txt"
-        try:
-            file_write(text, fnm)
-            assert file_content(fnm) == norm_line_sep(text)
-
-            file_write(norm_line_sep(text), fnm)
-            assert file_content(fnm) == norm_line_sep(text)
-        finally:
-            if os.path.exists(fnm):
-                os.remove(fnm)
-
-    def test_file_content_error(self):
-        assert file_content("tests/not_existing file.xxx") == ""
-        assert file_content(":invalid \\=// file name....") == ""
-
-    def test_file_lines(self):
-        text = "line1\nline2\rline3\r\n"
-        fnm = "tests/tst_lines.txt"
-        try:
-            file_write(text, fnm)
-            assert file_lines(fnm) == tuple(norm_line_sep(text).split("\n"))
-        finally:
-            if os.path.exists(fnm):
-                os.remove(fnm)
-
-    def test_file_write(self):
-        text = "line1\nline2\rline3\r\n"
-        fnm = "tests/tst_write.txt"
-        try:
-            assert file_write(text, fnm)
-            assert file_content(fnm) == norm_line_sep(text)
-        finally:
-            if os.path.exists(fnm):
-                os.remove(fnm)
-
-    def test_file_write_error(self):
-        assert not file_write("what ever", "folder_not_existing/writefile.xxx")
-        assert not file_write("what else", ":invalid \\=// file name....")
 
     def test_force_encoding_bytes(self):
         s = 'äöü'

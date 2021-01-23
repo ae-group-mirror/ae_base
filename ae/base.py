@@ -2,69 +2,59 @@
 basic constants and helper functions
 ====================================
 
-This module is pure python and has no external dependencies.
+This module is pure python and has no external dependencies. Apart from providing base constants and common helper
+functions it is also patching the :mod:`shutil` module for to prevent crashes on the Android OS.
 
 
 base constants
 --------------
 
-Generic ISO format strings for `date` and `datetime` values
-are provided by the constants :data:`DATE_ISO` and
+Generic ISO format strings for `date` and `datetime` values are provided by the constants :data:`DATE_ISO` and
 :data:`DATE_TIME_ISO`.
 
-The :data:`UNSET` constant is useful in cases where `None`
-is a valid data value and another special value is needed
-for to specify that e.g. an argument or attribute has
-no (valid) value.
+The :data:`UNSET` constant is useful in cases where `None` is a valid data value and another special value is needed
+for to specify that e.g. an argument or attribute has no (valid) value.
 
 
 base helper functions
 ---------------------
 
-For to determine the value of an OS environment variable
-with automatic variable name conversion you can use the
+For to determine the value of an OS environment variable with automatic variable name conversion you can use the
 function :func:`env_str`.
 
-The :func:`round_traditional` function get provided by this
-module for traditional rounding of float values. The function
-signature is fully compatible to Python's :func:`round` function.
+Other helper functions provided by this namespace portion for to determine the values of the most important system
+environment variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
 
-:func:`norm_line_sep` is converting any combination of line
-separators of a string to a single new-line character.
+:func:`norm_line_sep` is converting any combination of line separators of a string to a single new-line character.
 
-Use the function :func:`norm_name` for to convert any string
-into a name that can be used e.g. as file name or as
+Use the function :func:`norm_name` for to convert any string into a name that can be used e.g. as file name or as
 method/attribute name.
 
-:func:`camel_to_snake` and :func:`snake_to_camel` does
-also small and very useful name conversions of class and
+:func:`camel_to_snake` and :func:`snake_to_camel` does also small and very useful name conversions of class and
 method names.
 
-Other helper functions provided by this namespace portion for to
-determine the values of the most important system environment
-variables for your application are :func:`sys_env_dict`
-and :func:`sys_env_text`.
+The provided string :data:`os_platform` gets determined for most of the operating systems with the help of Python's
+:func:`os.name` and :func:`sys.platform` functions and additionally detects the operating systems iOS and Android (not
+supported by Python).
 
-The provided string :data:`os_platform` gets determined for most
-of the operating systems with the help of Python's
-:func:`os.name` and :func:`sys.platform` functions and additionally
-detects the operating systems iOS and Android (not supported by Python).
+For to encode unicode strings to other codecs the functions :func:`force_encoding` and :func:`to_ascii` can be used.
 
-For to encode unicode strings to other codecs the functions
-:func:`force_encoding` and :func:`to_ascii` can be used.
+The :func:`round_traditional` function get provided by this module for traditional rounding of float values. The
+function signature is fully compatible to Python's :func:`round` function.
 """
 import datetime
 import getpass
 import os
 import platform
+import shutil
 import socket
 import sys
 import unicodedata
 
-from typing import Any, AnyStr, Dict, Iterable, List, Optional, Tuple, Union, cast
+from typing import Any, AnyStr, Dict, Iterable, Optional, cast
 
 
-__version__ = '0.1.10'
+__version__ = '0.1.11'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -143,57 +133,6 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     if convert_name:
         name = norm_name(camel_to_snake(name)).upper()
     return os.environ.get(name)
-
-
-def file_content(file_path: str, encoding: Optional[str] = None, error_handling: str = 'ignore') -> Optional[str]:
-    """ returning content of the text file specified by file_path argument as string.
-
-    :param file_path:           file path/name to load into a string.
-    :param encoding:            encoding used to load and convert/interpret the file content.
-    :param error_handling:      pass `'strict'` or `None` to get `None` instead of empty string return value on
-                                either decoding ValueError exception or
-                                any `OSError`, `FileNotFoundError` or `PermissionError` exception.
-                                The default value `'ignore'` will ignore any decoding errors (missing some characters)
-                                and will return an empty string on any file/os exception.
-    :return:                    file content string. If the file could not be decoded, found or opened,
-                                then return empty string or None (None only if `'strict'` got passed to the
-                                :paramref:'~file_content.error_handling` parameter).
-    """
-    try:
-        with open(file_path, encoding=encoding, errors=error_handling) as file_handle:
-            return file_handle.read()
-    except (FileNotFoundError, OSError, PermissionError, ValueError):
-        return "" if error_handling == 'ignore' else None
-
-
-def file_lines(file_path: str, encoding: Optional[str] = None) -> Tuple[str, ...]:
-    """ returning lines of the text file specified by file_path argument as tuple.
-
-    :param file_path:           file path/name to parse/load.
-    :param encoding:            encoding used to load and convert/interpret the file content.
-    :return:                    tuple of the lines found in the specified file
-                                or empty tuple if the file could not be found or opened.
-    """
-    return tuple(norm_line_sep(file_content(file_path, encoding=encoding) or "").split("\n"))
-
-
-def file_write(text_or_lines: Union[str, List[str], Tuple[str]], file_path: str, encoding: Optional[str] = None
-               ) -> bool:
-    """ write the passed text string or list of line strings into the text file specified by file_path argument.
-
-    :param text_or_lines:       new file content either passed as string or list of line strings (will be
-                                concatenated with the line separator of the current OS: os.linesep).
-    :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
-    :param encoding:            encoding used to write/convert/interpret the file content to write.
-    :return:                    True if the content got written to the file, False on any file/OS error.
-    """
-    content = text_or_lines if isinstance(text_or_lines, str) else os.linesep.join(text_or_lines)
-    try:
-        with open(file_path, 'w', encoding=encoding) as file_handle:
-            file_handle.write(content)
-    except (FileExistsError, FileNotFoundError, OSError, PermissionError, ValueError):
-        return False
-    return True
 
 
 def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
@@ -322,6 +261,17 @@ def round_traditional(num_value: float, num_digits: int = 0) -> float:
     :return:                    rounded value.
     """
     return round(num_value + 10 ** (-len(str(num_value)) - 1), num_digits)
+
+
+if os_platform == 'android':                                    # pragma: no cover
+    # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
+    # 'android' (see # https://bugs.python.org/issue28141 and https://bugs.python.org/issue32073). These functions are
+    # used by shutil.copy2/copy/copytree/move for to copy OS-specific file attributes.
+    # Although shutil.copytree() and shutil.move() are copying/moving the files correctly when the copy_function
+    # arg is set to :func:`shutil.copyfile`, they will finally also crash afterwards when they try to set the attributes
+    # on the destination root directory.
+    shutil.copymode = lambda *args, **kwargs: None      # print("shutil.copymode ae.base.PATCH", args, kwargs)
+    shutil.copystat = lambda *args, **kwargs: None      # print("shutil.copystat ae.base.PATCH", args, kwargs)
 
 
 def snake_to_camel(name: str, back_convertible: bool = False) -> str:
