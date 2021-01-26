@@ -54,7 +54,7 @@ import unicodedata
 from typing import Any, AnyStr, Dict, Iterable, Optional, cast
 
 
-__version__ = '0.1.11'
+__version__ = '0.1.12'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -295,6 +295,8 @@ def sys_env_dict() -> Dict[str, Any]:
 
     :return:                    python system run-time environment values like python_ver, argv, cwd, executable,
                                 frozen and bundle_dir (if bundled with pyinstaller).
+
+    .. hint:: see also https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     """
     sed: Dict[str, Any] = dict()
 
@@ -320,13 +322,14 @@ def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_le
     :param ind_ch:              indent character (default=" ").
     :param ind_len:             indent depths (default=12 characters).
     :param key_ch:              key-value separator character (default="=").
-    :param key_len:             key-name maximum length (default=15 characters).
+    :param key_len:             key-name minimum length (default=15 characters).
     :param extra_sys_env_dict:  dict with additional system info items.
     :return:                    text block with system environment info.
     """
     sed = sys_env_dict()
     if extra_sys_env_dict:
         sed.update(extra_sys_env_dict)
+    key_len = max([key_len] + [len(key) + 1 for key in sed])
 
     ind = ""
     text = "\n".join([f"{ind:{ind_ch}>{ind_len}}{key:{key_ch}<{key_len}}{val}" for key, val in sed.items()])
