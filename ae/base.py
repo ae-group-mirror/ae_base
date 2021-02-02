@@ -54,7 +54,7 @@ import unicodedata
 from typing import Any, AnyStr, Dict, Iterable, Optional, cast
 
 
-__version__ = '0.1.12'
+__version__ = '0.1.13'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -68,9 +68,19 @@ DEF_ENCODING: str = 'ascii'
 NAME_PARTS_SEP = '_'                            #: name parts separator character, e.g. for :func:`norm_name`
 
 
-# using only object() does not provide proper representation string, hopefully  UNSET = _UNSET() is not needed
-class UNSET:
-    """ (singleton) UNSET (type) object used for attributes/arguments if `None` is needed as a valid value. """
+# using only object() does not provide proper representation string
+class _UNSET:
+    """ (singleton) UNSET (type) object class. """
+    def __bool__(self):
+        """ ensure to be evaluated as False, like None. """
+        return False
+
+    def __len__(self):
+        """ ensure to be evaluated as empty. """
+        return 0
+
+
+UNSET = _UNSET()    #: pseudo value used for attributes/arguments if `None` is needed as a valid value
 
 
 def app_name_guess() -> str:

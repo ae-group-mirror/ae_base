@@ -7,9 +7,18 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    app_name_guess, camel_to_snake, duplicates, env_str, force_encoding,
+    UNSET, app_name_guess, camel_to_snake, duplicates, env_str, force_encoding,
     norm_line_sep, norm_name, now_str, round_traditional, snake_to_camel,
     sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii)
+
+
+def test_unset_truthiness():
+    assert not UNSET
+    assert bool(UNSET) is False
+
+
+def test_unset_null_length():
+    assert len(UNSET) == 0
 
 
 class TestHelpers:
