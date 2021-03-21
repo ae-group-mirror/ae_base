@@ -41,6 +41,10 @@ For to encode unicode strings to other codecs the functions :func:`force_encodin
 
 The :func:`round_traditional` function get provided by this module for traditional rounding of float values. The
 function signature is fully compatible to Python's :func:`round` function.
+
+The function :func:`instantiate_config_parser` ensures that the :class:`~configparser.ConfigParser` instance
+is correctly configured, e.g. to support case-sensitive config variable names and to use
+:class:`ExtendedInterpolation` for the interpolation argument.
 """
 import datetime
 import getpass
@@ -51,10 +55,11 @@ import socket
 import sys
 import unicodedata
 
+from configparser import ConfigParser, ExtendedInterpolation
 from typing import Any, AnyStr, Dict, Iterable, Optional, cast
 
 
-__version__ = '0.1.13'
+__version__ = '0.1.14'
 
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
@@ -156,6 +161,18 @@ def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF
     """
     enc_str: bytes = cast(str, text).encode(encoding=encoding, errors=errors) if isinstance(text, str) else text
     return enc_str.decode(encoding=encoding)
+
+
+def instantiate_config_parser() -> ConfigParser:
+    """ instantiate and prepare config file parser. """
+    cfg_parser = ConfigParser(interpolation=ExtendedInterpolation())
+    # set optionxform to have case sensitive var names (or use 'lambda option: option')
+    # mypy V 0.740 bug - see mypy issue #5062: adding pragma "type: ignore" breaks PyCharm (showing
+    # .. inspection warning "Non-self attribute could not be type-hinted"), but
+    # .. also cast(Callable[[Arg(str, 'option')], str], str) and # type: ... is not working
+    # .. (because Arg is not available in plain mypy, only in the extra mypy_extensions package)
+    setattr(cfg_parser, 'optionxform', str)
+    return cfg_parser
 
 
 def norm_line_sep(text: str) -> str:

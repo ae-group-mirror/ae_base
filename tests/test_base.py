@@ -3,12 +3,13 @@ import os
 import pytest
 import sys
 
+from configparser import ConfigParser
 from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
     UNSET, app_name_guess, camel_to_snake, duplicates, env_str, force_encoding,
-    norm_line_sep, norm_name, now_str, round_traditional, snake_to_camel,
+    instantiate_config_parser, norm_line_sep, norm_name, now_str, round_traditional, snake_to_camel,
     sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii)
 
 
@@ -93,6 +94,11 @@ class TestHelpers:
 
         with pytest.raises(TypeError):
             assert force_encoding(s, encoding=cast(str, None)) == '\\xe4\\xf6\\xfc'
+
+    def test_instantiate_config_parser(self):
+        cfg_parser = instantiate_config_parser()
+        assert isinstance(cfg_parser, ConfigParser)
+        assert cfg_parser.optionxform is str
 
     def test_norm_line_sep(self):
         assert norm_line_sep('a\r\nb') == 'a\nb'
