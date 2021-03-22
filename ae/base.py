@@ -59,8 +59,11 @@ from configparser import ConfigParser, ExtendedInterpolation
 from typing import Any, AnyStr, Dict, Iterable, Optional, cast
 
 
-__version__ = '0.1.14'
+__version__ = '0.1.15'
 
+
+CFG_EXT: str = ".cfg"                           #: CFG config file extension
+INI_EXT: str = ".ini"                           #: INI config file extension
 
 DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
 DATE_TIME_ISO: str = '%Y-%m-%d %H:%M:%S.%f'     #: ISO string format for datetime values
