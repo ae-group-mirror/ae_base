@@ -8,7 +8,8 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    UNSET, app_name_guess, camel_to_snake, duplicates, env_str, force_encoding,
+    BUILD_CONFIG_FILE, UNSET, app_name_guess, build_config_variable_values, camel_to_snake, duplicates, env_str,
+    force_encoding,
     instantiate_config_parser, norm_line_sep, norm_name, now_str, round_traditional, snake_to_camel,
     sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii)
 
@@ -26,7 +27,29 @@ class TestHelpers:
     def test_app_name_guess(self):
         assert app_name_guess()     # app.exe name in pytest returning '_jb_pytest_runner'(PyCharm)/'__main__'(console)
         assert app_name_guess() != 'main'
-        assert app_name_guess() == 'ae_base'
+        assert app_name_guess() == 'unguessable'
+
+    def test_build_config_variable_values_with_spec(self):
+        try:
+            with open(BUILD_CONFIG_FILE, "w") as file_handle:
+                file_handle.write("""[app]\nexisting = tst""")
+            existing, not_existing = build_config_variable_values(
+                ('existing', ""),
+                ('not_existing', "default_value")
+            )
+            assert existing == "tst"
+            assert not_existing == "default_value"
+        finally:
+            if os.path.exists(BUILD_CONFIG_FILE):
+                os.remove(BUILD_CONFIG_FILE)
+
+    def test_build_config_variable_values_no_spec(self):
+        existing, not_existing = build_config_variable_values(
+            ('not_existing1', "default_value1"),
+            ('not_existing2', "default_value2")
+        )
+        assert existing == "default_value1"
+        assert not_existing == "default_value2"
 
     def test_camel_to_snake(self):
         assert camel_to_snake("AnyCamelCaseName") == "_Any_Camel_Case_Name"

@@ -56,11 +56,13 @@ import sys
 import unicodedata
 
 from configparser import ConfigParser, ExtendedInterpolation
-from typing import Any, AnyStr, Dict, Iterable, Optional, cast
+from typing import Any, AnyStr, Dict, Iterable, Optional, Tuple, cast
 
 
-__version__ = '0.1.15'
+__version__ = '0.1.16'
 
+
+BUILD_CONFIG_FILE = 'buildozer.spec'            #: app build config file
 
 CFG_EXT: str = ".cfg"                           #: CFG config file extension
 INI_EXT: str = ".ini"                           #: INI config file extension
@@ -94,14 +96,36 @@ UNSET = _UNSET()    #: pseudo value used for attributes/arguments if `None` is n
 def app_name_guess() -> str:
     """ guess/try to determine the name of the currently running app (w/o assessing not yet initialized app instance).
 
-    :return:                    application name/id.
+    :return:                    application name/id or "unguessable" if not guessable.
     """
-    path = sys.argv[0]
-    app_name = os.path.splitext(os.path.basename(path))[0]
-    if app_name.lower() in ('main', '__main__', '_jb_pytest_runner'):
-        path = os.getcwd()
-        app_name = os.path.basename(path)
+    app_name = build_config_variable_values(('package.name', ""))[0]
+    if not app_name:
+        unspecified_app_names = ('ae_base', 'app', '_jb_pytest_runner', 'main', '__main__', 'pydevconsole', 'src')
+        path = sys.argv[0]
+        app_name = os.path.splitext(os.path.basename(path))[0]
+        if app_name.lower() in unspecified_app_names:
+            path = os.getcwd()
+            app_name = os.path.basename(path)
+            if app_name.lower() in unspecified_app_names:
+                app_name = "unguessable"
     return app_name
+
+
+def build_config_variable_values(*names_defaults: Tuple[str, Any], section: str = 'app') -> Tuple[Any, ...]:
+    """ determine build config variable values from the buildozer.spec file in the current directory.
+
+    :param names_defaults:      tuple of tuples of build config variable names and default values.
+    :param section:             name of the spec file section, using 'app' as default.
+    :return:                    tuple of build config variable values (using the passed default value if not specified
+                                in the :data:`BUILD_CONFIG_FILE` spec file or if the spec file does not exists in cwd).
+    """
+    if not os.path.exists(BUILD_CONFIG_FILE):
+        return tuple(def_val for name, def_val in names_defaults)
+
+    config = instantiate_config_parser()
+    config.read(BUILD_CONFIG_FILE, 'utf-8')
+
+    return tuple(config.get(section, name, fallback=def_val) for name, def_val in names_defaults)
 
 
 def camel_to_snake(name: str) -> str:
@@ -168,7 +192,7 @@ def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF
 
 def instantiate_config_parser() -> ConfigParser:
     """ instantiate and prepare config file parser. """
-    cfg_parser = ConfigParser(interpolation=ExtendedInterpolation())
+    cfg_parser = ConfigParser(allow_no_value=True, interpolation=ExtendedInterpolation())
     # set optionxform to have case sensitive var names (or use 'lambda option: option')
     # mypy V 0.740 bug - see mypy issue #5062: adding pragma "type: ignore" breaks PyCharm (showing
     # .. inspection warning "Non-self attribute could not be type-hinted"), but
