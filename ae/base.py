@@ -2,49 +2,43 @@
 basic constants and helper functions
 ====================================
 
-This module is pure python and has no external dependencies. Apart from providing base constants and common helper
-functions it is also patching the :mod:`shutil` module for to prevent crashes on the Android OS.
+this module is pure python and has no external dependencies. apart from providing base constants and common helper
+functions it is also patching the :mod:`shutil` module to prevent crashes on Android OS.
 
 
 base constants
 --------------
 
-Generic ISO format strings for `date` and `datetime` values are provided by the constants :data:`DATE_ISO` and
+ISO format strings for `date` and `datetime` values are provided by the constants :data:`DATE_ISO` and
 :data:`DATE_TIME_ISO`.
 
-The :data:`UNSET` constant is useful in cases where `None` is a valid data value and another special value is needed
-for to specify that e.g. an argument or attribute has no (valid) value.
+the :data:`UNSET` constant is useful in cases where `None` is a valid data value and another special value is needed
+to specify that e.g. an argument or attribute has no (valid) value or did not get specified/passed.
+
+the string :data:`os_platform` provides the OS where your app is running.
 
 
 base helper functions
 ---------------------
 
-For to determine the value of an OS environment variable with automatic variable name conversion you can use the
-function :func:`env_str`.
-
-Other helper functions provided by this namespace portion for to determine the values of the most important system
-environment variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
+use :func:`env_str` to determine the value of an OS environment variable with automatic variable name conversion. other
+helper functions provided by this namespace portion to determine the values of the most important system environment
+variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
 
 :func:`norm_line_sep` is converting any combination of line separators of a string to a single new-line character.
 
-Use the function :func:`norm_name` for to convert any string into a name that can be used e.g. as file name or as
-method/attribute name.
+:func:`norm_name` converts any string into a name that can be used e.g. as file name or as method/attribute name.
 
-:func:`camel_to_snake` and :func:`snake_to_camel` does also small and very useful name conversions of class and
-method names.
+:func:`camel_to_snake` and :func:`snake_to_camel` providing name conversions of class and method names.
 
-The provided string :data:`os_platform` gets determined for most of the operating systems with the help of Python's
-:func:`os.name` and :func:`sys.platform` functions and additionally detects the operating systems iOS and Android (not
-supported by Python).
+to encode unicode strings to other codecs the functions :func:`force_encoding` and :func:`to_ascii` can be used.
 
-For to encode unicode strings to other codecs the functions :func:`force_encoding` and :func:`to_ascii` can be used.
-
-The :func:`round_traditional` function get provided by this module for traditional rounding of float values. The
+the :func:`round_traditional` function get provided by this module for traditional rounding of float values. the
 function signature is fully compatible to Python's :func:`round` function.
 
-The function :func:`instantiate_config_parser` ensures that the :class:`~configparser.ConfigParser` instance
-is correctly configured, e.g. to support case-sensitive config variable names and to use
-:class:`ExtendedInterpolation` for the interpolation argument.
+the function :func:`instantiate_config_parser` ensures that the :class:`~configparser.ConfigParser` instance is
+correctly configured, e.g. to support case-sensitive config variable names and to use :class:`ExtendedInterpolation` for
+the interpolation argument.
 """
 import datetime
 import getpass
@@ -59,7 +53,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 from typing import Any, AnyStr, Dict, Iterable, Optional, Tuple, cast
 
 
-__version__ = '0.1.16'
+__version__ = '0.1.17'
 
 
 BUILD_CONFIG_FILE = 'buildozer.spec'            #: app build config file
@@ -146,7 +140,7 @@ def camel_to_snake(name: str) -> str:
 def duplicates(values: Iterable) -> list:
     """ determine all duplicates in the passed iterable.
 
-    Inspired by Ritesh Kumars answer to https://stackoverflow.com/questions/9835762.
+    inspired by Ritesh Kumars answer to https://stackoverflow.com/questions/9835762.
 
     :param values:              iterable (list, tuple, str, ...) to search for duplicate items.
     :return:                    list of the duplicate items found (can contain the same duplicate multiple times).
@@ -167,7 +161,7 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     """ determine the string value of an OS environment variable, optionally preventing invalid variable name.
 
     :param name:                name of a OS environment variable.
-    :param convert_name:        pass True for to prevent invalid variable names by converting
+    :param convert_name:        pass True to prevent invalid variable names by converting
                                 CamelCase names into SNAKE_CASE, lower-case into
                                 upper-case and all non-alpha-numeric characters into underscore characters.
     :return:                    string value of OS environment variable if found, else None.
@@ -184,7 +178,7 @@ def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF
     :param encoding:            encoding (def= :data:`DEF_ENCODING`).
     :param errors:              encode error handling (def= :data:`DEF_ENCODE_ERRORS`).
 
-    :return:                    text as str (with all characters checked/converted/replaced for to be encode-able).
+    :return:                    text as str (with all characters checked/converted/replaced to be encode-able).
     """
     enc_str: bytes = cast(str, text).encode(encoding=encoding, errors=errors) if isinstance(text, str) else text
     return enc_str.decode(encoding=encoding)
@@ -212,7 +206,7 @@ def norm_line_sep(text: str) -> str:
 
 
 def norm_name(name: str) -> str:
-    """ normalize name for to contain only alpha-numeric and underscore chars (e.g. for a variable-/method-/file-name).
+    """ normalize name to contain only alpha-numeric and underscore chars (e.g. for a variable-/method-/file-name).
 
     :param name:                any string to be converted into a valid variable/method/file/... name.
     :return:                    cleaned/normalized/converted name string.
@@ -227,7 +221,7 @@ def norm_name(name: str) -> str:
 
 
 def now_str(sep: str = "") -> str:
-    """ return the current timestamp as string (for to use as suffix for file and variable/attribute names).
+    """ return the current timestamp as string (to use as suffix for file and variable/attribute names).
 
     :param sep:                 optional prefix and separator character (separating date from time and in time part
                                 the seconds from the microseconds).
@@ -287,12 +281,28 @@ def _os_platform() -> str:
                                 * `'win32'` for MS Windows systems (w/o the Cygwin extension).
 
     """
-    if env_str('ANDROID_ARGUMENT') is not None:  # p4a env variable; alternatively use ANDROID_PRIVATE
+    if env_str('ANDROID_ARGUMENT') is not None:     # p4a env variable; alternatively use ANDROID_PRIVATE
         return 'android'
     return env_str('KIVY_BUILD') or sys.platform    # KIVY_BUILD == 'android'/'ios' on Android/iOS
 
 
-os_platform = _os_platform()        #: operating system / platform string (see :func:`_os_platform`).
+os_platform = _os_platform()
+""" operating system / platform string (see :func:`_os_platform`).
+
+this string value gets determined for most of the operating systems with the help of Python's :func:`sys.platform`
+function and additionally detects the operating systems iOS and Android (not supported by Python).
+"""
+
+
+if os_platform == 'android':                                    # pragma: no cover
+    # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
+    # 'android' (see # https://bugs.python.org/issue28141 and https://bugs.python.org/issue32073). these functions are
+    # used by shutil.copy2/copy/copytree/move to copy OS-specific file attributes.
+    # although shutil.copytree() and shutil.move() are copying/moving the files correctly when the copy_function
+    # arg is set to :func:`shutil.copyfile`, they will finally also crash afterwards when they try to set the attributes
+    # on the destination root directory.
+    shutil.copymode = lambda *args, **kwargs: None      # print("shutil.copymode ae.base.PATCH", args, kwargs)
+    shutil.copystat = lambda *args, **kwargs: None      # print("shutil.copystat ae.base.PATCH", args, kwargs)
 
 
 def os_user_name() -> str:
@@ -306,7 +316,7 @@ def os_user_name() -> str:
 def round_traditional(num_value: float, num_digits: int = 0) -> float:
     """ round numeric value traditional.
 
-    Needed because python round() is working differently, e.g. round(0.075, 2) == 0.07 instead of 0.08
+    needed because python round() is working differently, e.g. round(0.075, 2) == 0.07 instead of 0.08
     inspired by https://stackoverflow.com/questions/31818050/python-2-7-round-number-to-nearest-integer.
 
     :param num_value:           float value to be round.
@@ -317,24 +327,13 @@ def round_traditional(num_value: float, num_digits: int = 0) -> float:
     return round(num_value + 10 ** (-len(str(num_value)) - 1), num_digits)
 
 
-if os_platform == 'android':                                    # pragma: no cover
-    # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
-    # 'android' (see # https://bugs.python.org/issue28141 and https://bugs.python.org/issue32073). These functions are
-    # used by shutil.copy2/copy/copytree/move for to copy OS-specific file attributes.
-    # Although shutil.copytree() and shutil.move() are copying/moving the files correctly when the copy_function
-    # arg is set to :func:`shutil.copyfile`, they will finally also crash afterwards when they try to set the attributes
-    # on the destination root directory.
-    shutil.copymode = lambda *args, **kwargs: None      # print("shutil.copymode ae.base.PATCH", args, kwargs)
-    shutil.copystat = lambda *args, **kwargs: None      # print("shutil.copystat ae.base.PATCH", args, kwargs)
-
-
 def snake_to_camel(name: str, back_convertible: bool = False) -> str:
     """ convert name from snake_case to CamelCase.
 
     :param name:                name string composed of parts separated by an underscore character
                                 (:data:`NAME_PARTS_SEP`).
     :param back_convertible:    pass `True` to have lower-case character at the begin of the returned name
-                                if the snake name has no leading underscore character (and for to allow
+                                if the snake name has no leading underscore character (and to allow
                                 the conversion between snake and camel case without information loss).
     :return:                    name in camel case.
     """
@@ -394,7 +393,7 @@ def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_le
 def to_ascii(unicode_str: str) -> str:
     """ converts unicode string into ascii representation.
 
-    Useful for fuzzy string compare; inspired by MiniQuark's answer
+    useful for fuzzy string compare; inspired by MiniQuark's answer
     in: https://stackoverflow.com/questions/517923/what-is-the-best-way-to-remove-accents-in-a-python-unicode-string
 
     :param unicode_str:         string to convert.
