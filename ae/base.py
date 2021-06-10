@@ -53,7 +53,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 from typing import Any, AnyStr, Dict, Iterable, Optional, Tuple, cast
 
 
-__version__ = '0.1.17'
+__version__ = '0.2.17'
 
 
 BUILD_CONFIG_FILE = 'buildozer.spec'            #: app build config file

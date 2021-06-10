@@ -10,7 +10,7 @@
     https://pypi.org/project/ae-base/#history)
 
 >The portions (modules and sub-packages) of the Application Environment for Python are within
-the `ae` namespace and are providing helper methods and classes for to develop
+the `ae` namespace and are providing helper methods and classes to develop
 full-featured applications with Python.
 
 [![Coverage](https://ae-group.gitlab.io/ae_base/coverage.svg)](
@@ -37,7 +37,7 @@ full-featured applications with Python.
 ## installation
 
 
-Execute the following command for to use the ae.base module in your
+Execute the following command to use the ae.base module in your
 application. It will install ae.base into your python (virtual) environment:
  
 ```shell script
@@ -54,8 +54,8 @@ pip install -e .[dev]
 ```
 
 The last command will install this module portion into your virtual environment, along with
-the tools you need to develop and run tests or for to extend the portion documentation.
-For to contribute only to the unit tests or the documentation of this portion replace
+the tools you need to develop and run tests or to extend the portion documentation.
+To contribute only to the unit tests or to the documentation of this portion replace
 the setup extras key `dev` in the above command with `tests` or `docs` respectively.
 
 
@@ -65,7 +65,7 @@ More info on the features and usage of this portion are available at
 [ReadTheDocs](https://ae.readthedocs.io/en/latest/_autosummary/ae.base.html#module-ae.base
 "ae_base documentation").
 
-<!-- Common files version 0.1.61 deployed version 0.1.0 (with 0.1.61)
+<!-- Common files version 0.1.76 deployed version 0.2.17 (with 0.1.76)
      to https://gitlab.com/ae-group as ae_base module as well as
      to https://ae-group.gitlab.io with CI check results as well as
      to https://pypi.org/project/ae-base as namespace portion ae-base.
