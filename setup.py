@@ -56,7 +56,7 @@ if __name__ == "__main__":
             "Programming Language :: Python",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.6",
-            "License :: " + nev['portion_license'],
+            "License :: " + nev['project_license'],
             "Operating System :: OS Independent",
             "Topic :: Software Development :: Libraries :: Application Frameworks",
         ],
