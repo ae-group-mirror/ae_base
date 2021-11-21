@@ -1,9 +1,9 @@
 """
-basic constants and helper functions
-====================================
+basic constants, helper functions and context manager
+=====================================================
 
-this module is pure python and has no external dependencies. apart from providing base constants and common helper
-functions it is also patching the :mod:`shutil` module to prevent crashes on Android OS.
+this module is pure python and has no external dependencies. apart from providing base constants, common helper
+functions and context managers, it is also patching the :mod:`shutil` module to prevent crashes on Android OS.
 
 
 base constants
@@ -21,13 +21,21 @@ the string :data:`os_platform` provides the OS where your app is running.
 base helper functions
 ---------------------
 
+the function :func:`duplicates` returns the duplicates of an iterable.
+
 use :func:`env_str` to determine the value of an OS environment variable with automatic variable name conversion. other
 helper functions provided by this namespace portion to determine the values of the most important system environment
 variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
 
+:func:`app_name_guess` guesses the name of o running Python application from the application environment, with the help
+of :func:`build_config_variable_values`, which determines config-variable-values from the app's build spec file.
+
 :func:`norm_line_sep` is converting any combination of line separators of a string to a single new-line character.
 
 :func:`norm_name` converts any string into a name that can be used e.g. as file name or as method/attribute name.
+
+to normalize a file path, in order to remove `.`, `..` placeholders, to resolve symbolic links or to make it relative or
+absolute, call the function :func:`norm_path`.
 
 :func:`camel_to_snake` and :func:`snake_to_camel` providing name conversions of class and method names.
 
@@ -39,6 +47,20 @@ function signature is fully compatible to Python's :func:`round` function.
 the function :func:`instantiate_config_parser` ensures that the :class:`~configparser.ConfigParser` instance is
 correctly configured, e.g. to support case-sensitive config variable names and to use :class:`ExtendedInterpolation` for
 the interpolation argument.
+
+
+generic context manager
+-----------------------
+
+the context manager :func:`in_wd` changes the current working directory in the temporary context. the following example
+demonstrate a typical usage, together with a temporary path, created with the help of Pythons
+:class:`~tempfile.TemporaryDirectory` class::
+
+    with tempfile.TemporaryDirectory() as tmp_dir, in_wd(tmp_dir):
+        assert os.getcwd() == tmp_dir
+        # the tmp_dir is set as the current working directory
+    # current working directory set back to the original path and the temporary directory got removed
+
 """
 import datetime
 import getpass
@@ -49,23 +71,32 @@ import socket
 import sys
 import unicodedata
 
-from configparser import ConfigParser, ExtendedInterpolation
-from typing import Any, AnyStr, Dict, Iterable, Optional, Tuple, cast
+from configparser import ConfigParser, ExtendedInterpolation, MissingSectionHeaderError
+from contextlib import contextmanager
+from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple, cast
 
 
 __version__ = '0.2.18'
 
 
-BUILD_CONFIG_FILE = 'buildozer.spec'            #: app build config file
+DOCS_FOLDER = 'docs'                            #: project documentation root folder name
+TESTS_FOLDER = 'tests'                          #: name of project folder to store unit/integration tests
+TEMPLATES_FOLDER = 'templates'
+""" template folder name, used in template and namespace root projects to maintain and provide common file templates """
 
-CFG_EXT: str = ".cfg"                           #: CFG config file extension
-INI_EXT: str = ".ini"                           #: INI config file extension
+BUILD_CONFIG_FILE = 'buildozer.spec'            #: gui app build config file
 
-DATE_ISO: str = '%Y-%m-%d'                      #: ISO string format for date values (e.g. in config files/variables)
-DATE_TIME_ISO: str = '%Y-%m-%d %H:%M:%S.%f'     #: ISO string format for datetime values
+PY_EXT = '.py'                                  #: file extension for modules and hooks
+PY_INIT = '__init__' + PY_EXT                   #: init-module file name of a python package
 
-DEF_ENCODE_ERRORS: str = 'backslashreplace'     #: default encode error handling for UnicodeEncodeErrors
-DEF_ENCODING: str = 'ascii'
+CFG_EXT = '.cfg'                                #: CFG config file extension
+INI_EXT = '.ini'                                #: INI config file extension
+
+DATE_ISO = "%Y-%m-%d"                           #: ISO string format for date values (e.g. in config files/variables)
+DATE_TIME_ISO = "%Y-%m-%d %H:%M:%S.%f"          #: ISO string format for datetime values
+
+DEF_ENCODE_ERRORS = 'backslashreplace'          #: default encode error handling for UnicodeEncodeErrors
+DEF_ENCODING = 'ascii'
 """ encoding for :func:`force_encoding` that will always work independent from destination (console, file sys, ...).
 """
 
@@ -73,7 +104,7 @@ NAME_PARTS_SEP = '_'                            #: name parts separator characte
 
 
 # using only object() does not provide proper representation string
-class _UNSET:
+class UnsetType:
     """ (singleton) UNSET (type) object class. """
     def __bool__(self):
         """ ensure to be evaluated as False, like None. """
@@ -84,7 +115,7 @@ class _UNSET:
         return 0
 
 
-UNSET = _UNSET()    #: pseudo value used for attributes/arguments if `None` is needed as a valid value
+UNSET = UnsetType()     #: pseudo value used for attributes/arguments if `None` is needed as a valid value
 
 
 def app_name_guess() -> str:
@@ -113,22 +144,26 @@ def build_config_variable_values(*names_defaults: Tuple[str, Any], section: str 
     :return:                    tuple of build config variable values (using the passed default value if not specified
                                 in the :data:`BUILD_CONFIG_FILE` spec file or if the spec file does not exists in cwd).
     """
-    if not os.path.exists(BUILD_CONFIG_FILE):
-        return tuple(def_val for name, def_val in names_defaults)
+    config = None
+    if os.path.exists(BUILD_CONFIG_FILE):
+        try:
+            config = instantiate_config_parser()
+            config.read(BUILD_CONFIG_FILE, 'utf-8')
+        except MissingSectionHeaderError:
+            pass
 
-    config = instantiate_config_parser()
-    config.read(BUILD_CONFIG_FILE, 'utf-8')
-
-    return tuple(config.get(section, name, fallback=def_val) for name, def_val in names_defaults)
+    if config:
+        return tuple(config.get(section, name, fallback=def_val) for name, def_val in names_defaults)
+    return tuple(def_val for name, def_val in names_defaults)
 
 
 def camel_to_snake(name: str) -> str:
     """ convert name from CamelCase to snake_case.
 
-    :param name:                name string in snake case format.
-    :return:                    name in camel case.
+    :param name:                name string in CamelCaseFormat.
+    :return:                    name in snake_case_format.
     """
-    str_parts = list()
+    str_parts = []
     for char in name:
         if char.isupper():
             str_parts.append(NAME_PARTS_SEP + char)
@@ -147,7 +182,7 @@ def duplicates(values: Iterable) -> list:
     """
     seen_set: set = set()
     seen_add = seen_set.add
-    dup_list: list = list()
+    dup_list: list = []
     dup_add = dup_list.append
     for item in values:
         if item in seen_set:
@@ -196,6 +231,16 @@ def instantiate_config_parser() -> ConfigParser:
     return cfg_parser
 
 
+@contextmanager
+def in_wd(new_cwd: str) -> Generator[None, None, None]:
+    cur_dir = os.getcwd()
+    try:
+        os.chdir(new_cwd)
+        yield
+    finally:
+        os.chdir(cur_dir)
+
+
 def norm_line_sep(text: str) -> str:
     """ convert any combination of line separators in the passed :paramref:`~norm_line_sep.text` to new-line characters.
 
@@ -205,19 +250,60 @@ def norm_line_sep(text: str) -> str:
     return text.replace('\r\n', '\n').replace('\r', '\n')
 
 
-def norm_name(name: str) -> str:
-    """ normalize name to contain only alpha-numeric and underscore chars (e.g. for a variable-/method-/file-name).
+def norm_name(name: str, allow_num_prefix: bool = False) -> str:
+    """ normalize name to start with a letter/alphabetic/underscore and to contain only alpha-numeric/underscore chars.
 
     :param name:                any string to be converted into a valid variable/method/file/... name.
-    :return:                    cleaned/normalized/converted name string.
+    :param allow_num_prefix:    pass True to allow leading digits in the returned normalized name.
+    :return:                    cleaned/normalized/converted name string (e.g. for a variable-/method-/file-name).
     """
-    str_parts = list()
+    str_parts: List[str] = []
     for char in name:
-        if char.isalnum():
+        if char.isalpha() or char.isalnum() and (allow_num_prefix or str_parts):
             str_parts.append(char)
         else:
             str_parts.append('_')
     return "".join(str_parts)
+
+
+def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "", remove_dots: bool = True,
+              resolve_sym_links: bool = True) -> str:
+    """ normalize path, replacing `..`/`.` parts or the tilde character (for home folder) and transform to relative/abs.
+
+    :param path:                path string to normalize/transform.
+    :param make_absolute:       pass False to not convert path to an absolute path.
+    :param remove_base_path:    pass a valid base path to return a relative path, even if the argument values of
+                                :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links` are
+                                `True`.
+    :param remove_dots:         pass False to not replace/remove the `.` and `..` placeholders.
+    :param resolve_sym_links:   pass False to not resolve symbolic links, passing True implies a `True` value also for
+                                the :paramref:`~norm_path.make_absolute` argument.
+    :return:                    normalized path string: absolute if :paramref:`~norm_path.remove_base_path` is empty and
+                                either :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links`
+                                is `True`; relative if :paramref:`~norm_path.remove_base_path` is a base path of
+                                :paramref:`~norm_path.path` or if :paramref:`~norm_path.path` got passed as relative
+                                path and neither :paramref:`~norm_path.make_absolute` nor
+                                :paramref:`~norm_path.resolve_sym_links` is `True`.
+
+    .. hint:: the :func:`~ae.paths.normalize` function additionally replaces :data:`~ae.paths.PATH_PLACEHOLDERS`.
+
+    """
+    path = path or "."
+    if path[0] == "~":
+        path = os.path.expanduser(path)
+
+    if remove_dots:
+        path = os.path.normpath(path)
+
+    if resolve_sym_links:
+        path = os.path.realpath(path)
+    elif make_absolute:
+        path = os.path.abspath(path)
+
+    if remove_base_path:
+        path = os.path.relpath(path, remove_base_path)
+
+    return path
 
 
 def now_str(sep: str = "") -> str:
@@ -313,6 +399,61 @@ def os_user_name() -> str:
     return getpass.getuser()
 
 
+def project_main_file(import_name: str, project_path: str = "") -> str:
+    """ determine the main module file path of a package project, containing the package __version__ module variable.
+
+    :param import_name:         import name of the module/package (including namespace prefixes for namespace packages).
+    :param project_path:        optional path where the project of the package/module is situated. not needed if the
+                                current working directory is the root folder of either the import_name project or of a
+                                sister project (under the same project parent folder).
+    :return:                    absolute file path/name of main module or empty string if no main/version file found.
+    """
+    *namespace_dirs, portion_name = import_name.split('.')
+    project_path = norm_path(project_path)
+    package_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
+    module_paths = [os.path.join(project_path, *namespace_dirs)]
+    if os.path.basename(project_path) != package_name:
+        module_paths.append(os.path.join(os.path.dirname(project_path), package_name, *namespace_dirs))
+    main_file_paths = (('main' + PY_EXT, ),
+                       ('__main__' + PY_EXT, ),
+                       ('__init__' + PY_EXT, ),
+                       (portion_name + PY_EXT, ),
+                       (portion_name, PY_INIT))
+    for module_path in module_paths:
+        for path_ext in main_file_paths:
+            main_file = os.path.join(module_path, *path_ext)
+            if os.path.isfile(main_file):
+                return main_file
+    return ""
+
+
+def read_file(file_path: str, extra_mode: str = "", encoding: Optional[str] = None, error_handling: str = 'ignore'
+              ) -> AnyStr:
+    """ returning content of the text/binary file specified by file_path argument as string.
+
+    :param file_path:           file path/name to load into a string or a bytes array.
+    :param extra_mode:          extra open mode flag characters appended to "r" onto open() mode argument. pass "b" to
+                                read the content of a binary file returned as bytes array. in binary mode the argument
+                                passed in :paramref:`~read_file.error_handling` will be ignored.
+    :param encoding:            encoding used to load and convert/interpret the file content.
+    :param error_handling:      for files opened in text mode pass `'strict'` or `None` to return `None` (instead of an
+                                empty string) for the cases where either a decoding `ValueError` exception or any
+                                `OSError`, `FileNotFoundError` or `PermissionError` exception got raised.
+                                the default value `'ignore'` will ignore any decoding errors (missing some characters)
+                                and will return an empty string on any file/os exception. this parameter will be ignored
+                                if the :paramref:`~read_file.extra_mode` argument contains the 'b' character (to read
+                                the file content as binary/bytes-array).
+    :return:                    file content string or bytes array.
+    :raises FileNotFoundError:  if file does not exist.
+    :raises OSError:            if :paramref:`~read_file.file_path` is misspelled or contains invalid characters.
+    :raises PermissionError:    if current OS user account lacks permissions to read the file content.
+    :raises ValueError:         on decoding errors.
+    """
+    extra_kwargs = {} if "b" in extra_mode else {'errors': error_handling}
+    with open(file_path, "r" + extra_mode, encoding=encoding, **extra_kwargs) as file_handle:           # type: ignore
+        return file_handle.read()
+
+
 def round_traditional(num_value: float, num_digits: int = 0) -> float:
     """ round numeric value traditional.
 
@@ -351,7 +492,7 @@ def sys_env_dict() -> Dict[str, Any]:
 
     .. hint:: see also https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     """
-    sed: Dict[str, Any] = dict()
+    sed: Dict[str, Any] = {}
 
     sed['python_ver'] = sys.version.replace('\n', ' ')
     sed['platform'] = os_platform
@@ -400,4 +541,22 @@ def to_ascii(unicode_str: str) -> str:
     :return:                    converted string (replaced accents, diacritics, ... into normal ascii characters).
     """
     nfkd_form = unicodedata.normalize('NFKD', unicode_str)
-    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('ß', "ss").replace('€', "Euro")
+
+
+def write_file(file_path: str, content: AnyStr, extra_mode: str = "", encoding: Optional[str] = None):
+    """ (over)write the file specified by :paramref:`~write_file.file_path` with text or binary/bytes content.
+
+    :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
+    :param content:             new file content either passed as string or list of line strings (will be
+                                concatenated with the line separator of the current OS: os.linesep).
+    :param extra_mode:          extra open mode flag characters appended to "w" onto open() mode argument.
+    :param encoding:            encoding used to write/convert/interpret the file content to write.
+    :raises FileExistsError:    if file exists already and is write protected.
+    :raises FileNotFoundError:  if parts of the file path do not exist.
+    :raises OSError:            if :paramref:`~read_file.file_path` is misspelled or contains invalid characters.
+    :raises PermissionError:    if current OS user account lacks permissions to read the file content.
+    :raises ValueError:         on decoding errors.
+    """
+    with open(file_path, 'w' + extra_mode, encoding=encoding) as file_handle:
+        file_handle.write(content)

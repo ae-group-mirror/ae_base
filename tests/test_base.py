@@ -8,10 +8,11 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    BUILD_CONFIG_FILE, UNSET, app_name_guess, build_config_variable_values, camel_to_snake, duplicates, env_str,
+    BUILD_CONFIG_FILE, TESTS_FOLDER, UNSET, app_name_guess, build_config_variable_values, camel_to_snake, duplicates,
+    env_str,
     force_encoding,
-    instantiate_config_parser, norm_line_sep, norm_name, now_str, round_traditional, snake_to_camel,
-    sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii)
+    instantiate_config_parser, norm_line_sep, norm_name, now_str, read_file, round_traditional, snake_to_camel,
+    sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii, write_file)
 
 
 def test_unset_truthiness():
@@ -134,6 +135,9 @@ class TestHelpers:
         assert norm_name("any_name") == "any_name"
         assert norm_name("äáßñìÄÏÜ") == "äáßñìÄÏÜ"
         assert norm_name("@special/chars!:;-`¡'´") == "_special_chars________"
+        assert norm_name("abc123") == "abc123"
+        assert norm_name("123abc") == "_23abc"
+        assert norm_name("123abc", allow_num_prefix=True) == "123abc"
 
     def test_now_str(self):
         assert len(now_str()) == 20
@@ -202,6 +206,12 @@ class TestHelpers:
         print(os_user_name())
         assert os_user_name()
 
+    def test_read_file(self):
+        with open(__file__) as file_handle:
+            content = file_handle.read()
+        assert read_file(__file__) == content
+        assert read_file(__file__, extra_mode="b") == bytes(content, 'utf8')
+
     def test_round_traditional(self):
         assert round_traditional(1.01) == 1
         assert round_traditional(10.1, -1) == 10
@@ -241,4 +251,43 @@ class TestHelpers:
         assert 'TstAdd' in ret
 
     def test_to_ascii(self):
-        assert to_ascii('äöü') == 'aou'
+        assert to_ascii('áéí óú') == 'aei ou'
+        assert to_ascii('ÁÉÍ ÓÚ') == 'AEI OU'
+
+        assert to_ascii('àèì òù') == 'aei ou'
+        assert to_ascii('ÀÈÌ ÒÙ') == 'AEI OU'
+
+        assert to_ascii('äëï öü') == 'aei ou'
+        assert to_ascii('ÄËÏ ÖÜ') == 'AEI OU'
+
+        assert to_ascii('âêî ôû') == 'aei ou'
+        assert to_ascii('ÂÊÎ ÔÛ') == 'AEI OU'
+
+        assert to_ascii('ß') == 'ss'
+        assert to_ascii('€') == 'Euro'
+
+    def test_write_file_as_text(self):
+        test_file = os.path.join(TESTS_FOLDER, 'tst_file_written.ext')
+        content = "any content"
+        assert not os.path.exists(test_file)
+        try:
+            write_file(test_file, content)
+            assert os.path.exists(test_file)
+            assert os.path.isfile(test_file)
+            assert read_file(test_file) == content
+        finally:
+            if os.path.exists(test_file):
+                os.remove(test_file)
+
+    def test_write_file_as_binary(self):
+        test_file = os.path.join(TESTS_FOLDER, 'bin_file_written.ext')
+        content = b"any content"
+        assert not os.path.exists(test_file)
+        try:
+            write_file(test_file, content, extra_mode="b")
+            assert os.path.exists(test_file)
+            assert os.path.isfile(test_file)
+            assert read_file(test_file, extra_mode="b") == content
+        finally:
+            if os.path.exists(test_file):
+                os.remove(test_file)
