@@ -25,7 +25,7 @@ if __name__ == "__main__":
         author="Andi Ecker",
         author_email="aecker2@gmail.com",
         description=package_name + " portion of python application environment namespace package",
-        license=nev['portion_license'],
+        license=nev['project_license'],
         long_description=file_content("README.md"),
         long_description_content_type="text/markdown",
         url=f"{nev['repo_root']}/{package_name}",
