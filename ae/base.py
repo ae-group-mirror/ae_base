@@ -71,12 +71,12 @@ import socket
 import sys
 import unicodedata
 
-from configparser import ConfigParser, ExtendedInterpolation, MissingSectionHeaderError
+from configparser import ConfigParser, ExtendedInterpolation
 from contextlib import contextmanager
 from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple, cast
 
 
-__version__ = '0.2.18'
+__version__ = '0.2.19'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -144,17 +144,13 @@ def build_config_variable_values(*names_defaults: Tuple[str, Any], section: str 
     :return:                    tuple of build config variable values (using the passed default value if not specified
                                 in the :data:`BUILD_CONFIG_FILE` spec file or if the spec file does not exists in cwd).
     """
-    config = None
-    if os.path.exists(BUILD_CONFIG_FILE):
-        try:
-            config = instantiate_config_parser()
-            config.read(BUILD_CONFIG_FILE, 'utf-8')
-        except MissingSectionHeaderError:
-            pass
+    if not os.path.exists(BUILD_CONFIG_FILE):
+        return tuple(def_val for name, def_val in names_defaults)
 
-    if config:
-        return tuple(config.get(section, name, fallback=def_val) for name, def_val in names_defaults)
-    return tuple(def_val for name, def_val in names_defaults)
+    config = instantiate_config_parser()
+    config.read(BUILD_CONFIG_FILE, 'utf-8')
+
+    return tuple(config.get(section, name, fallback=def_val) for name, def_val in names_defaults)
 
 
 def camel_to_snake(name: str) -> str:
@@ -233,6 +229,10 @@ def instantiate_config_parser() -> ConfigParser:
 
 @contextmanager
 def in_wd(new_cwd: str) -> Generator[None, None, None]:
+    """ context manager to temporary switch the current working directory / cwd.
+
+    :param new_cwd:             path to the directory to switch to (within the context/with block).
+    """
     cur_dir = os.getcwd()
     try:
         os.chdir(new_cwd)
@@ -301,6 +301,8 @@ def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "",
         path = os.path.abspath(path)
 
     if remove_base_path:
+        if remove_base_path[0] == "~":
+            remove_base_path = os.path.expanduser(remove_base_path)
         path = os.path.relpath(path, remove_base_path)
 
     return path
@@ -408,12 +410,13 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
                                 sister project (under the same project parent folder).
     :return:                    absolute file path/name of main module or empty string if no main/version file found.
     """
+    join = os.path.join
     *namespace_dirs, portion_name = import_name.split('.')
     project_path = norm_path(project_path)
     package_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
-    module_paths = [os.path.join(project_path, *namespace_dirs)]
+    module_paths = [join(project_path, *namespace_dirs)]
     if os.path.basename(project_path) != package_name:
-        module_paths.append(os.path.join(os.path.dirname(project_path), package_name, *namespace_dirs))
+        module_paths.append(join(os.path.dirname(project_path), package_name, *namespace_dirs))
     main_file_paths = (('main' + PY_EXT, ),
                        ('__main__' + PY_EXT, ),
                        ('__init__' + PY_EXT, ),
@@ -421,7 +424,7 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
                        (portion_name, PY_INIT))
     for module_path in module_paths:
         for path_ext in main_file_paths:
-            main_file = os.path.join(module_path, *path_ext)
+            main_file = join(module_path, *path_ext)
             if os.path.isfile(main_file):
                 return main_file
     return ""
@@ -492,19 +495,20 @@ def sys_env_dict() -> Dict[str, Any]:
 
     .. hint:: see also https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     """
-    sed: Dict[str, Any] = {}
+    sed: Dict[str, Any] = {
+        'python_ver': sys.version.replace('\n', ' '),
+        'platform': os_platform,
+        'argv': sys.argv,
+        'executable': sys.executable,
+        'cwd': os.getcwd(),
+        'frozen': getattr(sys, 'frozen', False),
+        'user_name': os_user_name(),
+        'host_name': os_host_name(),
+        'app_name_guess': app_name_guess(),
+    }
 
-    sed['python_ver'] = sys.version.replace('\n', ' ')
-    sed['platform'] = os_platform
-    sed['argv'] = sys.argv
-    sed['executable'] = sys.executable
-    sed['cwd'] = os.getcwd()
-    sed['frozen'] = getattr(sys, 'frozen', False)
-    if getattr(sys, 'frozen', False):
+    if sed['frozen']:
         sed['bundle_dir'] = getattr(sys, '_MEIPASS', '*#ERR#*')
-    sed['user_name'] = os_user_name()
-    sed['host_name'] = os_host_name()
-    sed['app_name_guess'] = app_name_guess()
 
     return sed
 

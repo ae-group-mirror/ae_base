@@ -8,11 +8,11 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    BUILD_CONFIG_FILE, TESTS_FOLDER, UNSET, app_name_guess, build_config_variable_values, camel_to_snake, duplicates,
-    env_str,
-    force_encoding,
-    instantiate_config_parser, norm_line_sep, norm_name, now_str, read_file, round_traditional, snake_to_camel,
-    sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii, write_file)
+    BUILD_CONFIG_FILE, PY_EXT, TESTS_FOLDER, UNSET,
+    app_name_guess, build_config_variable_values, camel_to_snake, duplicates, env_str, force_encoding, in_wd,
+    instantiate_config_parser, norm_line_sep, norm_name, norm_path, now_str, project_main_file, read_file,
+    round_traditional, snake_to_camel, sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform,
+    os_user_name, to_ascii, write_file)
 
 
 def test_unset_truthiness():
@@ -51,6 +51,19 @@ class TestHelpers:
         )
         assert existing == "default_value1"
         assert not_existing == "default_value2"
+
+        try:
+            write_file(BUILD_CONFIG_FILE, "")
+            existing, not_existing = build_config_variable_values(
+                ('not_existing1', "default_value1"),
+                ('not_existing2', "default_value2"),
+                section="tst_section"
+            )
+            assert existing == "default_value1"
+            assert not_existing == "default_value2"
+        finally:
+            if os.path.exists(BUILD_CONFIG_FILE):
+                os.remove(BUILD_CONFIG_FILE)
 
     def test_camel_to_snake(self):
         assert camel_to_snake("AnyCamelCaseName") == "_Any_Camel_Case_Name"
@@ -119,6 +132,13 @@ class TestHelpers:
         with pytest.raises(TypeError):
             assert force_encoding(s, encoding=cast(str, None)) == '\\xe4\\xf6\\xfc'
 
+    def test_in_wd(self):
+        old_dir = os.getcwd()
+        tst_dir = norm_path(TESTS_FOLDER)
+        with in_wd(TESTS_FOLDER):
+            assert os.getcwd() == tst_dir
+        assert os.getcwd() == old_dir
+
     def test_instantiate_config_parser(self):
         cfg_parser = instantiate_config_parser()
         assert isinstance(cfg_parser, ConfigParser)
@@ -138,6 +158,28 @@ class TestHelpers:
         assert norm_name("abc123") == "abc123"
         assert norm_name("123abc") == "_23abc"
         assert norm_name("123abc", allow_num_prefix=True) == "123abc"
+
+    def test_norm_path(self):
+        new_folder = "non_existent_folder"
+        
+        assert norm_path(".") == os.getcwd()
+        assert norm_path(".", resolve_sym_links=False) == os.getcwd()
+        assert norm_path(".", make_absolute=False) == os.getcwd()
+        assert norm_path(".", make_absolute=False, remove_base_path=os.getcwd()) == "."
+
+        assert norm_path(new_folder) == os.path.join(os.getcwd(), new_folder)
+        assert norm_path(new_folder, resolve_sym_links=False) == os.path.join(os.getcwd(), new_folder)
+        assert norm_path(new_folder, make_absolute=False) == os.path.join(os.getcwd(), new_folder)
+        assert norm_path(new_folder, make_absolute=False, remove_base_path=os.getcwd()) == new_folder
+
+        assert norm_path(os.path.join(TESTS_FOLDER, "..")) == os.getcwd()
+        assert norm_path(os.path.join(TESTS_FOLDER, ".."), resolve_sym_links=False) == os.getcwd()
+        assert norm_path(os.path.join(TESTS_FOLDER, ".."), make_absolute=False) == os.getcwd()
+        assert norm_path(os.path.join("ae", ".."), make_absolute=False, remove_base_path=os.getcwd()) == "."
+
+        assert norm_path("~") != ""
+        assert norm_path(os.path.join("~", new_folder)).endswith(new_folder)
+        assert norm_path(os.path.join("~", new_folder), remove_base_path="~").endswith(new_folder)
 
     def test_now_str(self):
         assert len(now_str()) == 20
@@ -205,6 +247,10 @@ class TestHelpers:
     def test_os_user_name(self):
         print(os_user_name())
         assert os_user_name()
+
+    def test_project_main_file(self):
+        assert project_main_file("not_existing_xy.tst") == ""
+        assert project_main_file("ae.base") == norm_path(os.path.join("ae", "base" + PY_EXT))
 
     def test_read_file(self):
         with open(__file__) as file_handle:
