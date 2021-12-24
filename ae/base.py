@@ -73,10 +73,10 @@ import unicodedata
 
 from configparser import ConfigParser, ExtendedInterpolation
 from contextlib import contextmanager
-from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple, cast
+from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple
 
 
-__version__ = '0.2.20'
+__version__ = '0.2.21'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -211,7 +211,7 @@ def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF
 
     :return:                    text as str (with all characters checked/converted/replaced to be encode-able).
     """
-    enc_str: bytes = cast(str, text).encode(encoding=encoding, errors=errors) if isinstance(text, str) else text
+    enc_str: bytes = text.encode(encoding=encoding, errors=errors) if isinstance(text, str) else text   # type: ignore
     return enc_str.decode(encoding=encoding)
 
 
@@ -412,11 +412,14 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
     """
     join = os.path.join
     *namespace_dirs, portion_name = import_name.split('.')
-    project_path = norm_path(project_path)
     package_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
-    module_paths = [join(project_path, *namespace_dirs)]
+    project_path = norm_path(project_path)
+    module_paths = []
     if os.path.basename(project_path) != package_name:
         module_paths.append(join(os.path.dirname(project_path), package_name, *namespace_dirs))
+    if namespace_dirs:
+        module_paths.append(join(project_path, *namespace_dirs))
+    module_paths.append(project_path)
     main_file_paths = (('main' + PY_EXT, ),
                        ('__main__' + PY_EXT, ),
                        ('__init__' + PY_EXT, ),

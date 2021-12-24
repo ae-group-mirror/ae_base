@@ -1,5 +1,7 @@
 """ ae.base unit tests """
 import os
+import shutil
+
 import pytest
 import sys
 
@@ -153,6 +155,7 @@ class TestHelpers:
         assert norm_name("anyCamelCaseName") == "anyCamelCaseName"
         assert norm_name("NoUnderScoreOnNone") == "NoUnderScoreOnNone"
         assert norm_name("any_name") == "any_name"
+        # noinspection SpellCheckingInspection
         assert norm_name("äáßñìÄÏÜ") == "äáßñìÄÏÜ"
         assert norm_name("@special/chars!:;-`¡'´") == "_special_chars________"
         assert norm_name("abc123") == "abc123"
@@ -250,7 +253,24 @@ class TestHelpers:
 
     def test_project_main_file(self):
         assert project_main_file("not_existing_xy.tst") == ""
-        assert project_main_file("ae.base") == norm_path(os.path.join("ae", "base" + PY_EXT))
+
+        ae_base_main_file = norm_path(os.path.join("ae", "base" + PY_EXT))
+        assert project_main_file("ae.base") == ae_base_main_file
+        assert project_main_file("ae.base", norm_path("")) == ae_base_main_file
+
+        local_project_dir = os.path.join(TESTS_FOLDER, "ae_base")
+        local_main_file = norm_path(os.path.join(local_project_dir, "main.py"))
+        try:
+            os.makedirs(local_project_dir)
+            write_file(local_main_file, "# main file content")
+            assert project_main_file("ae.base") == ae_base_main_file
+            assert project_main_file("ae.base", norm_path("")) == ae_base_main_file
+            assert project_main_file("ae.base", local_project_dir) == local_main_file
+            assert project_main_file("ae.base", norm_path(local_project_dir)) == local_main_file
+
+        finally:
+            if os.path.isdir(local_project_dir):
+                shutil.rmtree(local_project_dir)
 
     def test_read_file(self):
         with open(__file__) as file_handle:
