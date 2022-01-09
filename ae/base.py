@@ -76,7 +76,7 @@ from contextlib import contextmanager
 from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple
 
 
-__version__ = '0.2.21'
+__version__ = '0.3.21'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
