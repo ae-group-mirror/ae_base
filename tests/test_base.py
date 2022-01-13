@@ -12,7 +12,8 @@ from typing import cast
 from ae.base import (
     BUILD_CONFIG_FILE, PY_EXT, TESTS_FOLDER, UNSET,
     app_name_guess, build_config_variable_values, camel_to_snake, duplicates, env_str, force_encoding, in_wd,
-    instantiate_config_parser, norm_line_sep, norm_name, norm_path, now_str, project_main_file, read_file,
+    instantiate_config_parser, main_file_paths_parts, norm_line_sep, norm_name, norm_path, now_str, project_main_file,
+    read_file,
     round_traditional, snake_to_camel, sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform,
     os_user_name, to_ascii, write_file)
 
@@ -145,6 +146,18 @@ class TestHelpers:
         cfg_parser = instantiate_config_parser()
         assert isinstance(cfg_parser, ConfigParser)
         assert cfg_parser.optionxform is str
+
+    def test_main_file_paths_parts(self):
+        assert isinstance(main_file_paths_parts(""), tuple)
+        assert len(main_file_paths_parts(""))
+        assert isinstance(main_file_paths_parts("")[0], tuple)
+
+        assert any("__init__" + PY_EXT in _ for _ in main_file_paths_parts(""))
+        assert any("__main__" + PY_EXT in _ for _ in main_file_paths_parts(""))
+        assert any("main" + PY_EXT in _ for _ in main_file_paths_parts(""))
+        por_name = "portion_tst_name"
+        assert any(por_name in _ for _ in main_file_paths_parts(por_name))
+        assert any(por_name + PY_EXT in _ for _ in main_file_paths_parts(por_name))
 
     def test_norm_line_sep(self):
         assert norm_line_sep('a\r\nb') == 'a\nb'

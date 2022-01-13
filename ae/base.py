@@ -76,7 +76,7 @@ from contextlib import contextmanager
 from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple
 
 
-__version__ = '0.3.21'
+__version__ = '0.3.22'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -239,6 +239,19 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
         yield
     finally:
         os.chdir(cur_dir)
+
+
+def main_file_paths_parts(portion_name: str) -> Tuple[Tuple[str, ...], ...]:
+    """ determine tuple of supported main/version file name path part tuples.
+
+    :param portion_name:        portion or package name.
+    :return:                    tuple of tuples of main/version file name path parts.
+    """
+    return (('main' + PY_EXT, ),
+            ('__main__' + PY_EXT, ),
+            ('__init__' + PY_EXT, ),
+            (portion_name + PY_EXT, ),
+            (portion_name, PY_INIT))
 
 
 def norm_line_sep(text: str) -> str:
@@ -413,6 +426,8 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
     join = os.path.join
     *namespace_dirs, portion_name = import_name.split('.')
     package_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
+    paths_parts = main_file_paths_parts(portion_name)
+
     project_path = norm_path(project_path)
     module_paths = []
     if os.path.basename(project_path) != package_name:
@@ -420,14 +435,10 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
     if namespace_dirs:
         module_paths.append(join(project_path, *namespace_dirs))
     module_paths.append(project_path)
-    main_file_paths = (('main' + PY_EXT, ),
-                       ('__main__' + PY_EXT, ),
-                       ('__init__' + PY_EXT, ),
-                       (portion_name + PY_EXT, ),
-                       (portion_name, PY_INIT))
+
     for module_path in module_paths:
-        for path_ext in main_file_paths:
-            main_file = join(module_path, *path_ext)
+        for path_parts in paths_parts:
+            main_file = join(module_path, *path_parts)
             if os.path.isfile(main_file):
                 return main_file
     return ""
