@@ -76,7 +76,7 @@ from contextlib import contextmanager
 from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple
 
 
-__version__ = '0.3.22'
+__version__ = '0.3.23'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -85,6 +85,7 @@ TEMPLATES_FOLDER = 'templates'
 """ template folder name, used in template and namespace root projects to maintain and provide common file templates """
 
 BUILD_CONFIG_FILE = 'buildozer.spec'            #: gui app build config file
+PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: prefix of file/folder names to be included into the package_data
 
 PY_EXT = '.py'                                  #: file extension for modules and hooks
 PY_INIT = '__init__' + PY_EXT                   #: init-module file name of a python package
