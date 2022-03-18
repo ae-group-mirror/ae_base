@@ -21,7 +21,7 @@ the string :data:`os_platform` provides the OS where your app is running.
 base helper functions
 ---------------------
 
-the function :func:`duplicates` returns the duplicates of an iterable.
+the function :func:`duplicates` returns the duplicates of an iterable type.
 
 use :func:`env_str` to determine the value of an OS environment variable with automatic variable name conversion. other
 helper functions provided by this namespace portion to determine the values of the most important system environment
@@ -138,12 +138,12 @@ def app_name_guess() -> str:
 
 
 def build_config_variable_values(*names_defaults: Tuple[str, Any], section: str = 'app') -> Tuple[Any, ...]:
-    """ determine build config variable values from the buildozer.spec file in the current directory.
+    """ determine build config variable values from the ``buildozer.spec`` file in the current directory.
 
     :param names_defaults:      tuple of tuples of build config variable names and default values.
     :param section:             name of the spec file section, using 'app' as default.
     :return:                    tuple of build config variable values (using the passed default value if not specified
-                                in the :data:`BUILD_CONFIG_FILE` spec file or if the spec file does not exists in cwd).
+                                in the :data:`BUILD_CONFIG_FILE` spec file or if the spec file does not exist in cwd).
     """
     if not os.path.exists(BUILD_CONFIG_FILE):
         return tuple(def_val for name, def_val in names_defaults)
@@ -170,7 +170,7 @@ def camel_to_snake(name: str) -> str:
 
 
 def duplicates(values: Iterable) -> list:
-    """ determine all duplicates in the passed iterable.
+    """ determine all duplicates in the iterable specified in the :paramref:`.values` argument.
 
     inspired by Ritesh Kumars answer to https://stackoverflow.com/questions/9835762.
 
@@ -192,7 +192,7 @@ def duplicates(values: Iterable) -> list:
 def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     """ determine the string value of an OS environment variable, optionally preventing invalid variable name.
 
-    :param name:                name of a OS environment variable.
+    :param name:                name of an OS environment variable.
     :param convert_name:        pass True to prevent invalid variable names by converting
                                 CamelCase names into SNAKE_CASE, lower-case into
                                 upper-case and all non-alpha-numeric characters into underscore characters.
@@ -219,7 +219,7 @@ def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF
 def instantiate_config_parser() -> ConfigParser:
     """ instantiate and prepare config file parser. """
     cfg_parser = ConfigParser(allow_no_value=True, interpolation=ExtendedInterpolation())
-    # set optionxform to have case sensitive var names (or use 'lambda option: option')
+    # set optionxform to have case-sensitive var names (or use 'lambda option: option')
     # mypy V 0.740 bug - see mypy issue #5062: adding pragma "type: ignore" breaks PyCharm (showing
     # .. inspection warning "Non-self attribute could not be type-hinted"), but
     # .. also cast(Callable[[Arg(str, 'option')], str], str) and # type: ... is not working
@@ -256,7 +256,7 @@ def main_file_paths_parts(portion_name: str) -> Tuple[Tuple[str, ...], ...]:
 
 
 def norm_line_sep(text: str) -> str:
-    """ convert any combination of line separators in the passed :paramref:`~norm_line_sep.text` to new-line characters.
+    """ convert any combination of line separators in the :paramref:`~norm_line_sep.text` arg to new-line characters.
 
     :param text:                string containing any combination of line separators ('\\\\r\\\\n' or '\\\\r').
     :return:                    normalized/converted string with only new-line ('\\\\n') line separator characters.
@@ -265,7 +265,7 @@ def norm_line_sep(text: str) -> str:
 
 
 def norm_name(name: str, allow_num_prefix: bool = False) -> str:
-    """ normalize name to start with a letter/alphabetic/underscore and to contain only alpha-numeric/underscore chars.
+    """ normalize name to start with a letter/alphabetic/underscore and to contain only alphanumeric/underscore chars.
 
     :param name:                any string to be converted into a valid variable/method/file/... name.
     :param allow_num_prefix:    pass True to allow leading digits in the returned normalized name.
@@ -295,7 +295,7 @@ def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "",
     :return:                    normalized path string: absolute if :paramref:`~norm_path.remove_base_path` is empty and
                                 either :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links`
                                 is `True`; relative if :paramref:`~norm_path.remove_base_path` is a base path of
-                                :paramref:`~norm_path.path` or if :paramref:`~norm_path.path` got passed as relative
+                                :paramref:`~norm_path.path` or if :paramref:`~norm_path.path` got specified as relative
                                 path and neither :paramref:`~norm_path.make_absolute` nor
                                 :paramref:`~norm_path.resolve_sym_links` is `True`.
 
@@ -408,9 +408,9 @@ if os_platform == 'android':                                    # pragma: no cov
 
 
 def os_user_name() -> str:
-    """ determine the operating system user name.
+    """ determine the operating system username.
 
-    :return:                    user name string.
+    :return:                    username string.
     """
     return getpass.getuser()
 
@@ -491,7 +491,7 @@ def snake_to_camel(name: str, back_convertible: bool = False) -> str:
 
     :param name:                name string composed of parts separated by an underscore character
                                 (:data:`NAME_PARTS_SEP`).
-    :param back_convertible:    pass `True` to have lower-case character at the begin of the returned name
+    :param back_convertible:    pass `True` to get the first character of the returned name in lower-case
                                 if the snake name has no leading underscore character (and to allow
                                 the conversion between snake and camel case without information loss).
     :return:                    name in camel case.
@@ -572,7 +572,7 @@ def write_file(file_path: str, content: AnyStr, extra_mode: str = "", encoding: 
     :param extra_mode:          open mode flag characters. passed unchanged to the `mode` argument of :func:`open` if
                                 this argument starts with 'a', else this argument value will be appended to 'w'.
     :param encoding:            encoding used to write/convert/interpret the file content to write.
-    :raises FileExistsError:    if file exists already and is write protected.
+    :raises FileExistsError:    if file exists already and is write-protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
     :raises OSError:            if :paramref:`~read_file.file_path` is misspelled or contains invalid characters.
     :raises PermissionError:    if current OS user account lacks permissions to read the file content.
