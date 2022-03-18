@@ -76,7 +76,7 @@ from contextlib import contextmanager
 from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple
 
 
-__version__ = '0.3.23'
+__version__ = '0.3.24'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -569,7 +569,8 @@ def write_file(file_path: str, content: AnyStr, extra_mode: str = "", encoding: 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
     :param content:             new file content either passed as string or list of line strings (will be
                                 concatenated with the line separator of the current OS: os.linesep).
-    :param extra_mode:          extra open mode flag characters appended to "w" onto open() mode argument.
+    :param extra_mode:          open mode flag characters. passed unchanged to the `mode` argument of :func:`open` if
+                                this argument starts with 'a', else this argument value will be appended to 'w'.
     :param encoding:            encoding used to write/convert/interpret the file content to write.
     :raises FileExistsError:    if file exists already and is write protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
@@ -577,5 +578,5 @@ def write_file(file_path: str, content: AnyStr, extra_mode: str = "", encoding: 
     :raises PermissionError:    if current OS user account lacks permissions to read the file content.
     :raises ValueError:         on decoding errors.
     """
-    with open(file_path, 'w' + extra_mode, encoding=encoding) as file_handle:
+    with open(file_path, ('' if extra_mode.startswith('a') else 'w') + extra_mode, encoding=encoding) as file_handle:
         file_handle.write(content)
