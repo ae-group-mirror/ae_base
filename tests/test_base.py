@@ -1,6 +1,7 @@
 """ ae.base unit tests """
 import os
 import shutil
+from types import ModuleType
 
 import pytest
 import sys
@@ -10,10 +11,10 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    BUILD_CONFIG_FILE, PY_EXT, TESTS_FOLDER, UNSET,
-    app_name_guess, build_config_variable_values, camel_to_snake, duplicates, env_str, force_encoding, in_wd,
-    instantiate_config_parser, main_file_paths_parts, norm_line_sep, norm_name, norm_path, now_str, project_main_file,
-    read_file,
+    BUILD_CONFIG_FILE, PY_EXT, PY_INIT, TESTS_FOLDER, UNSET,
+    app_name_guess, build_config_variable_values, camel_to_snake, duplicates, env_str, force_encoding, import_module,
+    in_wd, instantiate_config_parser, main_file_paths_parts, norm_line_sep, norm_name, norm_path, now_str,
+    project_main_file, read_file,
     round_traditional, snake_to_camel, sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform,
     os_user_name, to_ascii, write_file)
 
@@ -135,17 +136,104 @@ class TestHelpers:
         with pytest.raises(TypeError):
             assert force_encoding(s, encoding=cast(str, None)) == '\\xe4\\xf6\\xfc'
 
+    def test_import_module_ae_base(self):
+        mod_ref = import_module('ae.base')
+        assert isinstance(mod_ref, ModuleType)
+        assert getattr(mod_ref, 'TESTS_FOLDER') == TESTS_FOLDER
+
+    def test_import_module_built_ins(self):
+        assert import_module('os') is None
+        assert import_module('textwrap') is None
+
+    def test_import_module_local_module(self):
+        module = "mod_2_tst"
+        mod_file = os.path.join(TESTS_FOLDER, module + PY_EXT)
+        cur_dir = os.getcwd()
+        try:
+            write_file(mod_file, "mod_var = 'mod_var_val'")
+
+            mod_ref = import_module(module, path=mod_file)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
+
+            mod_ref = import_module(TESTS_FOLDER + '.' + module)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
+
+            mod_ref = import_module(module)
+            assert mod_ref is None
+
+            os.chdir(TESTS_FOLDER)
+
+            mod_ref = import_module(module, path=module + PY_EXT)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
+
+            mod_ref = import_module(module)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
+
+        finally:
+            os.chdir(cur_dir)
+            if os.path.isfile(mod_file):
+                os.remove(mod_file)
+
+    def test_import_module_local_package(self):
+        namespace = "zy"
+        portion = "por_2_tst"
+        pkg_root = os.path.join(TESTS_FOLDER, namespace)
+        pkg_path = os.path.join(pkg_root, portion)
+        pkg_file = os.path.join(pkg_path, PY_INIT)
+        cur_dir = os.getcwd()
+        try:
+            os.makedirs(pkg_path)
+            write_file(pkg_file, "pkg_var = 'pkg_var_val'")
+
+            mod_ref = import_module(portion, path=pkg_file)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+            mod_ref = import_module(namespace + '.' + portion, path=pkg_file)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+            mod_ref = import_module(TESTS_FOLDER + '.' + namespace + '.' + portion, path=pkg_file)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+            mod_ref = import_module(TESTS_FOLDER + '.' + namespace + '.' + portion)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+            os.chdir(TESTS_FOLDER)
+
+            mod_ref = import_module(namespace + '.' + portion)
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+            mod_ref = import_module(namespace + '.' + portion, path=os.path.relpath(pkg_file, TESTS_FOLDER))
+            assert isinstance(mod_ref, ModuleType)
+            assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+        finally:
+            os.chdir(cur_dir)
+            if os.path.isdir(pkg_root):
+                shutil.rmtree(pkg_root)
+
+    def test_import_module_not_exists(self):
+        assert import_module('not_existing_import_name') is None
+
+    def test_instantiate_config_parser(self):
+        cfg_parser = instantiate_config_parser()
+        assert isinstance(cfg_parser, ConfigParser)
+        assert cfg_parser.optionxform is str
+
     def test_in_wd(self):
         old_dir = os.getcwd()
         tst_dir = norm_path(TESTS_FOLDER)
         with in_wd(TESTS_FOLDER):
             assert os.getcwd() == tst_dir
         assert os.getcwd() == old_dir
-
-    def test_instantiate_config_parser(self):
-        cfg_parser = instantiate_config_parser()
-        assert isinstance(cfg_parser, ConfigParser)
-        assert cfg_parser.optionxform is str
 
     def test_main_file_paths_parts(self):
         assert isinstance(main_file_paths_parts(""), tuple)

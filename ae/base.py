@@ -64,6 +64,8 @@ demonstrate a typical usage, together with a temporary path, created with the he
 """
 import datetime
 import getpass
+import importlib.abc
+import importlib.util
 import os
 import platform
 import shutil
@@ -73,10 +75,11 @@ import unicodedata
 
 from configparser import ConfigParser, ExtendedInterpolation
 from contextlib import contextmanager
-from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple
+from importlib.machinery import ModuleSpec
+from types import ModuleType
+from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
-
-__version__ = '0.3.24'
+__version__ = '0.3.25'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -214,6 +217,33 @@ def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF
     """
     enc_str: bytes = text.encode(encoding=encoding, errors=errors) if isinstance(text, str) else text   # type: ignore
     return enc_str.decode(encoding=encoding)
+
+
+def import_module(import_name: str, path: Optional[Union[str, UnsetType]] = UNSET) -> Optional[ModuleType]:
+    """ search, import and execute a Python module dynamically without adding it to sys.modules.
+
+    :param import_name:         dot-name of the module to import.
+    :param path:                optional file path of the module to import. if this arg is not specified or has the
+                                default value (:data:`UNSET`), then the path will be determined from the import name.
+                                specify ``None`` to prevent the module search.
+    :return:                    a reference to the loaded module or ``None`` if module could not be imported.
+    """
+    if path is UNSET:
+        path = import_name.replace('.', os.path.sep)
+        path += PY_EXT if os.path.isfile(path + PY_EXT) else os.path.sep + PY_INIT
+    mod_ref = None
+
+    spec = importlib.util.spec_from_file_location(import_name, path)    # type: ignore # silly mypy
+    if isinstance(spec, ModuleSpec):
+        mod_ref = importlib.util.module_from_spec(spec)
+        # added isinstance and imported importlib.abc to suppress PyCharm+mypy inspections
+        if isinstance(spec.loader, importlib.abc.Loader):
+            try:
+                spec.loader.exec_module(mod_ref)
+            except FileNotFoundError:
+                mod_ref = None
+
+    return mod_ref
 
 
 def instantiate_config_parser() -> ConfigParser:
