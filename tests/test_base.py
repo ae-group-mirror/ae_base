@@ -100,7 +100,9 @@ class TestHelpers:
         assert 'setup_kwargs' in pev
         assert 'entry_points' in pev['setup_kwargs']
         assert 'console_scripts' in pev['setup_kwargs']['entry_points']
+        # noinspection PyTypeChecker
         assert pev['setup_kwargs']['entry_points']['console_scripts'] == lst_val
+        # noinspection PyTypeChecker
         assert pev['setup_kwargs']['entry_points']['console_scripts'][0] == str_val
 
         assert pev['untouched_key2'] == "untouched val 2"

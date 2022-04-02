@@ -79,7 +79,7 @@ from importlib.machinery import ModuleSpec
 from types import ModuleType
 from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
-__version__ = '0.3.25'
+__version__ = '0.3.26'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
