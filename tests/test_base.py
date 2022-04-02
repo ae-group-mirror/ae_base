@@ -1,6 +1,7 @@
 """ ae.base unit tests """
 import os
 import shutil
+from collections import OrderedDict
 from types import ModuleType
 
 import pytest
@@ -12,11 +13,10 @@ from typing import cast
 # noinspection PyProtectedMember
 from ae.base import (
     BUILD_CONFIG_FILE, PY_EXT, PY_INIT, TESTS_FOLDER, UNSET,
-    app_name_guess, build_config_variable_values, camel_to_snake, duplicates, env_str, force_encoding, import_module,
-    in_wd, instantiate_config_parser, main_file_paths_parts, norm_line_sep, norm_name, norm_path, now_str,
-    project_main_file, read_file,
-    round_traditional, snake_to_camel, sys_env_dict, sys_env_text, os_host_name, os_local_ip, _os_platform,
-    os_user_name, to_ascii, write_file)
+    app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, duplicates, env_str, force_encoding,
+    import_module, in_wd, instantiate_config_parser, main_file_paths_parts, norm_line_sep, norm_name, norm_path,
+    now_str, project_main_file, read_file, round_traditional, snake_to_camel, sys_env_dict, sys_env_text,
+    os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii, write_file)
 
 
 def test_unset_truthiness():
@@ -76,6 +76,55 @@ class TestHelpers:
         assert camel_to_snake("_under_score") == "_under_score"
         assert camel_to_snake("any_name") == "any_name"
         assert camel_to_snake("@special/chars!") == "@special/chars!"
+
+    def test_deep_dict_update_empty(self):
+        str_val = "str_val"
+        pev = {}
+        upd = {'setup_kwargs': {'entry_points': {'console_scripts': str_val}}}
+
+        deep_dict_update(pev, upd)
+        assert pev
+        assert 'setup_kwargs' in pev
+        assert 'entry_points' in pev['setup_kwargs']
+        assert 'console_scripts' in pev['setup_kwargs']['entry_points']
+        assert pev['setup_kwargs']['entry_points']['console_scripts'] == str_val
+
+    def test_deep_dict_update_half_empty_ordered(self):
+        str_val = "str_val"
+        lst_val = [str_val]
+        pev = OrderedDict({'setup_kwargs': {'untouched_key1': "untouched val 1"}, 'untouched_key2': "untouched val 2"})
+        upd = {'setup_kwargs': {'entry_points': {'console_scripts': lst_val}}}
+
+        deep_dict_update(pev, upd)
+        assert pev
+        assert 'setup_kwargs' in pev
+        assert 'entry_points' in pev['setup_kwargs']
+        assert 'console_scripts' in pev['setup_kwargs']['entry_points']
+        # noinspection PyTypeChecker
+        assert pev['setup_kwargs']['entry_points']['console_scripts'] == lst_val
+        # noinspection PyTypeChecker
+        assert pev['setup_kwargs']['entry_points']['console_scripts'][0] == str_val
+
+        assert pev['untouched_key2'] == "untouched val 2"
+        assert pev['setup_kwargs']['untouched_key1'] == "untouched val 1"
+
+        assert list(pev.keys()) == ['setup_kwargs', 'untouched_key2']
+        assert list(pev['setup_kwargs'].keys()) == ['untouched_key1', 'entry_points']
+
+    def test_deep_dict_update_full(self):
+        str_old = "old_val"
+        str_new = "new_val"
+        lst_val = [str_new]
+        pev = {'setup_kwargs': {'entry_points': {'console_scripts': str_old}}}
+        upd = {'setup_kwargs': {'entry_points': {'console_scripts': lst_val}}}
+
+        deep_dict_update(pev, upd)
+        assert pev
+        assert 'setup_kwargs' in pev
+        assert 'entry_points' in pev['setup_kwargs']
+        assert 'console_scripts' in pev['setup_kwargs']['entry_points']
+        assert pev['setup_kwargs']['entry_points']['console_scripts'] == lst_val
+        assert pev['setup_kwargs']['entry_points']['console_scripts'][0] == str_new
 
     def test_duplicates(self):
         lst = ['a', 3, 'bb', 3, 'ccc', 3]
