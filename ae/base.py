@@ -172,6 +172,24 @@ def camel_to_snake(name: str) -> str:
     return "".join(str_parts)
 
 
+def deep_dict_update(data: dict, update: dict):
+    """ update the optionally nested data dict in-place with the items and sub-items from the update dict.
+
+    :param data:                dict to be updated/extended. non-existing keys of dict-sub-items will be added.
+    :param update:              dict with the [sub-]items to update in the :paramref:`.data` dict.
+
+    .. hint:: the module/portion :mod:`ae.deep` is providing more deep update helper functions.
+
+    """
+    for upd_key, upd_val in update.items():
+        if isinstance(upd_val, dict):
+            if upd_key not in data:
+                data[upd_key] = {}
+            deep_dict_update(data[upd_key], upd_val)
+        else:
+            data[upd_key] = upd_val
+
+
 def duplicates(values: Iterable) -> list:
     """ determine all duplicates in the iterable specified in the :paramref:`.values` argument.
 
