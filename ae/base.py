@@ -79,7 +79,7 @@ from importlib.machinery import ModuleSpec
 from types import ModuleType
 from typing import Any, AnyStr, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
-__version__ = '0.3.26'
+__version__ = '0.3.27'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -296,11 +296,14 @@ def main_file_paths_parts(portion_name: str) -> Tuple[Tuple[str, ...], ...]:
     :param portion_name:        portion or package name.
     :return:                    tuple of tuples of main/version file name path parts.
     """
-    return (('main' + PY_EXT, ),
-            ('__main__' + PY_EXT, ),
-            ('__init__' + PY_EXT, ),
-            (portion_name + PY_EXT, ),
-            (portion_name, PY_INIT))
+    return (
+        ('main' + PY_EXT, ),
+        ('__main__' + PY_EXT, ),
+        (PY_INIT, ),
+        ('main', PY_INIT),          # django main project
+        (portion_name + PY_EXT, ),
+        (portion_name, PY_INIT),
+    )
 
 
 def norm_line_sep(text: str) -> str:
