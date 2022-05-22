@@ -289,12 +289,15 @@ class TestHelpers:
         assert len(main_file_paths_parts(""))
         assert isinstance(main_file_paths_parts("")[0], tuple)
 
-        assert any("__init__" + PY_EXT in _ for _ in main_file_paths_parts(""))
-        assert any("__main__" + PY_EXT in _ for _ in main_file_paths_parts(""))
         assert any("main" + PY_EXT in _ for _ in main_file_paths_parts(""))
+        assert any("__main__" + PY_EXT in _ for _ in main_file_paths_parts(""))
+        assert any(PY_INIT in _ for _ in main_file_paths_parts(""))
         por_name = "portion_tst_name"
         assert any(por_name in _ for _ in main_file_paths_parts(por_name))
         assert any(por_name + PY_EXT in _ for _ in main_file_paths_parts(por_name))
+
+        assert ('main', PY_INIT) in main_file_paths_parts("")
+        assert (por_name, PY_INIT) in main_file_paths_parts(por_name)
 
     def test_norm_line_sep(self):
         assert norm_line_sep('a\r\nb') == 'a\nb'
