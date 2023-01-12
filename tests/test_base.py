@@ -1,22 +1,27 @@
 """ ae.base unit tests """
 import os
-import shutil
-from collections import OrderedDict
-from types import ModuleType
-
 import pytest
+import shutil
 import sys
+import textwrap
 
+from collections import OrderedDict
 from configparser import ConfigParser
+from types import ModuleType
 from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
     BUILD_CONFIG_FILE, PY_EXT, PY_INIT, TESTS_FOLDER, UNSET,
     app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, duplicates, env_str, force_encoding,
-    import_module, in_wd, instantiate_config_parser, main_file_paths_parts, norm_line_sep, norm_name, norm_path,
-    now_str, project_main_file, read_file, round_traditional, snake_to_camel, sys_env_dict, sys_env_text,
+    import_module, in_wd, instantiate_config_parser, main_file_paths_parts, full_stack_trace,
+    module_attr, module_file_path, module_name, norm_line_sep, norm_name, norm_path,
+    now_str, project_main_file, read_file, round_traditional, snake_to_camel,
+    stack_frames, stack_var, stack_vars, sys_env_dict, sys_env_text,
     os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii, write_file)
+
+
+module_test_var = 'module_test_var_val'   # used for stack_var()/try_exec() tests
 
 
 def test_unset_truthiness():
@@ -28,7 +33,7 @@ def test_unset_null_length():
     assert len(UNSET) == 0
 
 
-class TestHelpers:
+class TestBaseHelpers:
     def test_app_name_guess(self):
         assert app_name_guess()     # app.exe name in pytest returning '_jb_pytest_runner'(PyCharm)/'__main__'(console)
         assert app_name_guess() != 'main'
@@ -510,3 +515,254 @@ class TestHelpers:
         finally:
             if os.path.exists(test_file):
                 os.remove(test_file)
+
+
+class TestModuleHelpers:
+    def test_module_attr_callable_with_args(self):
+        namespace = TESTS_FOLDER
+        mod_name = 'test_module_name'
+        att_name = 'test_module_func'
+        module_file = os.path.join(namespace, mod_name + PY_EXT)
+        try:
+            write_file(module_file, f"def {att_name}(*args, **kwargs):\n    return args, kwargs\n")
+            args = (1, '2')
+            kwargs = dict(kwarg1=1, kwarg2='2')
+
+            ret = module_attr(namespace + '.' + mod_name, attr_name=att_name)
+            assert ret
+            assert callable(type(ret))
+
+            call_ret = ret(*args, **kwargs)
+            assert call_ret
+            assert call_ret[0] == args
+            assert call_ret[1] == kwargs
+
+        finally:
+            if os.path.exists(module_file):
+                os.remove(module_file)
+
+        # test already imported module
+        callee = module_attr('textwrap', attr_name='indent')
+        assert callable(callee)
+        assert callee is textwrap.indent
+
+    def test_module_attr_callable_wrong_args(self):
+        namespace = TESTS_FOLDER
+        mod_name = 'test_module_name'
+        att_name = 'test_module_func'
+        module_file = os.path.join(namespace, mod_name + PY_EXT)
+        try:
+            write_file(module_file, f"def {att_name}(arg1, args2, kwarg1='default'):\n    return arg1, arg2, kwarg1\n")
+
+            callee = module_attr(namespace + '.' + mod_name, attr_name=att_name)
+            assert callable(callee)
+
+            args = (1, '2')
+            kwargs = dict(kwarg1=1, kwarg2='2')
+            with pytest.raises(TypeError):
+                callee(*args, **kwargs)
+
+        finally:
+            if os.path.exists(module_file):
+                os.remove(module_file)
+
+    def test_module_attr_imported(self):
+        """ test with module w/ and w/o namespace. """
+        assert isinstance(module_attr('os'), ModuleType)
+        assert isinstance(module_attr('textwrap'), ModuleType)
+        assert isinstance(module_attr('ae.base'), ModuleType)
+
+    def test_module_attr_module_ref(self):
+        namespace = TESTS_FOLDER
+        mod_name = 'test_module_name'
+        module_file = os.path.join(namespace, mod_name + PY_EXT)
+        cur_dir = os.getcwd()
+        try:
+            write_file(module_file, "# empty module")
+
+            ret = module_attr(namespace + '.' + mod_name)
+            assert isinstance(ret, ModuleType)
+
+            os.chdir(namespace)
+
+            ret = module_attr(mod_name)
+            assert isinstance(ret, ModuleType)
+
+        finally:
+            os.chdir(cur_dir)
+            if os.path.exists(module_file):
+                os.remove(module_file)
+
+    def test_module_attr_not_exists_attr(self):
+        """ first test with non-existing module, second test with non-existing function. """
+        namespace = TESTS_FOLDER
+        mod_name = 'test_module_name'
+        att_name = 'test_module_func'
+        module_file = os.path.join(namespace, mod_name + PY_EXT)
+        cur_dir = os.getcwd()
+        try:
+            write_file(module_file, f"""def {att_name}(*args, **kwargs):\n    pass\n""")
+
+            ret = module_attr(namespace + '.' + mod_name, attr_name="not_existing_func_or_attr")
+            assert ret is UNSET
+
+            ret = module_attr(namespace + '.' + mod_name, attr_name=att_name)
+            assert callable(ret)
+
+            os.chdir(namespace)
+
+            ret = module_attr(mod_name)
+            assert ret
+            assert type(ret) is ModuleType
+
+        finally:
+            os.chdir(cur_dir)
+            if os.path.exists(module_file):
+                os.remove(module_file)
+
+    def test_module_attr_not_exists_module(self):
+        """ first test with non-existing module, second test with non-existing function. """
+        mod_name = 'non_existing_test_module_name'
+        att_name = 'non_existing_test_module_func'
+        assert module_attr(mod_name, attr_name=att_name) is None
+
+    def test_module_file_path(self):
+        assert module_file_path()
+        assert module_file_path(lambda: 0)
+
+    def test_module_name(self):
+        assert module_name() == 'test_base'
+        assert module_name('') == 'test_base'
+        assert module_name(cast(str, None)) == 'test_base'
+        assert module_name('_invalid_module_name') == 'test_base'
+        assert module_name('ae.base') == 'test_base'
+        assert module_name(depth=-30) == 'test_base'
+        assert module_name(depth=-2) == 'test_base'
+        assert module_name(depth=-1) == 'test_base'
+        # assert module_name(depth=0) == 'test_base'   # depth=0 is default value
+        # assert module_name(depth=1) == '_pytest.python'
+
+        assert module_name(__name__, depth=-30) == 'ae.base'
+        assert module_name(__name__, depth=-2) == 'ae.base'
+        assert module_name(__name__, depth=-1) == 'ae.base'
+
+        # assert module_name(__name__) == '_pytest.python'                  # depth=0 is the default
+        # assert module_name('test_base') == '_pytest.python'
+        # assert module_name(__name__, depth=1) == '_pytest.python'
+
+
+class TestStackHelpers:
+    def test_full_stack_trace(self):
+        try:
+            raise ValueError
+        except ValueError as ex:
+            # print(full_stack_trace(ex))
+            assert full_stack_trace(ex)
+
+    def test_stack_frames(self):
+        for frame in stack_frames():
+            assert frame
+            assert getattr(frame, 'f_globals')
+            # if pytest runs from terminal then f_locals is missing in the highest frame:
+            # assert getattr(frame, 'f_locals')
+
+    def test_stack_var_module(self):
+        assert module_test_var
+        assert stack_var('module_test_var', depth=-1) == 'module_test_var_val'
+        assert stack_var('module_test_var', depth=0) == 'module_test_var_val'
+        assert stack_var('module_test_var', scope='globals', depth=0) == 'module_test_var_val'
+        assert stack_var('module_test_var', 'ae.base', depth=0) == 'module_test_var_val'
+
+        assert stack_var('module_test_var') is UNSET      # depth==1 (def)
+        assert stack_var('module_test_var', depth=2) is UNSET
+        assert stack_var('module_test_var', scope='locals', depth=0) is UNSET
+        assert stack_var('module_test_var', scope='locals') is UNSET
+        assert stack_var('module_test_var', 'test_base') is UNSET
+        assert stack_var('module_test_var', 'ae.base', 'test_base') is UNSET
+
+    def test_stack_var_func(self):
+        _func_var = 'func_var_val'
+
+        assert stack_var('_func_var', 'ae.base', scope='locals', depth=0) == 'func_var_val'
+        assert stack_var('_func_var', depth=0) == 'func_var_val'
+        assert stack_var('_func_var', scope='locals', depth=0) == 'func_var_val'
+
+        # assert stack_var('_func_var', scope='locals', depth=1) is UNSET
+        assert stack_var('_func_var') is UNSET
+        assert stack_var('_func_var', scope='globals', depth=0) is UNSET
+        assert stack_var('_func_var', 'test_base', scope='locals') is UNSET
+        assert stack_var('_func_var', 'ae.base', 'test_base', scope='locals') is UNSET
+        assert stack_var('_func_var', scope='locals', depth=3) is UNSET
+
+    def test_stack_var_inner_func(self):
+        def _inner_func():
+            _inner_var = 'inner_var_val'
+            assert stack_var('_inner_var', depth=-1) == 'inner_var_val'
+            assert stack_var('_inner_var', depth=0) == 'inner_var_val'
+            assert stack_var('_inner_var', scope='locals', depth=0) == 'inner_var_val'
+            assert stack_var('_inner_var', 'ae.base', scope='locals', depth=0) == 'inner_var_val'
+            assert stack_var('_inner_var', 'ae.base', 'xxx yyy', scope='locals', depth=0) == 'inner_var_val'
+
+            assert stack_var('_inner_var') is UNSET     # depth==1 (def)
+            assert stack_var('_inner_var', depth=2) is UNSET
+            assert stack_var('_inner_var', scope='globals', depth=0) is UNSET
+            assert stack_var('_inner_var', 'test_base', scope='locals', depth=0) is UNSET
+
+            assert stack_var('_outer_var') == 'outer_var_val'
+            assert stack_var('_outer_var', depth=0) == 'outer_var_val'
+            assert stack_var('_outer_var', 'ae.base', scope='locals') == 'outer_var_val'
+            assert stack_var('_outer_var', scope='locals') == 'outer_var_val'
+            assert stack_var('_outer_var', scope='locals', depth=0) == 'outer_var_val'
+
+            assert stack_var('_outer_var', scope='locals', depth=2) is UNSET
+            assert stack_var('_outer_var', 'test_base', scope='locals') is UNSET
+            assert stack_var('_outer_var', 'ae.base', 'test_base', scope='locals') is UNSET
+
+            assert stack_var('module_test_var') == 'module_test_var_val'
+            assert stack_var('module_test_var', scope='globals') == 'module_test_var_val'
+
+            assert stack_var('module_test_var', depth=2) is UNSET
+            assert stack_var('module_test_var', scope='locals') is UNSET
+            assert stack_var('module_test_var', 'test_base') is UNSET
+            assert stack_var('module_test_var', 'ae.base', 'test_base') is UNSET
+
+        _outer_var = 'outer_var_val'
+        _inner_func()
+
+        assert stack_var('_outer_var', depth=0) == 'outer_var_val'
+        assert stack_var('_outer_var', 'ae.base', scope='locals', depth=0) == 'outer_var_val'
+        assert stack_var('_outer_var', scope='locals', depth=0) == 'outer_var_val'
+
+        assert stack_var('_outer_var') is UNSET
+        assert stack_var('_outer_var', scope='locals') is UNSET
+        assert stack_var('_outer_var', scope='locals', depth=2) is UNSET
+        assert stack_var('_outer_var', 'test_base') is UNSET
+
+        assert stack_var('module_test_var', depth=0) == 'module_test_var_val'
+        assert stack_var('module_test_var', depth=0, scope='globals') == 'module_test_var_val'
+
+        assert stack_var('module_test_var') is UNSET
+        assert stack_var('module_test_var', depth=2) is UNSET
+        assert stack_var('module_test_var', depth=3) is UNSET
+        assert stack_var('module_test_var', scope='locals', depth=0) is UNSET
+        assert stack_var('module_test_var', 'test_base') is UNSET
+        assert stack_var('module_test_var', 'ae.base', 'test_base') is UNSET
+
+    def test_stack_vars(self):
+        local_var = "loc_var_val"
+        glo, loc, deep = stack_vars(min_depth=0, max_depth=1)
+        assert deep == 1
+        assert 'local_var' in loc
+        assert loc['local_var'] == local_var
+
+        glo, loc, deep = stack_vars(max_depth=3)
+        assert deep == 3
+
+        glo, loc, deep = stack_vars(min_depth=0, find_name='module_test_var')    # min_depth needed for this stack frame
+        assert glo.get('module_test_var') == 'module_test_var_val'
+
+        glo, loc, deep = stack_vars(find_name='module_test_var')                 # min_depth default == 1
+        assert glo.get('module_test_var') is None
+
+        glo, loc, deep = stack_vars(min_depth=2, find_name='module_test_var')    # min_depth needed for this stack frame
+        assert glo.get('module_test_var') is None
