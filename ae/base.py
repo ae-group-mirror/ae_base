@@ -95,7 +95,7 @@ from types import ModuleType
 from typing import Any, AnyStr, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 
-__version__ = '0.3.28'
+__version__ = '0.3.29'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -122,7 +122,7 @@ DEF_ENCODING = 'ascii'
 
 NAME_PARTS_SEP = '_'                            #: name parts separator character, e.g. for :func:`norm_name`
 
-SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.inspector', 'ae.core', 'ae.console', 'ae.gui_app',
+SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.dynamicod', 'ae.core', 'ae.console', 'ae.gui_app',
                    'ae.gui_help', 'ae.kivy_app', 'ae.enaml_app',    # removed in V 0.1.4: 'ae.lisz_app_data',
                    'ae.beeware_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
                    'ae.qpython_app', 'ae.appjar_app',
