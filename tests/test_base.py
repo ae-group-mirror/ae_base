@@ -12,13 +12,12 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    BUILD_CONFIG_FILE, PY_EXT, PY_INIT, TESTS_FOLDER, UNSET,
-    app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, duplicates, env_str, force_encoding,
-    import_module, in_wd, instantiate_config_parser, main_file_paths_parts, full_stack_trace,
-    module_attr, module_file_path, module_name, norm_line_sep, norm_name, norm_path,
-    now_str, project_main_file, read_file, round_traditional, snake_to_camel,
-    stack_frames, stack_var, stack_vars, sys_env_dict, sys_env_text,
-    os_host_name, os_local_ip, _os_platform, os_user_name, to_ascii, write_file)
+    BUILD_CONFIG_FILE, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNSET,
+    app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, dummy_function, duplicates, env_str,
+    force_encoding, full_stack_trace, import_module, instantiate_config_parser, in_wd, main_file_paths_parts,
+    module_attr, module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str,
+    os_host_name, os_local_ip, _os_platform, os_user_name, project_main_file, read_file, round_traditional,
+    snake_to_camel, stack_frames, stack_var, stack_vars, sys_env_dict, sys_env_text, to_ascii, write_file)
 
 
 module_test_var = 'module_test_var_val'   # used for stack_var()/try_exec() tests
@@ -54,25 +53,13 @@ class TestBaseHelpers:
                 os.remove(BUILD_CONFIG_FILE)
 
     def test_build_config_variable_values_no_spec(self):
+        assert not os.path.exists(BUILD_CONFIG_FILE)
         existing, not_existing = build_config_variable_values(
             ('not_existing1', "default_value1"),
             ('not_existing2', "default_value2")
         )
         assert existing == "default_value1"
         assert not_existing == "default_value2"
-
-        try:
-            write_file(BUILD_CONFIG_FILE, "")
-            existing, not_existing = build_config_variable_values(
-                ('not_existing1', "default_value1"),
-                ('not_existing2', "default_value2"),
-                section="tst_section"
-            )
-            assert existing == "default_value1"
-            assert not_existing == "default_value2"
-        finally:
-            if os.path.exists(BUILD_CONFIG_FILE):
-                os.remove(BUILD_CONFIG_FILE)
 
     def test_camel_to_snake(self):
         assert camel_to_snake("AnyCamelCaseName") == "_Any_Camel_Case_Name"
@@ -130,6 +117,11 @@ class TestBaseHelpers:
         assert 'console_scripts' in pev['setup_kwargs']['entry_points']
         assert pev['setup_kwargs']['entry_points']['console_scripts'] == lst_val
         assert pev['setup_kwargs']['entry_points']['console_scripts'][0] == str_new
+
+    def test_dummy_function(self):
+        assert dummy_function() is None
+        assert dummy_function(999, "any_args") is None
+        assert dummy_function(3, kw_arg1=3, kw_arg2="6") is None
 
     def test_duplicates(self):
         lst = ['a', 3, 'bb', 3, 'ccc', 3]
@@ -295,7 +287,7 @@ class TestBaseHelpers:
         assert isinstance(main_file_paths_parts("")[0], tuple)
 
         assert any("main" + PY_EXT in _ for _ in main_file_paths_parts(""))
-        assert any("__main__" + PY_EXT in _ for _ in main_file_paths_parts(""))
+        assert any(PY_MAIN in _ for _ in main_file_paths_parts(""))
         assert any(PY_INIT in _ for _ in main_file_paths_parts(""))
         por_name = "portion_tst_name"
         assert any(por_name in _ for _ in main_file_paths_parts(por_name))

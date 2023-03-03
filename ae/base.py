@@ -2,8 +2,8 @@
 basic constants, helper functions and context manager
 =====================================================
 
-this module is pure python and has no external dependencies. apart from providing base constants, common helper
-functions and context managers, it is also patching the :mod:`shutil` module to prevent crashes on Android OS.
+this module is pure python, has no external dependencies, and is providing base constants, common helper
+functions and context managers.
 
 
 base constants
@@ -15,20 +15,23 @@ ISO format strings for `date` and `datetime` values are provided by the constant
 the :data:`UNSET` constant is useful in cases where `None` is a valid data value and another special value is needed
 to specify that e.g. an argument or attribute has no (valid) value or did not get specified/passed.
 
-the string :data:`os_platform` provides the OS where your app is running.
+default values to compile file and folder names for a package or an app project are provided by the constants:
+:data:`DOCS_FOLDER`, :data:`TESTS_FOLDER`, :data:`TEMPLATES_FOLDER`, :data:`BUILD_CONFIG_FILE`,
+:data:`PACKAGE_INCLUDE_FILES_PREFIX`, :data:`PY_EXT`, :data:`PY_INIT`, :data:`PY_MAIN`, :data:`CFG_EXT`
+and :data:`INI_EXT`.
+
+the constants :data:`PACKAGE_NAME`, :data:`PACKAGE_DOMAIN` and :data:`PERMISSIONS` are mainly used for apps running
+on mobile devices. to avoid redundancies, these values get loaded from the
+:data:`build config file <BUILD_CONFIG_FILE>` - if it exists in the current working directory.
 
 
 base helper functions
 ---------------------
 
+to write more compact and readable code for the most common file I/O operations, the helper functions :func:`read_file`
+and :func:`write_file` are wrapping Python's built-in :func:`open` function and its context manager.
+
 the function :func:`duplicates` returns the duplicates of an iterable type.
-
-use :func:`env_str` to determine the value of an OS environment variable with automatic variable name conversion. other
-helper functions provided by this namespace portion to determine the values of the most important system environment
-variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
-
-:func:`app_name_guess` guesses the name of o running Python application from the application environment, with the help
-of :func:`build_config_variable_values`, which determines config-variable-values from the app's build spec file.
 
 :func:`norm_line_sep` is converting any combination of line separators of a string to a single new-line character.
 
@@ -48,17 +51,61 @@ the function :func:`instantiate_config_parser` ensures that the :class:`~configp
 correctly configured, e.g. to support case-sensitive config variable names and to use :class:`ExtendedInterpolation` for
 the interpolation argument.
 
+:func:`app_name_guess` guesses the name of o running Python application from the application environment, with the help
+of :func:`build_config_variable_values`, which determines config-variable-values from the build spec file of an app
+project.
+
+
+operating system constants and helpers
+--------------------------------------
+
+the string :data:`os_platform` provides the OS where your app is running, extending Python's :func:`sys.platform`
+for mobile platforms like Android and iOS.
+
+:func:`os_host_name`, :func:`os_local_ip` and :func:`os_user_name` are determining machine and user information from
+the OS.
+
+use :func:`env_str` to determine the value of an OS environment variable with automatic variable name conversion. other
+helper functions provided by this namespace portion to determine the values of the most important system environment
+variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
+
+
+android-specific constants and helper functions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+some helper functions of this module are provided to be used for the Android OS.
+
+the helper function :func:`start_app_service` is starting a service in its own, separate thread.
+with the function :func:`request_app_permissions` you can ensure that all your Android permissions will be
+requested. the module :mod:`ae.kivy.apps` does this automatically on app startup. on other platforms than
+Android it will have no effect to call these functions.
+
+.. note:: importing this module on an Android OS, it is monkey patching the :mod:`shutil` module to prevent crashes.
+
+links to other android code and service examples and documentation:
+
+    * `https://python-for-android.readthedocs.io/en/latest/`__
+    * `https://github.com/kivy/python-for-android/tree/develop/pythonforandroid/recipes/android/src/android`__
+    * `https://github.com/tshirtman/kivy_service_osc/blob/master/src/main.py`__
+    * `https://blog.kivy.org/2014/01/building-a-background-application-on-android-with-kivy/`__
+    * `https://github.com/Android-for-Python/Android-for-Python-Users`__
+    * `https://github.com/Android-for-Python/INDEX-of-Examples`__
+
+big thanks to `Robert Flatt <https://github.com/RobertFlatt>`_ for his investigations, findings and documentations to
+code and build Kivy apps for the Android OS, and to `Gabriel Pettier <https://github.com/tshirtman>`_ for his service
+osc example.
+
 
 generic context manager
 -----------------------
 
-the context manager :func:`in_wd` changes the current working directory in the temporary context. the following example
-demonstrate a typical usage, together with a temporary path, created with the help of Pythons
+the context manager :func:`in_wd` allows to switch the current working directory temporarily. the following
+example demonstrates a typical usage, together with a temporary path, created with the help of Pythons
 :class:`~tempfile.TemporaryDirectory` class::
 
     with tempfile.TemporaryDirectory() as tmp_dir, in_wd(tmp_dir):
+        # within the context the tmp_dir is set as the current working directory
         assert os.getcwd() == tmp_dir
-        # the tmp_dir is set as the current working directory
     # current working directory set back to the original path and the temporary directory got removed
 
 
@@ -95,7 +142,7 @@ from types import ModuleType
 from typing import Any, AnyStr, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 
-__version__ = '0.3.30'
+__version__ = '0.3.31'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -104,10 +151,11 @@ TEMPLATES_FOLDER = 'templates'
 """ template folder name, used in template and namespace root projects to maintain and provide common file templates """
 
 BUILD_CONFIG_FILE = 'buildozer.spec'            #: gui app build config file
-PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: prefix of file/folder names to be included into the package_data
+PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: prefix of file/folder names to be included into setup package_data
 
 PY_EXT = '.py'                                  #: file extension for modules and hooks
 PY_INIT = '__init__' + PY_EXT                   #: init-module file name of a python package
+PY_MAIN = '__main__' + PY_EXT                   #: main-module file name of a python executable
 
 CFG_EXT = '.cfg'                                #: CFG config file extension
 INI_EXT = '.ini'                                #: INI config file extension
@@ -213,6 +261,15 @@ def deep_dict_update(data: dict, update: dict):
             data[upd_key] = upd_val
 
 
+def dummy_function(*_args, **_kwargs):
+    """ null function accepting any arguments and returning None.
+
+    :param _args:               ignored positional arguments.
+    :param _kwargs:             ignored keyword arguments.
+    :return:                    always None.
+    """
+
+
 def duplicates(values: Iterable) -> list:
     """ determine all duplicates in the iterable specified in the :paramref:`.values` argument.
 
@@ -247,6 +304,19 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     return os.environ.get(name)
 
 
+def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
+    """ force/ensure the encoding of text (str or bytes) without any UnicodeDecodeError/UnicodeEncodeError.
+
+    :param text:                text as str/bytes.
+    :param encoding:            encoding (def= :data:`DEF_ENCODING`).
+    :param errors:              encode error handling (def= :data:`DEF_ENCODE_ERRORS`).
+
+    :return:                    text as str (with all characters checked/converted/replaced to be encode-able).
+    """
+    enc_str: bytes = text.encode(encoding=encoding, errors=errors) if isinstance(text, str) else text   # type: ignore
+    return enc_str.decode(encoding=encoding)
+
+
 def full_stack_trace(ex: Exception) -> str:
     """ get full stack trace from an exception.
 
@@ -270,19 +340,6 @@ def full_stack_trace(ex: Exception) -> str:
         for frame in getinnerframes(trace_back):
             ext_ret(frame)
     return ret
-
-
-def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
-    """ force/ensure the encoding of text (str or bytes) without any UnicodeDecodeError/UnicodeEncodeError.
-
-    :param text:                text as str/bytes.
-    :param encoding:            encoding (def= :data:`DEF_ENCODING`).
-    :param errors:              encode error handling (def= :data:`DEF_ENCODE_ERRORS`).
-
-    :return:                    text as str (with all characters checked/converted/replaced to be encode-able).
-    """
-    enc_str: bytes = text.encode(encoding=encoding, errors=errors) if isinstance(text, str) else text   # type: ignore
-    return enc_str.decode(encoding=encoding)
 
 
 def import_module(import_name: str, path: Optional[Union[str, UnsetType]] = UNSET) -> Optional[ModuleType]:
@@ -346,7 +403,7 @@ def main_file_paths_parts(portion_name: str) -> Tuple[Tuple[str, ...], ...]:
     """
     return (
         ('main' + PY_EXT, ),
-        ('__main__' + PY_EXT, ),
+        (PY_MAIN, ),
         (PY_INIT, ),
         ('main', PY_INIT),          # django main project
         (portion_name + PY_EXT, ),
@@ -544,17 +601,6 @@ os_platform = _os_platform()
 this string value gets determined for most of the operating systems with the help of Python's :func:`sys.platform`
 function and additionally detects the operating systems iOS and Android (not supported by Python).
 """
-
-
-if os_platform == 'android':                                    # pragma: no cover
-    # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
-    # 'android' (see # https://bugs.python.org/issue28141 and https://bugs.python.org/issue32073). these functions are
-    # used by shutil.copy2/copy/copytree/move to copy OS-specific file attributes.
-    # although shutil.copytree() and shutil.move() are copying/moving the files correctly when the copy_function
-    # arg is set to :func:`shutil.copyfile`, they will finally also crash afterwards when they try to set the attributes
-    # on the destination root directory.
-    shutil.copymode = lambda *args, **kwargs: None      # print("shutil.copymode ae.base.PATCH", args, kwargs)
-    shutil.copystat = lambda *args, **kwargs: None      # print("shutil.copystat ae.base.PATCH", args, kwargs)
 
 
 def os_user_name() -> str:
@@ -808,3 +854,62 @@ def write_file(file_path: str, content: AnyStr, extra_mode: str = "", encoding: 
     """
     with open(file_path, ('' if extra_mode.startswith('a') else 'w') + extra_mode, encoding=encoding) as file_handle:
         file_handle.write(content)
+
+
+PACKAGE_NAME = stack_var('__name__') or 'unspecified_package'
+PACKAGE_DOMAIN = 'org.test'
+PERMISSIONS = "INTERNET, VIBRATE, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE"
+if os.path.exists(BUILD_CONFIG_FILE):                           # pragma: no cover
+    PACKAGE_NAME, PACKAGE_DOMAIN, PERMISSIONS = build_config_variable_values(
+        ('package.name', PACKAGE_NAME),
+        ('package.domain', PACKAGE_DOMAIN),
+        ('android.permissions', PERMISSIONS))
+elif os_platform == 'android':                                  # pragma: no cover
+    _importing_package = norm_path(stack_var('__file__') or 'empty_package' + PY_EXT)
+    if os.path.basename(_importing_package) in (PY_INIT, PY_MAIN):
+        _importing_package = os.path.dirname(_importing_package)
+    _importing_package = os.path.splitext(os.path.basename(_importing_package))[0]
+    write_file(f'{_importing_package}_debug.log', f"{BUILD_CONFIG_FILE} not bundled - using defaults\n", extra_mode='a')
+
+
+if os_platform == 'android':                                    # pragma: no cover
+    # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
+    # 'android' (see # https://bugs.python.org/issue28141 and https://bugs.python.org/issue32073). these functions are
+    # used by shutil.copy2/copy/copytree/move to copy OS-specific file attributes.
+    # although shutil.copytree() and shutil.move() are copying/moving the files correctly when the copy_function
+    # arg is set to :func:`shutil.copyfile`, they will finally also crash afterwards when they try to set the attributes
+    # on the destination root directory.
+    shutil.copymode = dummy_function
+    shutil.copystat = dummy_function
+
+    # noinspection PyUnresolvedReferences
+    from android.permissions import request_permissions, Permission     # type: ignore # pylint: disable=import-error
+    from jnius import autoclass                                         # type: ignore
+
+    def request_app_permissions():
+        """ request app/service permissions on Android OS. """
+        permissions = []
+        for permission_str in PERMISSIONS.split(','):
+            permission = getattr(Permission, permission_str.strip(), None)
+            if permission:
+                permissions.append(permission)
+        request_permissions(permissions)
+
+    def start_app_service(service_arg: str = "") -> Any:
+        """ start service.
+
+        :param service_arg:     string value to be assigned to environment variable PYTHON_SERVICE_ARGUMENT on start.
+        :return:                service instance.
+
+        see https://github.com/tshirtman/kivy_service_osc/blob/master/src/main.py
+        and https://python-for-android.readthedocs.io/en/latest/services/#arbitrary-scripts-services
+        """
+        service_instance = autoclass(f"{PACKAGE_DOMAIN}.{PACKAGE_NAME}.Service{PACKAGE_NAME.capitalize()}")
+        activity = autoclass('org.kivy.android.PythonActivity').mActivity
+        service_instance.start(activity, service_arg)        # service_arg will be in env var PYTHON_SERVICE_ARGUMENT
+
+        return service_instance
+
+else:
+    request_app_permissions = dummy_function
+    start_app_service = dummy_function
