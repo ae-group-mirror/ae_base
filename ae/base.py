@@ -142,7 +142,7 @@ from types import ModuleType
 from typing import Any, AnyStr, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 
-__version__ = '0.3.31'
+__version__ = '0.3.32'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -170,10 +170,10 @@ DEF_ENCODING = 'ascii'
 
 NAME_PARTS_SEP = '_'                            #: name parts separator character, e.g. for :func:`norm_name`
 
-SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.dynamicod', 'ae.core', 'ae.console', 'ae.gui_app',
-                   'ae.gui_help', 'ae.kivy', 'ae.enaml_app',    # removed in V 0.1.4: 'ae.lisz_app_data',
-                   'ae.beeware_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
-                   'ae.qpython_app', 'ae.appjar_app',
+SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.dynamicod', 'ae.core', 'ae.console', 'ae.gui_app', 'ae.gui_help',
+                   'ae.kivy', 'ae.kivy.apps', 'ae.kivy.behaviors', 'ae.kivy.i18n', 'ae.kivy.tours', 'ae.kivy.widgets',
+                   'ae.enaml_app', 'ae.beeware_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
+                   'ae.qpython_app', 'ae.appjar_app',   # removed in V 0.1.4: 'ae.lisz_app_data',
                    'importlib._bootstrap', 'importlib._bootstrap_external')
 """ skipped modules used as default by :func:`module_name`, :func:`stack_var` and :func:`stack_vars` """
 
@@ -442,8 +442,6 @@ def module_file_path(local_object: Optional[Callable] = None) -> str:
         if file_path:
             return norm_path(file_path)
 
-    # if getattr(sys, 'frozen', False):
-    #    path_without_file = os.getcwd()
     return stack_var('__file__', depth=2) or ""   # or use sys._getframe().f_code.co_filename
 
 
@@ -882,18 +880,24 @@ if os_platform == 'android':                                    # pragma: no cov
     shutil.copymode = dummy_function
     shutil.copystat = dummy_function
 
+    # import permissions module from python-for-android (pythonforandroid/recipes/android/src/android/permissions.py)
     # noinspection PyUnresolvedReferences
     from android.permissions import request_permissions, Permission     # type: ignore # pylint: disable=import-error
     from jnius import autoclass                                         # type: ignore
 
-    def request_app_permissions():
-        """ request app/service permissions on Android OS. """
+    def request_app_permissions(callback: Optional[Callable[[List[Permission], List[bool]], None]] = None):
+        """ request app/service permissions on Android OS.
+
+        :param callback:        optional callback receiving two list arguments with identical length,
+                                the 1st with the requested permissions and
+                                the 2nd with booleans stating if the permission got granted (True) or rejected (False).
+        """
         permissions = []
         for permission_str in PERMISSIONS.split(','):
             permission = getattr(Permission, permission_str.strip(), None)
             if permission:
                 permissions.append(permission)
-        request_permissions(permissions)
+        request_permissions(permissions, callback=callback)
 
     def start_app_service(service_arg: str = "") -> Any:
         """ start service.
