@@ -142,7 +142,7 @@ from types import ModuleType
 from typing import Any, AnyStr, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 
-__version__ = '0.3.32'
+__version__ = '0.3.33'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -151,7 +151,7 @@ TEMPLATES_FOLDER = 'templates'
 """ template folder name, used in template and namespace root projects to maintain and provide common file templates """
 
 BUILD_CONFIG_FILE = 'buildozer.spec'            #: gui app build config file
-PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: prefix of file/folder names to be included into setup package_data
+PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: file/folder names prefix to be included into setup package_data
 
 PY_EXT = '.py'                                  #: file extension for modules and hooks
 PY_INIT = '__init__' + PY_EXT                   #: init-module file name of a python package
@@ -386,10 +386,12 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
     """ context manager to temporary switch the current working directory / cwd.
 
     :param new_cwd:             path to the directory to switch to (within the context/with block).
+                                an empty string gets interpreted as the current working directory.
     """
     cur_dir = os.getcwd()
     try:
-        os.chdir(new_cwd)
+        if new_cwd:             # empty new_cwd results in current working folder (no dir change needed/prevent error)
+            os.chdir(new_cwd)
         yield
     finally:
         os.chdir(cur_dir)
