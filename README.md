@@ -1,6 +1,6 @@
 <!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae V0.3.92 -->
 <!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.tpl_namespace_root V0.3.13 -->
-# base 0.3.33
+# base 0.3.34
 
 [![GitLab develop](https://img.shields.io/gitlab/pipeline/ae-group/ae_base/develop?logo=python)](
     https://gitlab.com/ae-group/ae_base)

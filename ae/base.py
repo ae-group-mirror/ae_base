@@ -139,10 +139,10 @@ from contextlib import contextmanager
 from importlib.machinery import ModuleSpec
 from inspect import getinnerframes, getouterframes, getsourcefile
 from types import ModuleType
-from typing import Any, AnyStr, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 
-__version__ = '0.3.33'
+__version__ = '0.3.34'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -304,7 +304,7 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     return os.environ.get(name)
 
 
-def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
+def force_encoding(text: Union[str, bytes], encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
     """ force/ensure the encoding of text (str or bytes) without any UnicodeDecodeError/UnicodeEncodeError.
 
     :param text:                text as str/bytes.
@@ -313,7 +313,7 @@ def force_encoding(text: AnyStr, encoding: str = DEF_ENCODING, errors: str = DEF
 
     :return:                    text as str (with all characters checked/converted/replaced to be encode-able).
     """
-    enc_str: bytes = text.encode(encoding=encoding, errors=errors) if isinstance(text, str) else text   # type: ignore
+    enc_str: bytes = text.encode(encoding=encoding, errors=errors) if isinstance(text, str) else text
     return enc_str.decode(encoding=encoding)
 
 
@@ -642,7 +642,7 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
 
 
 def read_file(file_path: str, extra_mode: str = "", encoding: Optional[str] = None, error_handling: str = 'ignore'
-              ) -> AnyStr:
+              ) -> Union[str, bytes]:
     """ returning content of the text/binary file specified by file_path argument as string.
 
     :param file_path:           file path/name to load into a string or a bytes array.
@@ -837,7 +837,7 @@ def to_ascii(unicode_str: str) -> str:
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('ß', "ss").replace('€', "Euro")
 
 
-def write_file(file_path: str, content: AnyStr, extra_mode: str = "", encoding: Optional[str] = None):
+def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "", encoding: Optional[str] = None):
     """ (over)write the file specified by :paramref:`~write_file.file_path` with text or binary/bytes content.
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
