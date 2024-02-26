@@ -142,7 +142,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 
-__version__ = '0.3.34'
+__version__ = '0.3.35'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -151,8 +151,9 @@ TEMPLATES_FOLDER = 'templates'
 """ template folder name, used in template and namespace root projects to maintain and provide common file templates """
 
 BUILD_CONFIG_FILE = 'buildozer.spec'            #: gui app build config file
-PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: file/folder names prefix to be included into setup package_data
+PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: file/folder names prefix included into setup package_data/ae_updater
 
+PY_CACHE_FOLDER = '__pycache__'                 #: python cache folder name
 PY_EXT = '.py'                                  #: file extension for modules and hooks
 PY_INIT = '__init__' + PY_EXT                   #: init-module file name of a python package
 PY_MAIN = '__main__' + PY_EXT                   #: main-module file name of a python executable
@@ -323,13 +324,13 @@ def full_stack_trace(ex: Exception) -> str:
     :param ex:                  exception instance.
     :return:                    str with stack trace info.
     """
-    ret = f"Exception {ex!r}. Traceback:\n"
+    ret = f"Exception {ex!r}. Traceback:" + os.linesep
     trace_back = sys.exc_info()[2]
     if trace_back:
         def ext_ret(item):
             """ process traceback frame and add as str to ret """
             nonlocal ret
-            ret += f'File "{item[1]}", line {item[2]}, in {item[3]}\n'
+            ret += f'File "{item[1]}", line {item[2]}, in {item[3]}' + os.linesep
             lines = item[4]  # mypy does not detect item[]
             if lines:
                 for line in lines:
