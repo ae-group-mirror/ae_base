@@ -1,16 +1,16 @@
 <!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae V0.3.92 -->
 <!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.tpl_namespace_root V0.3.13 -->
-# base 0.3.35
+# base 0.3.36
 
 [![GitLab develop](https://img.shields.io/gitlab/pipeline/ae-group/ae_base/develop?logo=python)](
     https://gitlab.com/ae-group/ae_base)
 [![LatestPyPIrelease](
-    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.34?logo=python)](
-    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.34)
+    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.35?logo=python)](
+    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.35)
 [![PyPIVersions](https://img.shields.io/pypi/v/ae_base)](
     https://pypi.org/project/ae-base/#history)
 
->ae namespace module portion base: basic constants, helper functions and context manager.
+>ae_base module 0.3.36.
 
 [![Coverage](https://ae-group.gitlab.io/ae_base/coverage.svg)](
     https://ae-group.gitlab.io/ae_base/coverage/index.html)

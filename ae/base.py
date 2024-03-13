@@ -142,7 +142,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 
-__version__ = '0.3.35'
+__version__ = '0.3.36'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -613,7 +613,7 @@ def os_user_name() -> str:
 
 
 def project_main_file(import_name: str, project_path: str = "") -> str:
-    """ determine the main module file path of a package project, containing the package __version__ module variable.
+    """ determine the main module file path of a project package, containing the project __version__ module variable.
 
     :param import_name:         import name of the module/package (including namespace prefixes for namespace packages).
     :param project_path:        optional path where the project of the package/module is situated. not needed if the
@@ -623,13 +623,13 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
     """
     join = os.path.join
     *namespace_dirs, portion_name = import_name.split('.')
-    package_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
+    project_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
     paths_parts = main_file_paths_parts(portion_name)
 
     project_path = norm_path(project_path)
     module_paths = []
-    if os.path.basename(project_path) != package_name:
-        module_paths.append(join(os.path.dirname(project_path), package_name, *namespace_dirs))
+    if os.path.basename(project_path) != project_name:
+        module_paths.append(join(os.path.dirname(project_path), project_name, *namespace_dirs))
     if namespace_dirs:
         module_paths.append(join(project_path, *namespace_dirs))
     module_paths.append(project_path)
