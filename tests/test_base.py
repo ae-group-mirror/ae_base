@@ -1,5 +1,7 @@
 """ ae.base unit tests """
 import os
+import tempfile
+
 import pytest
 import shutil
 import sys
@@ -12,12 +14,38 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    BUILD_CONFIG_FILE, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNSET,
+    BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNSET,
     app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, dummy_function, duplicates, env_str,
-    force_encoding, full_stack_trace, import_module, instantiate_config_parser, in_wd, main_file_paths_parts,
-    module_attr, module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str,
-    os_host_name, os_local_ip, _os_platform, os_user_name, project_main_file, read_file, round_traditional,
-    snake_to_camel, stack_frames, stack_var, stack_vars, sys_env_dict, sys_env_text, to_ascii, write_file)
+    force_encoding, full_stack_trace, import_module, instantiate_config_parser, in_wd,
+    load_env_var_defaults, load_dotenvs, main_file_paths_parts, module_attr, module_file_path, module_name,
+    norm_line_sep, norm_name, norm_path, now_str, os_host_name, os_local_ip, _os_platform, os_user_name,
+    parse_dotenv, project_main_file, read_file, round_traditional, snake_to_camel, stack_frames, stack_var, stack_vars,
+    sys_env_dict, sys_env_text, to_ascii, write_file)
+
+
+env_var_name = 'env_var_nam1'
+env_var_val = 'value of env var'
+folder_name = 'fdr'
+full_folders = (0, 1, 3)
+
+@pytest.fixture
+def os_env_test_env():
+    """ create .env files to test and backup os.environ. """
+    with tempfile.TemporaryDirectory() as tmp_path:
+        for deep in range(6):
+            file_path = os.path.join(tmp_path, *((folder_name,) * deep))
+            os.makedirs(file_path, exist_ok=True)
+            if deep in full_folders:
+                content = (os.linesep +
+                           env_var_name + "='" + env_var_val + str(deep) + "'")
+                write_file(os.path.join(file_path, DOTENV_FILE_NAME), content)
+
+        old_env = os.environ
+        os.environ = old_env.copy()
+
+        yield tmp_path
+
+        os.environ = old_env
 
 
 module_test_var = 'module_test_var_val'   # used for stack_var()/try_exec() tests
@@ -281,6 +309,51 @@ class TestBaseHelpers:
             assert os.getcwd() == tst_dir
         assert os.getcwd() == old_dir
 
+    def test_load_dotenvs(self, os_env_test_env):
+        assert env_var_name not in os.environ
+        load_dotenvs()
+        assert env_var_name not in os.environ
+
+    def test_load_env_var_defaults_not_loaded(self, os_env_test_env):
+        assert env_var_name not in os.environ
+
+        load_env_var_defaults('/')
+        assert env_var_name not in os.environ
+
+        load_env_var_defaults('.')
+        assert env_var_name not in os.environ
+
+        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 5)))
+        assert env_var_name not in os.environ
+
+        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 6)))    # invalid/too-deep path
+        assert env_var_name not in os.environ
+
+    def test_load_env_var_defaults_load_start_parent_first_no_chain(self, os_env_test_env):
+        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 4)))
+        assert env_var_name in os.environ
+        assert os.environ[env_var_name] == env_var_val + '3'
+
+    def test_load_env_var_defaults_load_start_first_no_chain(self, os_env_test_env):
+        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 3)))
+        assert env_var_name in os.environ
+        assert os.environ[env_var_name] == env_var_val + '3'
+
+    def test_load_env_var_defaults_load_start_parent_first_in_chain(self, os_env_test_env):
+        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 2)))
+        assert env_var_name in os.environ
+        assert os.environ[env_var_name] == env_var_val + '1'
+
+    def test_load_env_var_defaults_load_start_no_parent_first_in_chain(self, os_env_test_env):
+        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 1)))
+        assert env_var_name in os.environ
+        assert os.environ[env_var_name] == env_var_val + '1'
+
+    def test_load_env_var_defaults_load_start_on_second_within_chain(self, os_env_test_env):
+        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 0)))
+        assert env_var_name in os.environ
+        assert os.environ[env_var_name] == env_var_val + '0'
+
     def test_main_file_paths_parts(self):
         assert isinstance(main_file_paths_parts(""), tuple)
         assert len(main_file_paths_parts(""))
@@ -400,6 +473,129 @@ class TestBaseHelpers:
     def test_os_user_name(self):
         print(os_user_name())
         assert os_user_name()
+
+    def test_parse_dotenv_error_space_prefixed_var_name(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write(' var_nam="var val"')
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' not in loaded      # added warning
+
+    def test_parse_dotenv_double_quoted_value(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write('var_nam="var val"')
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val"
+
+    def test_parse_dotenv_single_value(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("var_nam='var val'")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val"
+
+    def test_parse_dotenv_start_parent_first_in_chain(self, os_env_test_env):
+        assert env_var_name not in os.environ
+        file_path = os.path.join(os_env_test_env, folder_name, DOTENV_FILE_NAME)
+        loaded = parse_dotenv(file_path)
+        assert env_var_name in loaded
+        assert loaded[env_var_name] == env_var_val + '1'
+
+    def test_parse_dotenv_space_surrounded_value(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("var_nam   =   var val   ")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val"
+
+    def test_parse_dotenv_unquoted_value(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("var_nam=var val")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val"
+
+    def test_parse_dotenv_var_escaped_double_quote(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write('var_nam="escaped\\"val"')
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == 'escaped"val'
+
+    def test_parse_dotenv_var_empty_value(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("var_nam=")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == ""
+
+    def test_parse_dotenv_var_expands_variables_found_in_values(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("env_var=var val\nvar_nam=$env_var")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val"
+            assert 'env_var' in loaded
+            assert loaded['env_var'] == "var val"
+
+    def test_parse_dotenv_var_expands_variable_wrapped_in_brackets(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("env_var=var val\n\n\nvar_nam=${env_var} tst")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val tst"
+            assert 'env_var' in loaded
+            assert loaded['env_var'] == "var val"
+
+    def test_parse_dotenv_var_expands_undefined_variable_to_empty_string(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("var_nam=$env_var")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'env_var' not in loaded
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == ""
+
+    def test_parse_dotenv_var_expands_in_double_quoted_values(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("env_var=tst\nvar_nam=\"var val $env_var\"")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val tst"
+
+    def test_parse_dotenv_var_not_expands_in_single_quoted_values(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("var_nam='var val $env_var'")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val $env_var"
+
+    def test_parse_dotenv_var_not_expands_escaped_variables(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("var_nam=var val \\$env_var \${env_var}")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val $env_var ${env_var}"
+
+    def test_parse_dotenv_var_export_keyword(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write("export var_nam=var val")
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == "var val"
 
     def test_project_main_file(self):
         assert project_main_file("not_existing_xy.tst") == ""
@@ -619,8 +815,8 @@ class TestModuleHelpers:
         assert module_attr(mod_name, attr_name=att_name) is None
 
     def test_module_file_path(self):
-        assert module_file_path()
-        assert module_file_path(lambda: 0)
+        assert module_file_path() == __file__
+        assert module_file_path(lambda: 0) == __file__
 
     def test_module_name(self):
         assert module_name() == 'test_base'
