@@ -69,6 +69,9 @@ use :func:`env_str` to determine the value of an OS environment variable with au
 helper functions provided by this namespace portion to determine the values of the most important system environment
 variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
 
+to integrate system environment variables from ``.env`` files into :data:`os.environ` the helper functions
+:func:parse_dotenv`, :func:`load_env_var_defaults` and :func:`load_dotenvs` are provided.
+
 
 android-specific constants and helper functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -129,20 +132,21 @@ import importlib.abc
 import importlib.util
 import os
 import platform
+import re
 import shutil
 import socket
 import sys
 import unicodedata
+import warnings
 
 from configparser import ConfigParser, ExtendedInterpolation
 from contextlib import contextmanager
 from importlib.machinery import ModuleSpec
 from inspect import getinnerframes, getouterframes, getsourcefile
 from types import ModuleType
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
-
-__version__ = '0.3.36'
+__version__ = '0.3.37'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -168,6 +172,33 @@ DEF_ENCODE_ERRORS = 'backslashreplace'          #: default encode error handling
 DEF_ENCODING = 'ascii'
 """ encoding for :func:`force_encoding` that will always work independent from destination (console, file sys, ...).
 """
+
+DOTENV_FILE_NAME = '.env'                       #: name of the file containing console/shell environment variables
+_env_line = re.compile(r"""
+    ^
+    (?:export\s+)?      # optional export
+    ([\w.]+)            # key
+    (?:\s*=\s*|:\s+?)   # separator
+    (                   # optional value begin
+        '(?:\'|[^'])*'  #   single quoted value
+        |               #   or
+        "(?:\"|[^"])*"  #   double quoted value
+        |               #   or
+        [^#\n]+         #   unquoted value
+    )?                  # value end
+    (?:\s*\#.*)?        # optional comment
+    $
+    """, re.VERBOSE)
+_env_variable = re.compile(r"""
+    (\\)?               # is it escaped with a backslash?
+    (\$)                # literal $
+    (                   # collect braces with var for sub
+        \{?             #   allow brace wrapping
+        ([A-Z0-9_]+)    #   match the variable
+        }?              #   closing brace
+    )                   # braces end
+    """, re.IGNORECASE | re.VERBOSE)
+
 
 NAME_PARTS_SEP = '_'                            #: name parts separator character, e.g. for :func:`norm_name`
 
@@ -248,7 +279,7 @@ def deep_dict_update(data: dict, update: dict):
     """ update the optionally nested data dict in-place with the items and sub-items from the update dict.
 
     :param data:                dict to be updated/extended. non-existing keys of dict-sub-items will be added.
-    :param update:              dict with the [sub-]items to update in the :paramref:`.data` dict.
+    :param update:              dict with the [sub-]items to update in the :paramref:`~deep_dict_update.data` dict.
 
     .. hint:: the module/portion :mod:`ae.deep` is providing more deep update helper functions.
 
@@ -272,7 +303,7 @@ def dummy_function(*_args, **_kwargs):
 
 
 def duplicates(values: Iterable) -> list:
-    """ determine all duplicates in the iterable specified in the :paramref:`.values` argument.
+    """ determine all duplicates in the iterable specified in the :paramref:`~duplicates.values` argument.
 
     inspired by Ritesh Kumars answer to https://stackoverflow.com/questions/9835762.
 
@@ -398,6 +429,42 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
         os.chdir(cur_dir)
 
 
+def load_dotenvs():
+    """ detect and load multiple ``.env`` files in/above the current working directory and the calling module folder.
+
+    .. hint:: call from main module of project/app in order to also load ``.env`` files in/above the project folder.
+    """
+    load_env_var_defaults(os.getcwd())
+    load_env_var_defaults(os.path.dirname(stack_var('__file__', depth=2)))
+
+
+def load_env_var_defaults(start_dir: str):
+    """ detect and load chain of ``.env`` files starting in the specified folder or one above.
+
+    :param start_dir:           folder to start search of an ``.env`` file, if not found then checks the parent folder.
+                                if a first ``.env`` file got found, then load their console/shell environment variables
+                                into Python's :data:`os.environ`. after loading the first one, repeat to check for
+                                further ``.env`` files in the parent folder to load them too, until either detecting
+                                a folder without an ``.env`` file or until an ``.env`` got loaded from the root folder.
+
+    .. note::
+        only variables that are not declared in :data:`os.environ` will be added (with the
+        value specified in the ``.env`` file to be loaded).
+    """
+    file_path = os.path.abspath(os.path.join(start_dir, DOTENV_FILE_NAME))
+    if not os.path.isfile(file_path):
+        file_path = os.path.join(os.path.dirname(start_dir), DOTENV_FILE_NAME)
+
+    while os.path.isfile(file_path):
+        for var_nam, var_val in parse_dotenv(file_path).items():
+            if var_nam not in os.environ:
+                os.environ[var_nam] = var_val
+
+        if os.sep not in file_path:
+            break           # pragma: no cover # prevent endless-loop for ``.env`` file in root dir (os.sep == '/')
+        file_path = os.path.join(os.path.dirname(os.path.dirname(file_path)), DOTENV_FILE_NAME)
+
+
 def main_file_paths_parts(portion_name: str) -> Tuple[Tuple[str, ...], ...]:
     """ determine tuple of supported main/version file name path part tuples.
 
@@ -445,7 +512,14 @@ def module_file_path(local_object: Optional[Callable] = None) -> str:
         if file_path:
             return norm_path(file_path)
 
-    return stack_var('__file__', depth=2) or ""   # or use sys._getframe().f_code.co_filename
+    file_path = stack_var('__file__')
+    if not file_path:                                   # pragma: no cover
+        try:
+            # noinspection PyProtectedMember,PyUnresolvedReferences
+            file_path = sys._getframe().f_back.f_code.co_filename   # type: ignore # pylint: disable=protected-access
+        except (AttributeError, Exception):                         # pylint: disable=broad-except # pragma: no cover
+            file_path = ""
+    return file_path
 
 
 def module_name(*skip_modules: str, depth: int = 0) -> Optional[str]:
@@ -531,13 +605,13 @@ def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "",
 
 
 def now_str(sep: str = "") -> str:
-    """ return the current timestamp as string (to use as suffix for file and variable/attribute names).
+    """ return the current UTC timestamp as string (to use as suffix for file and variable/attribute names).
 
     :param sep:                 optional prefix and separator character (separating date from time and in time part
                                 the seconds from the microseconds).
-    :return:                    timestamp as string (length=20 + 3 * len(sep)).
+    :return:                    UTC timestamp as string (length=20 + 3 * len(sep)).
     """
-    return datetime.datetime.now().strftime("{sep}%Y%m%d{sep}%H%M%S{sep}%f".format(sep=sep))
+    return datetime.datetime.utcnow().strftime("{sep}%Y%m%d{sep}%H%M%S{sep}%f".format(sep=sep))
 
 
 def os_host_name() -> str:
@@ -610,6 +684,45 @@ def os_user_name() -> str:
     :return:                    username string.
     """
     return getpass.getuser()
+
+
+def parse_dotenv(file_path: str) -> Dict[str, str]:
+    """ parse ``.env`` file content and return environment variable names as dict keys and values as dict values.
+
+    :param file_path:           string with the name/path of an existing ``.env``/:data:`DOTENV_FILE_NAME` file.
+    :return:                    dict with environment variable names and values
+    """
+    env_vars: Dict[str, str] = {}
+    for line in cast(str, read_file(file_path)).splitlines():
+        match = _env_line.search(line)
+        if not match:
+            if not re.search(r'^\s*(?:#.*)?$', line):  # not comment or blank
+                warnings.warn(f"'{line!r}' in '{file_path}' doesn't match {DOTENV_FILE_NAME} format", SyntaxWarning)
+            continue
+
+        var_nam, var_val = match.groups()
+        var_val = "" if var_val is None else var_val.strip()
+
+        # remove surrounding quotes, unescape all chars except $ so variables can be escaped properly
+        match = re.match(r'^([\'"])(.*)\1$', var_val)
+        if match:
+            delimiter, var_val = match.groups()
+            if delimiter == '"':
+                var_val = re.sub(r'\\([^$])', r'\1', var_val)
+        else:
+            delimiter = None
+        if delimiter != "'":
+            for parts in _env_variable.findall(var_val):
+                if parts[0] == '\\':
+                    replace = "".join(parts[1:-1])          # don't replace escaped variables
+                else:
+                    # substitute variables in a value, replace it with the value from the environment
+                    replace = env_vars.get(parts[-1], os.environ.get(parts[-1], ""))
+                var_val = var_val.replace("".join(parts[0:-1]), replace)
+
+        env_vars[var_nam] = var_val
+
+    return env_vars
 
 
 def project_main_file(import_name: str, project_path: str = "") -> str:
@@ -878,12 +991,12 @@ if os_platform == 'android':                                    # pragma: no cov
     # 'android' (see # https://bugs.python.org/issue28141 and https://bugs.python.org/issue32073). these functions are
     # used by shutil.copy2/copy/copytree/move to copy OS-specific file attributes.
     # although shutil.copytree() and shutil.move() are copying/moving the files correctly when the copy_function
-    # arg is set to :func:`shutil.copyfile`, they will finally also crash afterwards when they try to set the attributes
+    # arg is set to :func:`shutil.copyfile`, they will finally also crash afterward when they try to set the attributes
     # on the destination root directory.
     shutil.copymode = dummy_function
     shutil.copystat = dummy_function
 
-    # import permissions module from python-for-android (pythonforandroid/recipes/android/src/android/permissions.py)
+    # import permissions module from python-for-android (recipes/android/src/android/permissions.py)
     # noinspection PyUnresolvedReferences
     from android.permissions import request_permissions, Permission     # type: ignore # pylint: disable=import-error
     from jnius import autoclass                                         # type: ignore
