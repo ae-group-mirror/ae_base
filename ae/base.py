@@ -146,7 +146,7 @@ from inspect import getinnerframes, getouterframes, getsourcefile
 from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
-__version__ = '0.3.37'
+__version__ = '0.3.38'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -435,7 +435,8 @@ def load_dotenvs():
     .. hint:: call from main module of project/app in order to also load ``.env`` files in/above the project folder.
     """
     load_env_var_defaults(os.getcwd())
-    load_env_var_defaults(os.path.dirname(stack_var('__file__', depth=2)))
+    if file_name := stack_var('__file__'):
+        load_env_var_defaults(os.path.dirname(os.path.abspath(file_name)))
 
 
 def load_env_var_defaults(start_dir: str):
