@@ -20,8 +20,11 @@ from ae.base import (
     load_env_var_defaults, load_dotenvs, main_file_paths_parts, module_attr, module_file_path, module_name,
     norm_line_sep, norm_name, norm_path, now_str, os_host_name, os_local_ip, _os_platform, os_user_name,
     parse_dotenv, project_main_file, read_file, round_traditional, snake_to_camel, stack_frames, stack_var, stack_vars,
-    sys_env_dict, sys_env_text, to_ascii, write_file)
+    sys_env_dict, sys_env_text, to_ascii, filename2uri, uri2filename, write_file, ErrorMsgMixin)
 
+
+tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>"
+tst_fna1 = "schema%3A%2F%2Fuser%3Apwd@domain%2Fpath_root%2Fpath_sub%5Cpath+file%25 Üml%3Fä%7Cït.path_ext%2A%22%3C%3E"
 
 env_var_name = 'env_var_nam1'
 env_var_val = 'value of env var'
@@ -58,6 +61,27 @@ def test_unset_truthiness():
 
 def test_unset_null_length():
     assert len(UNSET) == 0
+
+
+class TestErrorMsgMixin:
+    def test_instantiation(self):
+        assert ErrorMsgMixin()
+
+    def test_error_message_property(self):
+        ins = ErrorMsgMixin()
+        assert ins.error_message == ""
+
+        err_msg = "set new error message"
+        ins.error_message = err_msg
+        assert ins.error_message == err_msg
+
+        err_msg2 = "added error message"
+        ins.error_message = err_msg2
+        assert err_msg in ins.error_message
+        assert err_msg2 in ins.error_message
+
+        ins.error_message = ""
+        assert ins.error_message == ""
 
 
 class TestBaseHelpers:
@@ -677,6 +701,21 @@ class TestBaseHelpers:
 
         assert to_ascii('ß') == 'ss'
         assert to_ascii('€') == 'Euro'
+
+    def test_filename2uri(self):
+        assert filename2uri(tst_fna1) == tst_uri1
+        assert uri2filename(filename2uri(tst_fna1)) == tst_fna1
+
+    def test_uri2filename(self):
+        assert uri2filename(tst_uri1) == tst_fna1
+        assert filename2uri(uri2filename(tst_uri1)) == tst_uri1
+
+    def test_uri_file_name(self):
+        try:
+            write_file(tst_fna1, "tst uri file content")
+        finally:
+            if os.path.exists(tst_fna1):
+                os.remove(tst_fna1)
 
     def test_write_file_as_text(self):
         test_file = os.path.join(TESTS_FOLDER, 'tst_file_written.ext')
