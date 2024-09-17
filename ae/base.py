@@ -42,7 +42,7 @@ absolute, call the function :func:`norm_path`.
 
 :func:`camel_to_snake` and :func:`snake_to_camel` providing name conversions of class and method names.
 
-to encode unicode strings to other codecs the functions :func:`force_encoding` and :func:`to_ascii` can be used.
+to encode Unicode strings to other codecs the functions :func:`force_encoding` and :func:`to_ascii` can be used.
 
 the :func:`round_traditional` function get provided by this module for traditional rounding of float values. the
 function signature is fully compatible to Python's :func:`round` function.
@@ -137,6 +137,7 @@ import shutil
 import socket
 import sys
 import unicodedata
+import urllib.parse
 import warnings
 
 from configparser import ConfigParser, ExtendedInterpolation
@@ -146,7 +147,8 @@ from inspect import getinnerframes, getouterframes, getsourcefile
 from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
-__version__ = '0.3.38'
+
+__version__ = '0.3.39'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -921,7 +923,7 @@ def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_le
                  extra_sys_env_dict: Optional[Dict[str, str]] = None) -> str:
     """ compile formatted text block with system environment info.
 
-    :param ind_ch:              indent character (default=" ").
+    :param ind_ch:              indent character (defaults to " ").
     :param ind_len:             indent depths (default=12 characters).
     :param key_ch:              key-value separator character (default="=").
     :param key_len:             key-name minimum length (default=15 characters).
@@ -940,7 +942,7 @@ def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_le
 
 
 def to_ascii(unicode_str: str) -> str:
-    """ converts unicode string into ascii representation.
+    """ converts Unicode string into ascii representation.
 
     useful for fuzzy string compare; inspired by MiniQuark's answer
     in: https://stackoverflow.com/questions/517923/what-is-the-best-way-to-remove-accents-in-a-python-unicode-string
@@ -950,6 +952,36 @@ def to_ascii(unicode_str: str) -> str:
     """
     nfkd_form = unicodedata.normalize('NFKD', unicode_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('ß', "ss").replace('€', "Euro")
+
+
+def uri2filename(uri: str) -> str:
+    """ convert a URI to be usable as name of a file or folder
+
+    :param uri:                 URI to convert to a corresponding file name, that will be revertible back to this URI.
+    :return:                    name of a file/folder representing the specified URI.
+
+    in *nix only / and \0 are not allowed characters in file names.
+    in MS Windows are not allowed: ASCII 0...31): / \\ : * ? ” < > | (). some blogs recommend to also not allow
+    (convert) the characters # and '.
+    only old POSIX seems to be even more restricted (only allowing alphanumeric characters plus . - and _).
+
+    file name length is not restricted/shortened by this function, although the maximum is 255 characters on most OSs.
+
+    more on allowed characters in file names in the answers of RedGrittyBrick on https://superuser.com/questions/358855
+    and of Christopher Oezbek on https://stackoverflow.com/questions/1976007.
+    """
+    # using urllib.parse.quote(uri, safe="") instead would convert also any non-ascii (e.g. umlaut) characters into hex
+    # added [] to str.join() argument because List comprehensions are faster than generator expressions
+    return "".join([f"%{hex(ord(_))[2:].upper()}" if _ in '/|\\:*?"<>%' else _ for _ in uri])
+
+
+def filename2uri(file_name: str) -> str:
+    """ convert a file name converted by :func:`uri2filename` back to its representation as a URI
+
+    :param file_name:           name of the file/folder to convert back to its URI representation.
+    :return:                    URI string.
+    """
+    return urllib.parse.unquote(file_name)
 
 
 def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "", encoding: Optional[str] = None):
@@ -966,9 +998,40 @@ def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "",
     :raises OSError:            if :paramref:`~read_file.file_path` is misspelled or contains invalid characters.
     :raises PermissionError:    if current OS user account lacks permissions to read the file content.
     :raises ValueError:         on decoding errors.
+
+    to extend this function for Android 14+ see https://github.com/beeware/toga/pull/1158#issuecomment-2254564657
+    and https://gist.github.com/neonankiti/05922cf0a44108a2e2732671ed9ef386
+    Yes, to use ACTION_CREATE_DOCUMENT, you don't supply a URI in the intent. You wait for the intent result, and that
+    will contain a URI which you can write to.
+    See #1158 (comment - https://github.com/beeware/toga/pull/1158#issuecomment-2254564657) for a link to a Java
+    example, and #1158 (comment - https://github.com/beeware/toga/pull/1158#issuecomment-1446196973) for how to wait
+    for an intent result.
+    Related german docs: https://developer.android.com/training/data-storage/shared/media?hl=de
     """
     with open(file_path, ('' if extra_mode.startswith('a') else 'w') + extra_mode, encoding=encoding) as file_handle:
         file_handle.write(content)
+
+
+class ErrorMsgMixin:
+    """ mixin class providing error message """
+    _err_msg: str = ""
+
+    @property
+    def error_message(self) -> str:
+        """ error message string if an error occurred or an empty string if not.
+
+        :getter:                return the accumulated error message of the recently occurred error(s).
+        :setter:                any assigned error message will be accumulated to recent error messages.
+                                pass an empty string to reset the error message.
+        """
+        return self._err_msg
+
+    @error_message.setter
+    def error_message(self, next_err_msg: str):
+        if next_err_msg:
+            self._err_msg += ("\n\n" if self._err_msg else "") + next_err_msg
+        else:
+            self._err_msg = ""
 
 
 PACKAGE_NAME = stack_var('__name__') or 'unspecified_package'
