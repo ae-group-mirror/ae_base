@@ -3,7 +3,7 @@ basic constants, helper functions and context manager
 =====================================================
 
 this module is pure python, has no external dependencies, and is providing base constants, common helper
-functions and context managers.
+functions, useful classes and context managers.
 
 
 base constants
@@ -23,6 +23,9 @@ and :data:`INI_EXT`.
 the constants :data:`PACKAGE_NAME`, :data:`PACKAGE_DOMAIN` and :data:`PERMISSIONS` are mainly used for apps running
 on mobile devices. to avoid redundancies, these values get loaded from the
 :data:`build config file <BUILD_CONFIG_FILE>` - if it exists in the current working directory.
+
+with the help of the format string constant :data:`NOW_STR_FORMAT` and the function :func:`now_str` you can create a
+sortable and compact string from a timestamp.
 
 
 base helper functions
@@ -99,6 +102,15 @@ code and build Kivy apps for the Android OS, and to `Gabriel Pettier <https://gi
 osc example.
 
 
+types, classes and mixins
+-------------------------
+
+the :class:`UnsetType` class can be used e.g. for the declaration of optional function and method parameters,
+allowing also `None` is an accepted argument value.
+
+to extend any class with an intelligent error message property, add the mixin :class:`ErrorMsgMixin` to it.
+
+
 generic context manager
 -----------------------
 
@@ -148,7 +160,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.39'
+__version__ = '0.3.40'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -202,7 +214,9 @@ _env_variable = re.compile(r"""
     """, re.IGNORECASE | re.VERBOSE)
 
 
-NAME_PARTS_SEP = '_'                            #: name parts separator character, e.g. for :func:`norm_name`
+NAME_PARTS_SEP = '_'                                #: name parts separator character, e.g. for :func:`norm_name`
+
+NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"    #: timestamp format of :func:`now_str`
 
 SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.dynamicod', 'ae.core', 'ae.console', 'ae.gui_app', 'ae.gui_help',
                    'ae.kivy', 'ae.kivy.apps', 'ae.kivy.behaviors', 'ae.kivy.i18n', 'ae.kivy.tours', 'ae.kivy.widgets',
@@ -612,9 +626,12 @@ def now_str(sep: str = "") -> str:
 
     :param sep:                 optional prefix and separator character (separating date from time and in time part
                                 the seconds from the microseconds).
-    :return:                    UTC timestamp as string (length=20 + 3 * len(sep)).
+    :return:                    naive UTC timestamp (without timezone info) as string (length=20 + 3 * len(sep)).
     """
-    return datetime.datetime.utcnow().strftime("{sep}%Y%m%d{sep}%H%M%S{sep}%f".format(sep=sep))
+    # if sys.version_info >= (3, 12):
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime(NOW_STR_FORMAT.format(sep=sep))
+    # else:
+    #     return datetime.datetime.utcnow().strftime(NOW_STR_FORMAT.format(sep=sep))
 
 
 def os_host_name() -> str:
