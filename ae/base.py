@@ -31,6 +31,9 @@ sortable and compact string from a timestamp.
 base helper functions
 ---------------------
 
+:func:`now_str` creates a timestamp string with the actual UTC date and time. the :func:`utc_datetime` provides the
+actual UTC date and time as datetime object.
+
 to write more compact and readable code for the most common file I/O operations, the helper functions :func:`read_file`
 and :func:`write_file` are wrapping Python's built-in :func:`open` function and its context manager.
 
@@ -42,6 +45,9 @@ the function :func:`duplicates` returns the duplicates of an iterable type.
 
 to normalize a file path, in order to remove `.`, `..` placeholders, to resolve symbolic links or to make it relative or
 absolute, call the function :func:`norm_path`.
+
+:func:`uri2filename` converts special characters of a URI/URL resulting in a string that can be used as a file name.
+use the function :func:`filename2uri` to convert this string back to the corresponding URL/URI.
 
 :func:`camel_to_snake` and :func:`snake_to_camel` providing name conversions of class and method names.
 
@@ -160,7 +166,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.40'
+__version__ = '0.3.41'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -350,6 +356,17 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     if convert_name:
         name = norm_name(camel_to_snake(name)).upper()
     return os.environ.get(name)
+
+
+def filename2uri(file_name: str) -> str:
+    """ convert a file name converted by :func:`uri2filename` back to its representation as a URI
+
+    :param file_name:           name of the file/folder to convert back to its URI representation.
+    :return:                    URI string.
+
+    .. hint:: to ensure proper conversion the specified file name has to be created by :func:`uri2filename`.
+    """
+    return urllib.parse.unquote(file_name)
 
 
 def force_encoding(text: Union[str, bytes], encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
@@ -628,10 +645,7 @@ def now_str(sep: str = "") -> str:
                                 the seconds from the microseconds).
     :return:                    naive UTC timestamp (without timezone info) as string (length=20 + 3 * len(sep)).
     """
-    # if sys.version_info >= (3, 12):
-    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime(NOW_STR_FORMAT.format(sep=sep))
-    # else:
-    #     return datetime.datetime.utcnow().strftime(NOW_STR_FORMAT.format(sep=sep))
+    return utc_datetime().strftime(NOW_STR_FORMAT.format(sep=sep))
 
 
 def os_host_name() -> str:
@@ -986,19 +1000,20 @@ def uri2filename(uri: str) -> str:
 
     more on allowed characters in file names in the answers of RedGrittyBrick on https://superuser.com/questions/358855
     and of Christopher Oezbek on https://stackoverflow.com/questions/1976007.
+
+    .. hint:: use :func:`filename2uri` to convert the resulting file name back to the corresponding URO
     """
     # using urllib.parse.quote(uri, safe="") instead would convert also any non-ascii (e.g. umlaut) characters into hex
     # added [] to str.join() argument because List comprehensions are faster than generator expressions
     return "".join([f"%{hex(ord(_))[2:].upper()}" if _ in '/|\\:*?"<>%' else _ for _ in uri])
 
 
-def filename2uri(file_name: str) -> str:
-    """ convert a file name converted by :func:`uri2filename` back to its representation as a URI
+def utc_datetime() -> datetime.datetime:
+    """ return the current UTC timestamp as string (to use as suffix for file and variable/attribute names).
 
-    :param file_name:           name of the file/folder to convert back to its URI representation.
-    :return:                    URI string.
+    :return:                    timestamp string of the actual UTC date and time.
     """
-    return urllib.parse.unquote(file_name)
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "", encoding: Optional[str] = None):
