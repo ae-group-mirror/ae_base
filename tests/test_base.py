@@ -1,4 +1,5 @@
 """ ae.base unit tests """
+import datetime
 import os
 import tempfile
 
@@ -16,11 +17,11 @@ from typing import cast
 from ae.base import (
     BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNSET,
     app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, dummy_function, duplicates, env_str,
-    force_encoding, full_stack_trace, import_module, instantiate_config_parser, in_wd,
+    filename2uri, force_encoding, full_stack_trace, import_module, instantiate_config_parser, in_wd,
     load_env_var_defaults, load_dotenvs, main_file_paths_parts, module_attr, module_file_path, module_name,
     norm_line_sep, norm_name, norm_path, now_str, os_host_name, os_local_ip, _os_platform, os_user_name,
     parse_dotenv, project_main_file, read_file, round_traditional, snake_to_camel, stack_frames, stack_var, stack_vars,
-    sys_env_dict, sys_env_text, to_ascii, filename2uri, uri2filename, write_file, ErrorMsgMixin)
+    sys_env_dict, sys_env_text, to_ascii, uri2filename, utc_datetime, write_file, ErrorMsgMixin)
 
 
 tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>"
@@ -203,6 +204,10 @@ class TestBaseHelpers:
         os.environ['NON_ALPHA_NUM_CHARS_69'] = vv
         assert env_str(ev, convert_name=True) == vv
 
+    def test_filename2uri(self):
+        assert filename2uri(tst_fna1) == tst_uri1
+        assert uri2filename(filename2uri(tst_fna1)) == tst_fna1
+
     def test_force_encoding_bytes(self):
         s = 'äöü'
 
@@ -245,7 +250,7 @@ class TestBaseHelpers:
 
     def test_import_module_local_module(self):
         module = "mod_2_tst"
-        mod_file = os.path.join(TESTS_FOLDER, module + PY_EXT)
+        mod_file = cast(str, os.path.join(TESTS_FOLDER, module + PY_EXT))
         cur_dir = os.getcwd()
         try:
             write_file(mod_file, "mod_var = 'mod_var_val'")
@@ -676,7 +681,8 @@ class TestBaseHelpers:
         assert sys_env_dict().get('bundle_dir') is None
         sys.frozen = True
         assert sys_env_dict().get('bundle_dir')
-        del sys.__dict__['frozen']
+        # noinspection PyUnresolvedReferences
+        del sys.__dict__['frozen']      # sys.__dict__.pop('frozen')
         assert sys_env_dict().get('bundle_dir') is None
 
     def test_sys_env_text(self):
@@ -702,13 +708,14 @@ class TestBaseHelpers:
         assert to_ascii('ß') == 'ss'
         assert to_ascii('€') == 'Euro'
 
-    def test_filename2uri(self):
-        assert filename2uri(tst_fna1) == tst_uri1
-        assert uri2filename(filename2uri(tst_fna1)) == tst_fna1
-
     def test_uri2filename(self):
         assert uri2filename(tst_uri1) == tst_fna1
         assert filename2uri(uri2filename(tst_uri1)) == tst_uri1
+
+    def test_utc_datetime(self):
+        dt1 = utc_datetime()
+        dt2 = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        assert dt2 - dt1 < datetime.timedelta(seconds=1)
 
     def test_uri_file_name(self):
         try:
@@ -749,7 +756,7 @@ class TestModuleHelpers:
         namespace = TESTS_FOLDER
         mod_name = 'test_module_name'
         att_name = 'test_module_func'
-        module_file = os.path.join(namespace, mod_name + PY_EXT)
+        module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
         try:
             write_file(module_file, f"def {att_name}(*args, **kwargs):\n    return args, kwargs\n")
             args = (1, '2')
@@ -777,7 +784,7 @@ class TestModuleHelpers:
         namespace = TESTS_FOLDER
         mod_name = 'test_module_name'
         att_name = 'test_module_func'
-        module_file = os.path.join(namespace, mod_name + PY_EXT)
+        module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
         try:
             write_file(module_file, f"def {att_name}(arg1, args2, kwarg1='default'):\n    return arg1, arg2, kwarg1\n")
 
@@ -802,7 +809,7 @@ class TestModuleHelpers:
     def test_module_attr_module_ref(self):
         namespace = TESTS_FOLDER
         mod_name = 'test_module_name'
-        module_file = os.path.join(namespace, mod_name + PY_EXT)
+        module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
         cur_dir = os.getcwd()
         try:
             write_file(module_file, "# empty module")
@@ -825,7 +832,7 @@ class TestModuleHelpers:
         namespace = TESTS_FOLDER
         mod_name = 'test_module_name'
         att_name = 'test_module_func'
-        module_file = os.path.join(namespace, mod_name + PY_EXT)
+        module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
         cur_dir = os.getcwd()
         try:
             write_file(module_file, f"""def {att_name}(*args, **kwargs):\n    pass\n""")
