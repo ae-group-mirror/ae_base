@@ -746,6 +746,11 @@ class TestBaseHelpers:
             assert os.path.exists(test_file)
             assert os.path.isfile(test_file)
             assert read_file(test_file, extra_mode="b") == content
+
+            write_file(test_file, content)      # 'b' in extra_mode arg is optional because content is bytes array
+            assert os.path.exists(test_file)
+            assert os.path.isfile(test_file)
+            assert read_file(test_file, extra_mode="b") == content
         finally:
             if os.path.exists(test_file):
                 os.remove(test_file)
