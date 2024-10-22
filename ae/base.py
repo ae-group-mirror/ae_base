@@ -143,6 +143,13 @@ to determine e.g. variable values of the callers of a function/method.
     :attr:`title <AppBase.app_title>` of an application, if these values are not specified in the instance initializer.
 
 another useful helper function provided by this portion to inspect and debug your code is :func:`full_stack_trace`.
+
+
+os.path shortcuts
+-----------------
+
+the following data items are pointers to shortcut the lookup to their related functions in the
+Python module :mod:`os.path`:
 """
 import datetime
 import getpass
@@ -166,7 +173,21 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.41'
+__version__ = '0.3.42'
+
+
+os_path_abspath = os.path.abspath
+os_path_basename = os.path.basename
+os_path_dirname = os.path.dirname
+os_path_expanduser = os.path.expanduser
+os_path_isdir = os.path.isdir
+os_path_isfile = os.path.isfile
+os_path_join = os.path.join
+os_path_normpath = os.path.normpath
+os_path_realpath = os.path.realpath
+os_path_relpath = os.path.relpath
+os_path_sep = os.path.sep
+os_path_splitext = os.path.splitext
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -256,10 +277,10 @@ def app_name_guess() -> str:
     if not app_name:
         unspecified_app_names = ('ae_base', 'app', '_jb_pytest_runner', 'main', '__main__', 'pydevconsole', 'src')
         path = sys.argv[0]
-        app_name = os.path.splitext(os.path.basename(path))[0]
+        app_name = os_path_splitext(os_path_basename(path))[0]
         if app_name.lower() in unspecified_app_names:
             path = os.getcwd()
-            app_name = os.path.basename(path)
+            app_name = os_path_basename(path)
             if app_name.lower() in unspecified_app_names:
                 app_name = "unguessable"
     return app_name
@@ -273,7 +294,7 @@ def build_config_variable_values(*names_defaults: Tuple[str, Any], section: str 
     :return:                    tuple of build config variable values (using the passed default value if not specified
                                 in the :data:`BUILD_CONFIG_FILE` spec file or if the spec file does not exist in cwd).
     """
-    if not os.path.exists(BUILD_CONFIG_FILE):
+    if not os_path_isfile(BUILD_CONFIG_FILE):
         return tuple(def_val for name, def_val in names_defaults)
 
     config = instantiate_config_parser()
@@ -417,8 +438,8 @@ def import_module(import_name: str, path: Optional[Union[str, UnsetType]] = UNSE
     :return:                    a reference to the loaded module or ``None`` if module could not be imported.
     """
     if path is UNSET:
-        path = import_name.replace('.', os.path.sep)
-        path += PY_EXT if os.path.isfile(path + PY_EXT) else os.path.sep + PY_INIT
+        path = import_name.replace('.', os_path_sep)
+        path += PY_EXT if os_path_isfile(path + PY_EXT) else os_path_sep + PY_INIT
     mod_ref = None
 
     spec = importlib.util.spec_from_file_location(import_name, path)    # type: ignore # silly mypy
@@ -469,7 +490,7 @@ def load_dotenvs():
     """
     load_env_var_defaults(os.getcwd())
     if file_name := stack_var('__file__'):
-        load_env_var_defaults(os.path.dirname(os.path.abspath(file_name)))
+        load_env_var_defaults(os_path_dirname(os_path_abspath(file_name)))
 
 
 def load_env_var_defaults(start_dir: str):
@@ -485,18 +506,18 @@ def load_env_var_defaults(start_dir: str):
         only variables that are not declared in :data:`os.environ` will be added (with the
         value specified in the ``.env`` file to be loaded).
     """
-    file_path = os.path.abspath(os.path.join(start_dir, DOTENV_FILE_NAME))
-    if not os.path.isfile(file_path):
-        file_path = os.path.join(os.path.dirname(start_dir), DOTENV_FILE_NAME)
+    file_path = os_path_abspath(os_path_join(start_dir, DOTENV_FILE_NAME))
+    if not os_path_isfile(file_path):
+        file_path = os_path_join(os_path_dirname(start_dir), DOTENV_FILE_NAME)
 
-    while os.path.isfile(file_path):
+    while os_path_isfile(file_path):
         for var_nam, var_val in parse_dotenv(file_path).items():
             if var_nam not in os.environ:
                 os.environ[var_nam] = var_val
 
         if os.sep not in file_path:
             break           # pragma: no cover # prevent endless-loop for ``.env`` file in root dir (os.sep == '/')
-        file_path = os.path.join(os.path.dirname(os.path.dirname(file_path)), DOTENV_FILE_NAME)
+        file_path = os_path_join(os_path_dirname(os_path_dirname(file_path)), DOTENV_FILE_NAME)
 
 
 def main_file_paths_parts(portion_name: str) -> Tuple[Tuple[str, ...], ...]:
@@ -620,20 +641,20 @@ def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "",
     """
     path = path or "."
     if path[0] == "~":
-        path = os.path.expanduser(path)
+        path = os_path_expanduser(path)
 
     if remove_dots:
-        path = os.path.normpath(path)
+        path = os_path_normpath(path)
 
     if resolve_sym_links:
-        path = os.path.realpath(path)
+        path = os_path_realpath(path)
     elif make_absolute:
-        path = os.path.abspath(path)
+        path = os_path_abspath(path)
 
     if remove_base_path:
         if remove_base_path[0] == "~":
-            remove_base_path = os.path.expanduser(remove_base_path)
-        path = os.path.relpath(path, remove_base_path)
+            remove_base_path = os_path_expanduser(remove_base_path)
+        path = os_path_relpath(path, remove_base_path)
 
     return path
 
@@ -768,23 +789,22 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
                                 sister project (under the same project parent folder).
     :return:                    absolute file path/name of main module or empty string if no main/version file found.
     """
-    join = os.path.join
     *namespace_dirs, portion_name = import_name.split('.')
     project_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
     paths_parts = main_file_paths_parts(portion_name)
 
     project_path = norm_path(project_path)
     module_paths = []
-    if os.path.basename(project_path) != project_name:
-        module_paths.append(join(os.path.dirname(project_path), project_name, *namespace_dirs))
+    if os_path_basename(project_path) != project_name:
+        module_paths.append(os_path_join(os_path_dirname(project_path), project_name, *namespace_dirs))
     if namespace_dirs:
-        module_paths.append(join(project_path, *namespace_dirs))
+        module_paths.append(os_path_join(project_path, *namespace_dirs))
     module_paths.append(project_path)
 
     for module_path in module_paths:
         for path_parts in paths_parts:
-            main_file = join(module_path, *path_parts)
-            if os.path.isfile(main_file):
+            main_file = os_path_join(module_path, *path_parts)
+            if os_path_isfile(main_file):
                 return main_file
     return ""
 
@@ -899,7 +919,7 @@ def stack_vars(*skip_modules: str,
     :param max_depth:           the maximum depth in the call stack from which to return the variables. if the specified
                                 argument is not zero and no :paramref:`~stack_vars.skip_modules` are specified then the
                                 first deeper stack frame that is not within the default :data:`SKIPPED_MODULES` will be
-                                returned. if this argument and :paramref:`~stack_var.find_name` get not passed then the
+                                returned. if this argument and :paramref:`~stack_vars.find_name` get not passed then the
                                 variables of the top stack frame will be returned.
     :return:                    tuple of the global and local variable dicts and the depth in the call stack.
     """
@@ -1020,14 +1040,18 @@ def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "",
     """ (over)write the file specified by :paramref:`~write_file.file_path` with text or binary/bytes content.
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
-    :param content:             new file content either passed as string or list of line strings (will be
-                                concatenated with the line separator of the current OS: os.linesep).
-    :param extra_mode:          open mode flag characters. passed unchanged to the `mode` argument of :func:`open` if
-                                this argument starts with 'a', else this argument value will be appended to 'w'.
+    :param content:             new file content passed either as string or bytes array. if a bytes array get passed
+                                then this method will automatically write the content as binary.
+    :param extra_mode:          additional open mode flag characters. passed to the `mode` argument of :func:`open` if
+                                this argument starts with 'a' or 'w', else this argument value will be appended to 'w'
+                                before it get passed to the `mode` argument of :func:`open`.
+                                if the :paramref:`~write_file.content` is a bytes array, then a 'b' character will
+                                be automatically added to the `mode` argument of :func:`open` (if not already specified
+                                in this argument).
     :param encoding:            encoding used to write/convert/interpret the file content to write.
     :raises FileExistsError:    if file exists already and is write-protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
-    :raises OSError:            if :paramref:`~read_file.file_path` is misspelled or contains invalid characters.
+    :raises OSError:            if :paramref:`~write_file.file_path` is misspelled or contains invalid characters.
     :raises PermissionError:    if current OS user account lacks permissions to read the file content.
     :raises ValueError:         on decoding errors.
 
@@ -1040,7 +1064,13 @@ def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "",
     for an intent result.
     Related german docs: https://developer.android.com/training/data-storage/shared/media?hl=de
     """
-    with open(file_path, ('' if extra_mode.startswith('a') else 'w') + extra_mode, encoding=encoding) as file_handle:
+    if isinstance(content, bytes) and 'b' not in extra_mode:
+        extra_mode += 'b'
+
+    if extra_mode == '' or extra_mode[0] not in ('a', 'w'):
+        extra_mode = 'w' + extra_mode
+
+    with open(file_path, mode=extra_mode, encoding=encoding) as file_handle:
         file_handle.write(content)
 
 
@@ -1069,16 +1099,16 @@ class ErrorMsgMixin:
 PACKAGE_NAME = stack_var('__name__') or 'unspecified_package'
 PACKAGE_DOMAIN = 'org.test'
 PERMISSIONS = "INTERNET, VIBRATE, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE"
-if os.path.exists(BUILD_CONFIG_FILE):                           # pragma: no cover
+if os_path_isfile(BUILD_CONFIG_FILE):                           # pragma: no cover
     PACKAGE_NAME, PACKAGE_DOMAIN, PERMISSIONS = build_config_variable_values(
         ('package.name', PACKAGE_NAME),
         ('package.domain', PACKAGE_DOMAIN),
         ('android.permissions', PERMISSIONS))
 elif os_platform == 'android':                                  # pragma: no cover
     _importing_package = norm_path(stack_var('__file__') or 'empty_package' + PY_EXT)
-    if os.path.basename(_importing_package) in (PY_INIT, PY_MAIN):
-        _importing_package = os.path.dirname(_importing_package)
-    _importing_package = os.path.splitext(os.path.basename(_importing_package))[0]
+    if os_path_basename(_importing_package) in (PY_INIT, PY_MAIN):
+        _importing_package = os_path_dirname(_importing_package)
+    _importing_package = os_path_splitext(os_path_basename(_importing_package))[0]
     write_file(f'{_importing_package}_debug.log', f"{BUILD_CONFIG_FILE} not bundled - using defaults\n", extra_mode='a')
 
 
