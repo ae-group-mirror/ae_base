@@ -46,8 +46,9 @@ the function :func:`duplicates` returns the duplicates of an iterable type.
 to normalize a file path, in order to remove `.`, `..` placeholders, to resolve symbolic links or to make it relative or
 absolute, call the function :func:`norm_path`.
 
-:func:`uri2filename` converts special characters of a URI/URL resulting in a string that can be used as a file name.
-use the function :func:`filename2uri` to convert this string back to the corresponding URL/URI.
+:func:`defuse` converts special characters of a URI/URL or a file path string, resulting in a string that can be used
+either as a URL slug or as a file name. use the function :func:`dedefuse` to convert this string back to the
+corresponding URL/URI or file path.
 
 :func:`camel_to_snake` and :func:`snake_to_camel` providing name conversions of class and method names.
 
@@ -162,7 +163,6 @@ import shutil
 import socket
 import sys
 import unicodedata
-import urllib.parse
 import warnings
 
 from configparser import ConfigParser, ExtendedInterpolation
@@ -173,7 +173,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.42'
+__version__ = '0.3.43'
 
 
 os_path_abspath = os.path.abspath
@@ -336,6 +336,96 @@ def deep_dict_update(data: dict, update: dict):
             data[upd_key] = upd_val
 
 
+URI_SEP_CHAR = '⫻'  # U+2AFB: TRIPLE SOLIDUS BINARY RELATION
+ASCII_UNICODE = (
+    ('/', '⁄'),     # U+2044: Fraction Slash; '∕' U+2215: Division Slash; '⧸' U+29F8: Big Solidus
+                    # ; '╱' U+FF0F: Fullwidth Solidus; '╱' U+2571: Box Drawings Light Diagonal Upper Right to Lower Left
+    ('|', '।'),     # U+0964: Devanagari Danda
+    ('\\', '﹨'),    # U+FE68: SMALL REVERSE SOLIDUS; '⑊' U+244A OCR DOUBLE BACKSLASH; '⧵' U+29F5 REV. SOLIDUS OPERATOR
+    (':', '﹕'),     # U+FE55: Small Colon
+    ('*', '﹡'),     # U+FE61: Small Asterisk
+    ('?', '﹖'),     # U+FE56: Small Question Mark
+    ('"', '＂'),     # U+FF02: Fullwidth Quotation Mark
+    ("'", '‘'),     # U+2018: Left Single; '’' U+2019: Right Single; '‛' U+201B: Single High-Reversed-9 Quotation Mark
+    ('<', '⟨'),     # U+27E8: LEFT ANGLE BRACKET; '‹' U+2039: Single Left-Pointing Angle Quotation Mark
+    ('>', '⟩'),     # U+27E9: RIGHT ANGLE BRACKET; '›' U+203A: Single Right-Pointing Angle Quotation Mark
+    ('(', '⟮'),     # U+27EE: MATHEMATICAL LEFT FLATTENED PARENTHESIS
+    (')', '⟯'),     # U+27EF: MATHEMATICAL RIGHT FLATTENED PARENTHESIS
+    ('[', '⟦'),     # U+27E6: MATHEMATICAL LEFT WHITE SQUARE BRACKET
+    (']', '⟧'),     # U+27E7: MATHEMATICAL RIGHT WHITE SQUARE BRACKET
+    ('_', '𛲖'),     # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
+    ('#', '﹟'),     # U+FE5F: Small Number Sign
+    (';', '﹔'),     # U+FE54: Small Semicolon
+    ('@', '﹫'),     # U+FE6B: Small Commercial At
+    ('&', '﹠'),     # U+FE60: Small Ampersand
+    ('=', '﹦'),     # U+FE66: Small Equals Sign
+    ('+', '﹢'),     # U+FE62: Small Plus Sign
+    ('$', '﹩'),     # U+FE69: Small Dollar Sign
+    ('%', '﹪'),     # U+FE6A: Small Percent Sign
+    ('^', '＾'),     # U+FF3E: Fullwidth Circumflex Accent
+    (',', '﹐'),     # U+FE50: Small Comma
+    (' ', '　'),     # U+3000: Ideographic Space; ' ' U+200A Hair Space; ' ' U+2007 Figure Space;
+                    # ' ' U+2009 Thin; ' ' U+2003 Em Space; ' ' U+2002 En Space; ' ' U+2008 Punctuation Space
+                    # ' ' U+00A0: No-Break Space (NBSP); ' ' U+202F: Narrow No-Break Space (NNBSP)
+    (chr(127), '␡'),  # U+2421: DELETE SYMBOL
+)
+""" transformation table of special ASCII to Unicode alternative character,
+see https://www.compart.com/en/unicode/category/Po and https://xahlee.info/comp/unicode_naming_slash.html (http!) """
+
+ASCII_TO_UNICODE = dict(ASCII_UNICODE)  #: map to convert ASCII to an alternative defused Unicode character
+UNICODE_TO_ASCII = {unicode_char: ascii_char for ascii_char, unicode_char in ASCII_UNICODE}     #: Unicode to ASCII map
+
+
+def dedefuse(value: str) -> str:
+    """ convert a string that got defused with :func:`defuse` back to its original form.
+
+    :param value:               string defused with the function :func:`defuse`.
+    :return:                    re-activated form of the string (with all ASCII special characters recovered).
+    """
+    original = ""
+    for char in value:
+        if char in UNICODE_TO_ASCII:
+            char = UNICODE_TO_ASCII[char]
+        elif 0x2400 <= (code := ord(char)) <= 0x241F:
+            char = chr(code - 0x2400)
+        original += char
+
+    return original.replace(URI_SEP_CHAR, '://')
+
+
+def defuse(value: str) -> str:
+    """ convert a file path or a URI into a defused/presentational form to be usable as URL slug or file/folder name.
+
+    :param value:               any string to defuse (replace special chars with Unicode alternatives).
+    :return:                    string with its special characters replaced by its pure presentational alternatives.
+
+    the ASCII character range 0..31 gets converted to the Unicode range U+2400 + ord(char): 0==U+2400 ... 31==U+241F.
+
+    in *nix only / and \0 are not allowed characters in file names.
+
+    in MS Windows are not allowed: ASCII 0...31): / | \\ : * ? ” % < > ( ). some blogs recommend to also not allow
+    (convert) the characters # and '.
+    only old POSIX seems to be even more restricted (only allowing alphanumeric characters plus . - and _).
+
+    more on allowed characters in file names in the answers of RedGrittyBrick on https://superuser.com/questions/358855
+    and of Christopher Oezbek on https://stackoverflow.com/questions/1976007.
+
+    file name length is not restricted/shortened by this function, although the maximum is 255 characters on most OSs.
+
+    .. hint:: use :func:`dedefuse` to convert the defused string back to the corresponding URI/file-path.
+
+    """
+    defused = ""
+    value = value.replace('://', URI_SEP_CHAR)  # make URIs shorter
+    for char in value:
+        if char in ASCII_TO_UNICODE:
+            char = ASCII_TO_UNICODE[char]
+        elif (code := ord(char)) <= 31:
+            char = chr(0x2400 + code)
+        defused += char
+    return defused
+
+
 def dummy_function(*_args, **_kwargs):
     """ null function accepting any arguments and returning None.
 
@@ -377,17 +467,6 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     if convert_name:
         name = norm_name(camel_to_snake(name)).upper()
     return os.environ.get(name)
-
-
-def filename2uri(file_name: str) -> str:
-    """ convert a file name converted by :func:`uri2filename` back to its representation as a URI
-
-    :param file_name:           name of the file/folder to convert back to its URI representation.
-    :return:                    URI string.
-
-    .. hint:: to ensure proper conversion the specified file name has to be created by :func:`uri2filename`.
-    """
-    return urllib.parse.unquote(file_name)
 
 
 def force_encoding(text: Union[str, bytes], encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
@@ -1003,29 +1082,6 @@ def to_ascii(unicode_str: str) -> str:
     """
     nfkd_form = unicodedata.normalize('NFKD', unicode_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('ß', "ss").replace('€', "Euro")
-
-
-def uri2filename(uri: str) -> str:
-    """ convert a URI to be usable as name of a file or folder
-
-    :param uri:                 URI to convert to a corresponding file name, that will be revertible back to this URI.
-    :return:                    name of a file/folder representing the specified URI.
-
-    in *nix only / and \0 are not allowed characters in file names.
-    in MS Windows are not allowed: ASCII 0...31): / \\ : * ? ” < > | (). some blogs recommend to also not allow
-    (convert) the characters # and '.
-    only old POSIX seems to be even more restricted (only allowing alphanumeric characters plus . - and _).
-
-    file name length is not restricted/shortened by this function, although the maximum is 255 characters on most OSs.
-
-    more on allowed characters in file names in the answers of RedGrittyBrick on https://superuser.com/questions/358855
-    and of Christopher Oezbek on https://stackoverflow.com/questions/1976007.
-
-    .. hint:: use :func:`filename2uri` to convert the resulting file name back to the corresponding URO
-    """
-    # using urllib.parse.quote(uri, safe="") instead would convert also any non-ascii (e.g. umlaut) characters into hex
-    # added [] to str.join() argument because List comprehensions are faster than generator expressions
-    return "".join([f"%{hex(ord(_))[2:].upper()}" if _ in '/|\\:*?"<>%' else _ for _ in uri])
 
 
 def utc_datetime() -> datetime.datetime:
