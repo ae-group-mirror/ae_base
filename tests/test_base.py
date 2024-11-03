@@ -15,17 +15,20 @@ from typing import cast
 
 # noinspection PyProtectedMember
 from ae.base import (
-    BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNSET,
-    app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, dummy_function, duplicates, env_str,
-    filename2uri, force_encoding, full_stack_trace, import_module, instantiate_config_parser, in_wd,
+    ASCII_TO_UNICODE, BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNICODE_TO_ASCII,
+    UNSET,
+    URI_SEP_CHAR, app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, dummy_function,
+    duplicates, env_str,
+    dedefuse, force_encoding, full_stack_trace, import_module, instantiate_config_parser, in_wd,
     load_env_var_defaults, load_dotenvs, main_file_paths_parts, module_attr, module_file_path, module_name,
     norm_line_sep, norm_name, norm_path, now_str, os_host_name, os_local_ip, _os_platform, os_user_name,
     parse_dotenv, project_main_file, read_file, round_traditional, snake_to_camel, stack_frames, stack_var, stack_vars,
-    sys_env_dict, sys_env_text, to_ascii, uri2filename, utc_datetime, write_file, ErrorMsgMixin)
+    sys_env_dict, sys_env_text, to_ascii, defuse, utc_datetime, write_file, ErrorMsgMixin)
 
 
-tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>"
-tst_fna1 = "schema%3A%2F%2Fuser%3Apwd@domain%2Fpath_root%2Fpath_sub%5Cpath+file%25 Üml%3Fä%7Cït.path_ext%2A%22%3C%3E"
+tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>|*'()[]{}#^;&=$,~" + chr(127)
+tst_fna1 = "schema⫻user﹕pwd﹫domain⁄path𛲖root⁄path𛲖sub﹨path﹢file﹪　Üml﹖ä।ït.path𛲖ext﹡＂⟨⟩।﹡‘⟮⟯⟦⟧{}﹟＾﹔﹠﹦﹩﹐~␡"
+tst_fna2 = "test control chars" + "".join(chr(_) for _ in range(1, 32))
 
 env_var_name = 'env_var_nam1'
 env_var_val = 'value of env var'
@@ -171,6 +174,32 @@ class TestBaseHelpers:
         assert pev['setup_kwargs']['entry_points']['console_scripts'] == lst_val
         assert pev['setup_kwargs']['entry_points']['console_scripts'][0] == str_new
 
+    def test_dedefuse_file_name(self):
+        assert dedefuse(tst_fna1) == tst_uri1
+        assert defuse(dedefuse(tst_fna1)) == tst_fna1
+
+        assert dedefuse(defuse(tst_fna2)) == tst_fna2
+
+    def test_defuse_file_name(self):
+        assert defuse(tst_uri1) == tst_fna1
+        assert dedefuse(defuse(tst_uri1)) == tst_uri1
+
+    def test_defuse_os_file_name(self):
+        try:
+            write_file(tst_fna1, "tst uri file content1")
+            assert os.path.exists(tst_fna1)
+            write_file(tst_fna2, "tst uri file content2")
+            assert os.path.exists(tst_fna2)
+        finally:
+            if os.path.exists(tst_fna1):
+                os.remove(tst_fna1)
+            if os.path.exists(tst_fna2):
+                os.remove(tst_fna2)
+
+    def test_defuse_maps(self):
+        assert URI_SEP_CHAR not in UNICODE_TO_ASCII
+        assert len(UNICODE_TO_ASCII) == len(ASCII_TO_UNICODE)   # check for duplicates in the ASCII_UNICODE map
+
     def test_dummy_function(self):
         assert dummy_function() is None
         assert dummy_function(999, "any_args") is None
@@ -203,10 +232,6 @@ class TestBaseHelpers:
         vv = "test variable value"
         os.environ['NON_ALPHA_NUM_CHARS_69'] = vv
         assert env_str(ev, convert_name=True) == vv
-
-    def test_filename2uri(self):
-        assert filename2uri(tst_fna1) == tst_uri1
-        assert uri2filename(filename2uri(tst_fna1)) == tst_fna1
 
     def test_force_encoding_bytes(self):
         s = 'äöü'
@@ -708,21 +733,10 @@ class TestBaseHelpers:
         assert to_ascii('ß') == 'ss'
         assert to_ascii('€') == 'Euro'
 
-    def test_uri2filename(self):
-        assert uri2filename(tst_uri1) == tst_fna1
-        assert filename2uri(uri2filename(tst_uri1)) == tst_uri1
-
     def test_utc_datetime(self):
         dt1 = utc_datetime()
         dt2 = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         assert dt2 - dt1 < datetime.timedelta(seconds=1)
-
-    def test_uri_file_name(self):
-        try:
-            write_file(tst_fna1, "tst uri file content")
-        finally:
-            if os.path.exists(tst_fna1):
-                os.remove(tst_fna1)
 
     def test_write_file_as_text(self):
         test_file = os.path.join(TESTS_FOLDER, 'tst_file_written.ext')
