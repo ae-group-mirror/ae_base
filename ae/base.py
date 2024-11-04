@@ -173,7 +173,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.43'
+__version__ = '0.3.44'
 
 
 os_path_abspath = os.path.abspath
@@ -353,7 +353,6 @@ ASCII_UNICODE = (
     (')', '⟯'),     # U+27EF: MATHEMATICAL RIGHT FLATTENED PARENTHESIS
     ('[', '⟦'),     # U+27E6: MATHEMATICAL LEFT WHITE SQUARE BRACKET
     (']', '⟧'),     # U+27E7: MATHEMATICAL RIGHT WHITE SQUARE BRACKET
-    ('_', '𛲖'),     # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
     ('#', '﹟'),     # U+FE5F: Small Number Sign
     (';', '﹔'),     # U+FE54: Small Semicolon
     ('@', '﹫'),     # U+FE6B: Small Commercial At
@@ -368,6 +367,7 @@ ASCII_UNICODE = (
                     # ' ' U+2009 Thin; ' ' U+2003 Em Space; ' ' U+2002 En Space; ' ' U+2008 Punctuation Space
                     # ' ' U+00A0: No-Break Space (NBSP); ' ' U+202F: Narrow No-Break Space (NNBSP)
     (chr(127), '␡'),  # U+2421: DELETE SYMBOL
+    # ('_', '𛲖'),     # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
 )
 """ transformation table of special ASCII to Unicode alternative character,
 see https://www.compart.com/en/unicode/category/Po and https://xahlee.info/comp/unicode_naming_slash.html (http!) """
