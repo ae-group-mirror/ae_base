@@ -1,6 +1,7 @@
 """ ae.base unit tests """
 import datetime
 import os
+import string
 import tempfile
 
 import pytest
@@ -27,8 +28,9 @@ from ae.base import (
 
 
 tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>|*'()[]{}#^;&=$,~" + chr(127)
-tst_fna1 = "schema⫻user﹕pwd﹫domain⁄path𛲖root⁄path𛲖sub﹨path﹢file﹪　Üml﹖ä।ït.path𛲖ext﹡＂⟨⟩।﹡‘⟮⟯⟦⟧{}﹟＾﹔﹠﹦﹩﹐~␡"
-tst_fna2 = "test control chars" + "".join(chr(_) for _ in range(1, 32))
+tst_fna1 = "schema⫻user﹕pwd﹫domain⁄path_root⁄path_sub﹨path﹢file﹪　Üml﹖ä।ït.path_ext﹡＂⟨⟩।﹡‘⟮⟯⟦⟧{}﹟＾﹔﹠﹦﹩﹐~␡"
+tst_uri2 = "test control chars" + "".join(chr(_) for _ in range(1, 32))
+tst_fna2 = "test\u3000control\u3000chars␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟"
 
 env_var_name = 'env_var_nam1'
 env_var_val = 'value of env var'
@@ -176,13 +178,17 @@ class TestBaseHelpers:
 
     def test_dedefuse_file_name(self):
         assert dedefuse(tst_fna1) == tst_uri1
-        assert defuse(dedefuse(tst_fna1)) == tst_fna1
+        assert dedefuse(tst_fna2) == tst_uri2
 
-        assert dedefuse(defuse(tst_fna2)) == tst_fna2
+        assert dedefuse(defuse(tst_uri1)) == tst_uri1
+        assert dedefuse(defuse(tst_uri2)) == tst_uri2
 
     def test_defuse_file_name(self):
         assert defuse(tst_uri1) == tst_fna1
-        assert dedefuse(defuse(tst_uri1)) == tst_uri1
+        assert defuse(tst_uri2) == tst_fna2
+
+        assert defuse(dedefuse(tst_fna1)) == tst_fna1
+        assert defuse(dedefuse(tst_fna2)) == tst_fna2
 
     def test_defuse_os_file_name(self):
         try:
@@ -196,9 +202,17 @@ class TestBaseHelpers:
             if os.path.exists(tst_fna2):
                 os.remove(tst_fna2)
 
-    def test_defuse_maps(self):
+    def test_defuse_maps_integrity(self):
         assert URI_SEP_CHAR not in UNICODE_TO_ASCII
         assert len(UNICODE_TO_ASCII) == len(ASCII_TO_UNICODE)   # check for duplicates in the ASCII_UNICODE map
+
+    def test_defuse_maps_not_touching_chars_allowed_as_slug_and_filename(self):
+        assert '-' not in ASCII_TO_UNICODE
+        assert '_' not in ASCII_TO_UNICODE
+        assert '.' not in ASCII_TO_UNICODE
+        assert '~' not in ASCII_TO_UNICODE
+        for char in string.ascii_letters + string.digits:
+            assert char not in ASCII_TO_UNICODE
 
     def test_dummy_function(self):
         assert dummy_function() is None
