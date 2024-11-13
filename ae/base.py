@@ -173,7 +173,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.44'
+__version__ = '0.3.45'
 
 
 os_path_abspath = os.path.abspath
@@ -363,9 +363,13 @@ ASCII_UNICODE = (
     ('%', '﹪'),     # U+FE6A: Small Percent Sign
     ('^', '＾'),     # U+FF3E: Fullwidth Circumflex Accent
     (',', '﹐'),     # U+FE50: Small Comma
-    (' ', '　'),     # U+3000: Ideographic Space; ' ' U+200A Hair Space; ' ' U+2007 Figure Space;
-                    # ' ' U+2009 Thin; ' ' U+2003 Em Space; ' ' U+2002 En Space; ' ' U+2008 Punctuation Space
-                    # ' ' U+00A0: No-Break Space (NBSP); ' ' U+202F: Narrow No-Break Space (NNBSP)
+    (' ', '␣'),     # U+2423: Open Box; more see underneath and https://unicode-explorer.com/articles/space-characters:
+                    # ' ' U+00A0: No-Break Space (NBSP); '?¿?' U+1680 Ogham Space Mark; ' ' U+2000 En Quad;
+                    # ' ' U+2001 Em Quad; ' ' U+2002 En Space; ' ' U+2003 Em Space; ' ' U+2004 Three-Per-Em
+                    # ' ' U+2005 Four-Per-Em; ' ' U+2006 Six-Per-Em; ' ' U+2007 Figure Space;
+                    # ' ' U+2008 Punctuation Space; ' ' U+2009 Thin; ' ' U+200A Hair Space;
+                    # ' ' U+202F: Narrow No-Break Space (NNBSP); ' ' U+205F Medium Mathematical Space;
+                    # '␠' U+2420 symbol for space; '␣' U+2423 Open Box; '　' U+3000: Ideographic Space
     (chr(127), '␡'),  # U+2421: DELETE SYMBOL
     # ('_', '𛲖'),     # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
 )
@@ -1092,7 +1096,8 @@ def utc_datetime() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
-def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "", encoding: Optional[str] = None):
+def write_file(file_path: str, content: Union[str, bytes],
+               extra_mode: str = "", encoding: Optional[str] = None, make_dirs: bool = False):
     """ (over)write the file specified by :paramref:`~write_file.file_path` with text or binary/bytes content.
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
@@ -1105,6 +1110,8 @@ def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "",
                                 be automatically added to the `mode` argument of :func:`open` (if not already specified
                                 in this argument).
     :param encoding:            encoding used to write/convert/interpret the file content to write.
+    :param make_dirs:           pass True to automatically create not existing folders specified in
+                                :paramref:`~write_file.file_path`.
     :raises FileExistsError:    if file exists already and is write-protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
     :raises OSError:            if :paramref:`~write_file.file_path` is misspelled or contains invalid characters.
@@ -1120,6 +1127,9 @@ def write_file(file_path: str, content: Union[str, bytes], extra_mode: str = "",
     for an intent result.
     Related german docs: https://developer.android.com/training/data-storage/shared/media?hl=de
     """
+    if make_dirs and (dir_path := os_path_dirname(file_path)):
+        os.makedirs(dir_path, exist_ok=True)
+
     if isinstance(content, bytes) and 'b' not in extra_mode:
         extra_mode += 'b'
 

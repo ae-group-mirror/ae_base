@@ -28,9 +28,9 @@ from ae.base import (
 
 
 tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>|*'()[]{}#^;&=$,~" + chr(127)
-tst_fna1 = "schema⫻user﹕pwd﹫domain⁄path_root⁄path_sub﹨path﹢file﹪　Üml﹖ä।ït.path_ext﹡＂⟨⟩।﹡‘⟮⟯⟦⟧{}﹟＾﹔﹠﹦﹩﹐~␡"
+tst_fna1 = "schema⫻user﹕pwd﹫domain⁄path_root⁄path_sub﹨path﹢file﹪␣Üml﹖ä।ït.path_ext﹡＂⟨⟩।﹡‘⟮⟯⟦⟧{}﹟＾﹔﹠﹦﹩﹐~␡"
 tst_uri2 = "test control chars" + "".join(chr(_) for _ in range(1, 32))
-tst_fna2 = "test\u3000control\u3000chars␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟"
+tst_fna2 = "test␣control␣chars␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟"
 
 env_var_name = 'env_var_nam1'
 env_var_val = 'value of env var'
@@ -782,6 +782,27 @@ class TestBaseHelpers:
         finally:
             if os.path.exists(test_file):
                 os.remove(test_file)
+
+    def test_write_file_make_dirs(self):
+        root_dir = os.path.join(TESTS_FOLDER, 'root path of file')
+        test_dir = os.path.join(root_dir, '1st sub dir of file', 'subDir2')
+        test_file = os.path.join(test_dir, 'file in sub dir.ext')
+        content = "any content"
+        assert not os.path.exists(test_dir)
+        assert not os.path.exists(test_file)
+        try:
+            with pytest.raises(FileNotFoundError):
+                write_file(test_file, content)
+            write_file(test_file, content, make_dirs=True)
+            assert os.path.exists(test_dir)
+            assert os.path.isdir(test_dir)
+            assert os.path.exists(test_file)
+            assert os.path.isfile(test_file)
+            assert read_file(test_file) == content
+
+        finally:
+            if os.path.exists(root_dir):
+                shutil.rmtree(root_dir)
 
 
 class TestModuleHelpers:
