@@ -9,10 +9,10 @@ functions, useful classes and context managers.
 base constants
 --------------
 
-ISO format strings for `date` and `datetime` values are provided by the constants :data:`DATE_ISO` and
+ISO format strings for ``date`` and ``datetime`` values are provided by the constants :data:`DATE_ISO` and
 :data:`DATE_TIME_ISO`.
 
-the :data:`UNSET` constant is useful in cases where `None` is a valid data value and another special value is needed
+the :data:`UNSET` constant is useful in cases where ``None`` is a valid data value and another special value is needed
 to specify that e.g. an argument or attribute has no (valid) value or did not get specified/passed.
 
 default values to compile file and folder names for a package or an app project are provided by the constants:
@@ -20,8 +20,8 @@ default values to compile file and folder names for a package or an app project 
 :data:`PACKAGE_INCLUDE_FILES_PREFIX`, :data:`PY_EXT`, :data:`PY_INIT`, :data:`PY_MAIN`, :data:`CFG_EXT`
 and :data:`INI_EXT`.
 
-the constants :data:`PACKAGE_NAME`, :data:`PACKAGE_DOMAIN` and :data:`PERMISSIONS` are mainly used for apps running
-on mobile devices. to avoid redundancies, these values get loaded from the
+the constants :data:`PACKAGE_NAME`, :data:`PACKAGE_DOMAIN` and :data:`PERMISSIONS` are mainly
+used for apps running on mobile devices. to avoid redundancies, these values get loaded from the
 :data:`build config file <BUILD_CONFIG_FILE>` - if it exists in the current working directory.
 
 with the help of the format string constant :data:`NOW_STR_FORMAT` and the function :func:`now_str` you can create a
@@ -104,8 +104,8 @@ links to other android code and service examples and documentation:
     * `https://github.com/Android-for-Python/Android-for-Python-Users`__
     * `https://github.com/Android-for-Python/INDEX-of-Examples`__
 
-big thanks to `Robert Flatt <https://github.com/RobertFlatt>`_ for his investigations, findings and documentations to
-code and build Kivy apps for the Android OS, and to `Gabriel Pettier <https://github.com/tshirtman>`_ for his service
+big thanks to `Robert Flatt <https://github.com/RobertFlatt>`__ for his investigations, findings and documentations to
+code and build Kivy apps for the Android OS, and to `Gabriel Pettier <https://github.com/tshirtman>`__ for his service
 osc example.
 
 
@@ -113,9 +113,9 @@ types, classes and mixins
 -------------------------
 
 the :class:`UnsetType` class can be used e.g. for the declaration of optional function and method parameters,
-allowing also `None` is an accepted argument value.
+allowing also ``None`` is an accepted argument value.
 
-to extend any class with an intelligent error message property, add the mixin :class:`ErrorMsgMixin` to it.
+to extend any class with an intelligent error message handling, add the mixin :class:`ErrorMsgMixin` to it.
 
 
 generic context manager
@@ -173,7 +173,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.45'
+__version__ = '0.3.46'
 
 
 os_path_abspath = os.path.abspath
@@ -265,7 +265,7 @@ class UnsetType:
         return 0
 
 
-UNSET = UnsetType()     #: pseudo value used for attributes/arguments if `None` is needed as a valid value
+UNSET = UnsetType()     #: pseudo value used for attributes/arguments if ``None`` is needed as a valid value
 
 
 def app_name_guess() -> str:
@@ -405,10 +405,11 @@ def defuse(value: str) -> str:
 
     the ASCII character range 0..31 gets converted to the Unicode range U+2400 + ord(char): 0==U+2400 ... 31==U+241F.
 
-    in *nix only / and \0 are not allowed characters in file names.
+    in most unix variants only the slash and the ASCII 0 characters are not allowed in file names.
 
-    in MS Windows are not allowed: ASCII 0...31): / | \\ : * ? ” % < > ( ). some blogs recommend to also not allow
+    in MS Windows are not allowed: ASCII 0..31 / | \\ : * ? ” % < > ( ). some blogs recommend to also not allow
     (convert) the characters # and '.
+
     only old POSIX seems to be even more restricted (only allowing alphanumeric characters plus . - and _).
 
     more on allowed characters in file names in the answers of RedGrittyBrick on https://superuser.com/questions/358855
@@ -416,7 +417,7 @@ def defuse(value: str) -> str:
 
     file name length is not restricted/shortened by this function, although the maximum is 255 characters on most OSs.
 
-    .. hint:: use :func:`dedefuse` to convert the defused string back to the corresponding URI/file-path.
+    .. hint:: use the :func:`dedefuse` function to convert the defused string back to the corresponding URI/file-path.
 
     """
     defused = ""
@@ -663,7 +664,7 @@ def module_file_path(local_object: Optional[Callable] = None) -> str:
 def module_name(*skip_modules: str, depth: int = 0) -> Optional[str]:
     """ find the first module in the call stack that is *not* in :paramref:`~module_name.skip_modules`.
 
-    :param skip_modules:        module names to skip (def=this ae.core module).
+    :param skip_modules:        module names to skip (def=this and other core modules, see :data:`SKIPPED_MODULES`).
     :param depth:               the calling level from which on to search. the default value 0 refers the frame and
                                 the module of the caller of this function.
                                 pass 1 or an even higher value if you want to get the module name of a function/method
@@ -851,12 +852,11 @@ def parse_dotenv(file_path: str) -> Dict[str, str]:
             delimiter = None
         if delimiter != "'":
             for parts in _env_variable.findall(var_val):
-                if parts[0] == '\\':
-                    replace = "".join(parts[1:-1])          # don't replace escaped variables
-                else:
-                    # substitute variables in a value, replace it with the value from the environment
-                    replace = env_vars.get(parts[-1], os.environ.get(parts[-1], ""))
-                var_val = var_val.replace("".join(parts[0:-1]), replace)
+                # substitute env variables in a value with its value, if declared and not escaped
+                if parts[0] == '\\' or (replace := env_vars.get(parts[-1], os.environ.get(parts[-1], UNSET))) is UNSET:
+                    replace = "".join(parts[1:-1])  # don't replace escaped/undeclared vars to prevent value cut at '$'
+
+                var_val = var_val.replace("".join(parts[0:-1]), cast(str, replace))
 
         env_vars[var_nam] = var_val
 
@@ -901,8 +901,8 @@ def read_file(file_path: str, extra_mode: str = "", encoding: Optional[str] = No
                                 read the content of a binary file returned as bytes array. in binary mode the argument
                                 passed in :paramref:`~read_file.error_handling` will be ignored.
     :param encoding:            encoding used to load and convert/interpret the file content.
-    :param error_handling:      for files opened in text mode pass `'strict'` or `None` to return `None` (instead of an
-                                empty string) for the cases where either a decoding `ValueError` exception or any
+    :param error_handling:      for files opened in text mode pass `'strict'` or ``None`` to return ``None`` (instead of
+                                an empty string) for the cases where either a decoding `ValueError` exception or any
                                 `OSError`, `FileNotFoundError` or `PermissionError` exception got raised.
                                 the default value `'ignore'` will ignore any decoding errors (missing some characters)
                                 and will return an empty string on any file/os exception. this parameter will be ignored
@@ -1118,14 +1118,14 @@ def write_file(file_path: str, content: Union[str, bytes],
     :raises PermissionError:    if current OS user account lacks permissions to read the file content.
     :raises ValueError:         on decoding errors.
 
-    to extend this function for Android 14+ see https://github.com/beeware/toga/pull/1158#issuecomment-2254564657
-    and https://gist.github.com/neonankiti/05922cf0a44108a2e2732671ed9ef386
+    to extend this function for Android 14+ see `<https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>`__
+    and `<https://gist.github.com/neonankiti/05922cf0a44108a2e2732671ed9ef386>`__
     Yes, to use ACTION_CREATE_DOCUMENT, you don't supply a URI in the intent. You wait for the intent result, and that
     will contain a URI which you can write to.
-    See #1158 (comment - https://github.com/beeware/toga/pull/1158#issuecomment-2254564657) for a link to a Java
-    example, and #1158 (comment - https://github.com/beeware/toga/pull/1158#issuecomment-1446196973) for how to wait
-    for an intent result.
-    Related german docs: https://developer.android.com/training/data-storage/shared/media?hl=de
+    See #1158 (comment - `<https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>`__) for a link to a Java
+    example, and #1158 (comment - `<https://github.com/beeware/toga/pull/1158#issuecomment-1446196973>`__) for how to
+    wait for an intent result.
+    Related german docs: `<https://developer.android.com/training/data-storage/shared/media?hl=de>`__
     """
     if make_dirs and (dir_path := os_path_dirname(file_path)):
         os.makedirs(dir_path, exist_ok=True)
@@ -1141,8 +1141,32 @@ def write_file(file_path: str, content: Union[str, bytes],
 
 
 class ErrorMsgMixin:
-    """ mixin class providing error message """
+    """ mixin class providing sophisticated error message handling. """
     _err_msg: str = ""
+
+    cae = None
+    po = print
+    dpo = print
+    vpo = print
+
+    def __init__(self):
+        try:
+            from ae.core import main_app_instance       # type: ignore
+
+            self.cae = cae = main_app_instance()
+            assert cae is not None, f"{self.__class__.__name__}.__init__() called too early; main app instance not"
+
+            self.po = cae.po
+            self.dpo = cae.dpo
+            self.vpo = cae.vpo
+
+        except (ImportError, AssertionError, Exception) as exc:
+            print(f"{self.__class__.__name__}.__init__() raised {exc}; using print() instead of main app error loggers")
+
+            # self.cae = None
+            # self.po = print
+            # self.dpo = print
+            # self.vpo = print
 
     @property
     def error_message(self) -> str:
@@ -1157,14 +1181,19 @@ class ErrorMsgMixin:
     @error_message.setter
     def error_message(self, next_err_msg: str):
         if next_err_msg:
+            if "WARNING" in next_err_msg.upper():
+                self.vpo(f" .::. {next_err_msg}")
+            else:
+                self.dpo(f" .::. {next_err_msg}")
             self._err_msg += ("\n\n" if self._err_msg else "") + next_err_msg
         else:
             self._err_msg = ""
 
 
-PACKAGE_NAME = stack_var('__name__') or 'unspecified_package'
-PACKAGE_DOMAIN = 'org.test'
-PERMISSIONS = "INTERNET, VIBRATE, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE"
+# package and permissions handling defaults for all other platforms and frameworks
+PACKAGE_NAME = stack_var('__name__') or 'unspecified_package'                       #: package name default
+PACKAGE_DOMAIN = 'org.test'                                                         #: package domain default
+PERMISSIONS = "INTERNET, VIBRATE, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE"    #: permissions default
 if os_path_isfile(BUILD_CONFIG_FILE):                           # pragma: no cover
     PACKAGE_NAME, PACKAGE_DOMAIN, PERMISSIONS = build_config_variable_values(
         ('package.name', PACKAGE_NAME),
@@ -1180,8 +1209,8 @@ elif os_platform == 'android':                                  # pragma: no cov
 
 if os_platform == 'android':                                    # pragma: no cover
     # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
-    # 'android' (see # https://bugs.python.org/issue28141 and https://bugs.python.org/issue32073). these functions are
-    # used by shutil.copy2/copy/copytree/move to copy OS-specific file attributes.
+    # 'android' (see # `<https://bugs.python.org/issue28141>`__ and `<https://bugs.python.org/issue32073>`__). these
+    # functions are used by shutil.copy2/copy/copytree/move to copy OS-specific file attributes.
     # although shutil.copytree() and shutil.move() are copying/moving the files correctly when the copy_function
     # arg is set to :func:`shutil.copyfile`, they will finally also crash afterward when they try to set the attributes
     # on the destination root directory.
@@ -1213,8 +1242,8 @@ if os_platform == 'android':                                    # pragma: no cov
         :param service_arg:     string value to be assigned to environment variable PYTHON_SERVICE_ARGUMENT on start.
         :return:                service instance.
 
-        see https://github.com/tshirtman/kivy_service_osc/blob/master/src/main.py
-        and https://python-for-android.readthedocs.io/en/latest/services/#arbitrary-scripts-services
+        see `<https://github.com/tshirtman/kivy_service_osc/blob/master/src/main.py>`__
+        and `<https://python-for-android.readthedocs.io/en/latest/services/#arbitrary-scripts-services>`__
         """
         service_instance = autoclass(f"{PACKAGE_DOMAIN}.{PACKAGE_NAME}.Service{PACKAGE_NAME.capitalize()}")
         activity = autoclass('org.kivy.android.PythonActivity').mActivity
