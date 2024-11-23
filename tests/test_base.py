@@ -3,6 +3,7 @@ import datetime
 import os
 import string
 import tempfile
+from unittest.mock import patch
 
 import pytest
 import shutil
@@ -71,7 +72,43 @@ def test_unset_null_length():
 
 class TestErrorMsgMixin:
     def test_instantiation(self):
-        assert ErrorMsgMixin()
+        ins = ErrorMsgMixin()
+        assert ins
+        assert ins.cae is None      # in test env is no console/gui app available
+        assert ins.po is ins.dpo is ins.vpo is print
+
+        with patch('ae.core.main_app_instance', lambda : None):
+            ins = ErrorMsgMixin()
+            assert ins
+            assert ins.cae is None
+            assert ins.po is ins.dpo is ins.vpo is print
+
+        class _AppMock(ErrorMsgMixin):
+            cae = None
+
+            def po(self):
+                """ po() mock """
+                return "po"
+
+            def dpo(self):
+                """ dpo() mock """
+                return "dpo"
+
+            def vpo(self):
+                """ vpo() mock """
+                return "vpo"
+
+        app_ins = _AppMock()
+
+        with patch('ae.core.main_app_instance', lambda : app_ins):
+            ins = ErrorMsgMixin()
+            assert ins.cae is app_ins
+            assert ins.po is not print
+            assert ins.po() == "po"
+            assert ins.dpo is not print
+            assert ins.dpo() == "dpo"
+            assert ins.vpo is not print
+            assert ins.vpo() == "vpo"
 
     def test_error_message_property(self):
         ins = ErrorMsgMixin()
@@ -88,6 +125,14 @@ class TestErrorMsgMixin:
 
         ins.error_message = ""
         assert ins.error_message == ""
+
+    def test_error_message_property_for_warnings(self):
+        ins = ErrorMsgMixin()
+
+        err_msg = "error message with the word warning"
+        ins.error_message = err_msg
+        ins.error_message = "another message"
+        assert err_msg in ins.error_message
 
 
 class TestBaseHelpers:
@@ -542,12 +587,15 @@ class TestBaseHelpers:
         print(os_user_name())
         assert os_user_name()
 
-    def test_parse_dotenv_error_space_prefixed_var_name(self):
+    def test_parse_dotenv_dollar_char_does_not_cutoff_value(self):
         with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write(' var_nam="var val"')
+            fp.write('declaredVar = DeclaredValue\n')
+            fp.write('replacedVar = beforeTheDollar$declaredVar\n')
+            fp.write('uncutVar = beforeTheDollar$afterTheDollar\n')
             fp.seek(0)
             loaded = parse_dotenv(fp.name)
-            assert 'var_nam' not in loaded      # added warning
+            assert loaded['replacedVar'] == "beforeTheDollarDeclaredValue"
+            assert loaded['uncutVar'] == "beforeTheDollar$afterTheDollar"
 
     def test_parse_dotenv_double_quoted_value(self):
         with tempfile.NamedTemporaryFile(mode="w") as fp:
@@ -556,6 +604,13 @@ class TestBaseHelpers:
             loaded = parse_dotenv(fp.name)
             assert 'var_nam' in loaded
             assert loaded['var_nam'] == "var val"
+
+    def test_parse_dotenv_error_space_prefixed_var_name(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            fp.write(' var_nam="var val"')
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' not in loaded      # added warning
 
     def test_parse_dotenv_single_value(self):
         with tempfile.NamedTemporaryFile(mode="w") as fp:
@@ -624,14 +679,14 @@ class TestBaseHelpers:
             assert 'env_var' in loaded
             assert loaded['env_var'] == "var val"
 
-    def test_parse_dotenv_var_expands_undefined_variable_to_empty_string(self):
+    def test_parse_dotenv_var_expands_not_an_undefined_variable_to_empty_string(self):
         with tempfile.NamedTemporaryFile(mode="w") as fp:
             fp.write("var_nam=$env_var")
             fp.seek(0)
             loaded = parse_dotenv(fp.name)
             assert 'env_var' not in loaded
             assert 'var_nam' in loaded
-            assert loaded['var_nam'] == ""
+            assert loaded['var_nam'] == "$env_var"
 
     def test_parse_dotenv_var_expands_in_double_quoted_values(self):
         with tempfile.NamedTemporaryFile(mode="w") as fp:
