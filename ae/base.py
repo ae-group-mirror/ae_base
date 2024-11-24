@@ -173,7 +173,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.46'
+__version__ = '0.3.47'
 
 
 os_path_abspath = os.path.abspath
@@ -283,7 +283,7 @@ def app_name_guess() -> str:
             app_name = os_path_basename(path)
             if app_name.lower() in unspecified_app_names:
                 app_name = "unguessable"
-    return app_name
+    return defuse(app_name)
 
 
 def build_config_variable_values(*names_defaults: Tuple[str, Any], section: str = 'app') -> Tuple[Any, ...]:
@@ -364,7 +364,7 @@ ASCII_UNICODE = (
     ('^', '＾'),     # U+FF3E: Fullwidth Circumflex Accent
     (',', '﹐'),     # U+FE50: Small Comma
     (' ', '␣'),     # U+2423: Open Box; more see underneath and https://unicode-explorer.com/articles/space-characters:
-                    # ' ' U+00A0: No-Break Space (NBSP); '?¿?' U+1680 Ogham Space Mark; ' ' U+2000 En Quad;
+                    # ' ' U+00A0: No-Break Space (NBSP); ' ' U+1680 Ogham Space Mark; ' ' U+2000 En Quad;
                     # ' ' U+2001 Em Quad; ' ' U+2002 En Space; ' ' U+2003 Em Space; ' ' U+2004 Three-Per-Em
                     # ' ' U+2005 Four-Per-Em; ' ' U+2006 Six-Per-Em; ' ' U+2007 Figure Space;
                     # ' ' U+2008 Punctuation Space; ' ' U+2009 Thin; ' ' U+200A Hair Space;
@@ -758,7 +758,7 @@ def os_host_name() -> str:
 
     :return:                    machine name string.
     """
-    return platform.node()
+    return defuse(platform.node()) or "undeterminableHostName"
 
 
 def os_local_ip() -> str:
