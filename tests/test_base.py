@@ -86,15 +86,18 @@ class TestErrorMsgMixin:
         class _AppMock(ErrorMsgMixin):
             cae = None
 
-            def po(self):
+            @staticmethod
+            def po():
                 """ po() mock """
                 return "po"
 
-            def dpo(self):
+            @staticmethod
+            def dpo():
                 """ dpo() mock """
                 return "dpo"
 
-            def vpo(self):
+            @staticmethod
+            def vpo():
                 """ vpo() mock """
                 return "vpo"
 
