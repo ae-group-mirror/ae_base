@@ -5,6 +5,11 @@ basic constants, helper functions and context manager
 this module is pure python, has no external dependencies, and is providing base constants, common helper
 functions, useful classes and context managers.
 
+.. note::
+    on import of this module, while running on Android OS, it will monkey patch the :mod:`shutil` module
+    to allow to use them on Android devices. therefore the import of this module should be one of the first ones
+    in your app's main module.
+
 
 base constants
 --------------
@@ -19,10 +24,6 @@ default values to compile file and folder names for a package or an app project 
 :data:`DOCS_FOLDER`, :data:`TESTS_FOLDER`, :data:`TEMPLATES_FOLDER`, :data:`BUILD_CONFIG_FILE`,
 :data:`PACKAGE_INCLUDE_FILES_PREFIX`, :data:`PY_EXT`, :data:`PY_INIT`, :data:`PY_MAIN`, :data:`CFG_EXT`
 and :data:`INI_EXT`.
-
-the constants :data:`PACKAGE_NAME`, :data:`PACKAGE_DOMAIN` and :data:`PERMISSIONS` are mainly
-used for apps running on mobile devices. to avoid redundancies, these values get loaded from the
-:data:`build config file <BUILD_CONFIG_FILE>` - if it exists in the current working directory.
 
 with the help of the format string constant :data:`NOW_STR_FORMAT` and the function :func:`now_str` you can create a
 sortable and compact string from a timestamp.
@@ -82,31 +83,13 @@ variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`
 to integrate system environment variables from ``.env`` files into :data:`os.environ` the helper functions
 :func:parse_dotenv`, :func:`load_env_var_defaults` and :func:`load_dotenvs` are provided.
 
+the :mod:`ae.core` portion is providing more OS-specific constants and helper functions, like e.g.
+:func:`start_app_service` and :func:`request_app_permissions`.
 
-android-specific constants and helper functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-some helper functions of this module are provided to be used for the Android OS.
-
-the helper function :func:`start_app_service` is starting a service in its own, separate thread.
-with the function :func:`request_app_permissions` you can ensure that all your Android permissions will be
-requested. the module :mod:`ae.kivy.apps` does this automatically on app startup. on other platforms than
-Android it will have no effect to call these functions.
-
-.. note:: importing this module on an Android OS, it is monkey patching the :mod:`shutil` module to prevent crashes.
-
-links to other android code and service examples and documentation:
-
-    * `https://python-for-android.readthedocs.io/en/latest/`__
-    * `https://github.com/kivy/python-for-android/tree/develop/pythonforandroid/recipes/android/src/android`__
-    * `https://github.com/tshirtman/kivy_service_osc/blob/master/src/main.py`__
-    * `https://blog.kivy.org/2014/01/building-a-background-application-on-android-with-kivy/`__
-    * `https://github.com/Android-for-Python/Android-for-Python-Users`__
-    * `https://github.com/Android-for-Python/INDEX-of-Examples`__
-
-big thanks to `Robert Flatt <https://github.com/RobertFlatt>`__ for his investigations, findings and documentations to
-code and build Kivy apps for the Android OS, and to `Gabriel Pettier <https://github.com/tshirtman>`__ for his service
-osc example.
+.. note::
+    on import of this module, while running on Android OS, it will monkey patch the :mod:`shutil` module to allow to
+    use them on Android devices, and on first app start request the permissions of your app. therefore to prevent
+    permission errors, the import of this module should be the first statement in the main module of your app.
 
 
 types, classes and mixins
@@ -149,7 +132,7 @@ another useful helper function provided by this portion to inspect and debug you
 os.path shortcuts
 -----------------
 
-the following data items are pointers to shortcut the lookup to their related functions in the
+the following data items are pointers to shortcut at runtime the lookup to their related functions in the
 Python module :mod:`os.path`:
 """
 import datetime
@@ -173,7 +156,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.47'
+__version__ = '0.3.48'
 
 
 os_path_abspath = os.path.abspath
@@ -248,8 +231,7 @@ NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"    #: timestamp format of :func
 SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.dynamicod', 'ae.core', 'ae.console', 'ae.gui_app', 'ae.gui_help',
                    'ae.kivy', 'ae.kivy.apps', 'ae.kivy.behaviors', 'ae.kivy.i18n', 'ae.kivy.tours', 'ae.kivy.widgets',
                    'ae.enaml_app', 'ae.beeware_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
-                   'ae.qpython_app', 'ae.appjar_app',   # removed in V 0.1.4: 'ae.lisz_app_data',
-                   'importlib._bootstrap', 'importlib._bootstrap_external')
+                   'ae.qpython_app', 'ae.appjar_app', 'importlib._bootstrap', 'importlib._bootstrap_external')
 """ skipped modules used as default by :func:`module_name`, :func:`stack_var` and :func:`stack_vars` """
 
 
@@ -758,7 +740,7 @@ def os_host_name() -> str:
 
     :return:                    machine name string.
     """
-    return defuse(platform.node()) or "undeterminableHostName"
+    return defuse(platform.node()) or "indeterminableHostName"
 
 
 def os_local_ip() -> str:
@@ -1190,23 +1172,6 @@ class ErrorMsgMixin:
             self._err_msg = ""
 
 
-# package and permissions handling defaults for all other platforms and frameworks
-PACKAGE_NAME = stack_var('__name__') or 'unspecified_package'                       #: package name default
-PACKAGE_DOMAIN = 'org.test'                                                         #: package domain default
-PERMISSIONS = "INTERNET, VIBRATE, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE"    #: permissions default
-if os_path_isfile(BUILD_CONFIG_FILE):                           # pragma: no cover
-    PACKAGE_NAME, PACKAGE_DOMAIN, PERMISSIONS = build_config_variable_values(
-        ('package.name', PACKAGE_NAME),
-        ('package.domain', PACKAGE_DOMAIN),
-        ('android.permissions', PERMISSIONS))
-elif os_platform == 'android':                                  # pragma: no cover
-    _importing_package = norm_path(stack_var('__file__') or 'empty_package' + PY_EXT)
-    if os_path_basename(_importing_package) in (PY_INIT, PY_MAIN):
-        _importing_package = os_path_dirname(_importing_package)
-    _importing_package = os_path_splitext(os_path_basename(_importing_package))[0]
-    write_file(f'{_importing_package}_debug.log', f"{BUILD_CONFIG_FILE} not bundled - using defaults\n", extra_mode='a')
-
-
 if os_platform == 'android':                                    # pragma: no cover
     # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
     # 'android' (see # `<https://bugs.python.org/issue28141>`__ and `<https://bugs.python.org/issue32073>`__). these
@@ -1216,41 +1181,3 @@ if os_platform == 'android':                                    # pragma: no cov
     # on the destination root directory.
     shutil.copymode = dummy_function
     shutil.copystat = dummy_function
-
-    # import permissions module from python-for-android (recipes/android/src/android/permissions.py)
-    # noinspection PyUnresolvedReferences
-    from android.permissions import request_permissions, Permission     # type: ignore # pylint: disable=import-error
-    from jnius import autoclass                                         # type: ignore
-
-    def request_app_permissions(callback: Optional[Callable[[List[Permission], List[bool]], None]] = None):
-        """ request app/service permissions on Android OS.
-
-        :param callback:        optional callback receiving two list arguments with identical length,
-                                the 1st with the requested permissions and
-                                the 2nd with booleans stating if the permission got granted (True) or rejected (False).
-        """
-        permissions = []
-        for permission_str in PERMISSIONS.split(','):
-            permission = getattr(Permission, permission_str.strip(), None)
-            if permission:
-                permissions.append(permission)
-        request_permissions(permissions, callback=callback)
-
-    def start_app_service(service_arg: str = "") -> Any:
-        """ start service.
-
-        :param service_arg:     string value to be assigned to environment variable PYTHON_SERVICE_ARGUMENT on start.
-        :return:                service instance.
-
-        see `<https://github.com/tshirtman/kivy_service_osc/blob/master/src/main.py>`__
-        and `<https://python-for-android.readthedocs.io/en/latest/services/#arbitrary-scripts-services>`__
-        """
-        service_instance = autoclass(f"{PACKAGE_DOMAIN}.{PACKAGE_NAME}.Service{PACKAGE_NAME.capitalize()}")
-        activity = autoclass('org.kivy.android.PythonActivity').mActivity
-        service_instance.start(activity, service_arg)        # service_arg will be in env var PYTHON_SERVICE_ARGUMENT
-
-        return service_instance
-
-else:
-    request_app_permissions = dummy_function
-    start_app_service = dummy_function
