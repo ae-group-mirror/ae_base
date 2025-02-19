@@ -21,7 +21,7 @@ from ae.base import (
     UNSET,
     URI_SEP_CHAR, app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, dummy_function,
     duplicates, env_str,
-    dedefuse, force_encoding, full_stack_trace, import_module, instantiate_config_parser, in_wd,
+    dedefuse, force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
     load_env_var_defaults, load_dotenvs, main_file_paths_parts, module_attr, module_file_path, module_name,
     norm_line_sep, norm_name, norm_path, now_str, os_host_name, os_local_ip, _os_platform, os_user_name,
     parse_dotenv, project_main_file, read_file, round_traditional, snake_to_camel, stack_frames, stack_var, stack_vars,
@@ -325,6 +325,27 @@ class TestBaseHelpers:
 
         with pytest.raises(TypeError):
             assert force_encoding(s, encoding=cast(str, None)) == '\\xe4\\xf6\\xfc'
+
+    def test_format_given(self):
+        assert format_given("test text with {placeholder}", {}) == "test text with {placeholder}"
+        assert format_given("test text with {placeholder:.2e}", {}) == "test text with {placeholder:.2e}"
+        assert format_given("a {placeholder} {{test}}", {}) == "a {placeholder} {test}"
+
+        assert format_given("test text with {placeholder}", {'placeholder': "replaced"}) == "test text with replaced"
+        assert format_given("test text with {placeholder:.2e}", {'placeholder': 3.14159}) == "test text with 3.14e+00"
+
+        assert format_given("a {ph} {{test}}", {'ph': "rep"}) == "a rep {test}"
+        assert format_given("a {{ph}} {test}", {'ph': "rep"}) == "a {ph} {test}"
+        assert format_given("a {{ph} {test}}", {'ph': "rep"}) == "a {{ph} {test}}"
+
+        assert format_given("a non-ph}", {'ph': "rep"}) == "a non-ph}"
+        assert format_given("a non-{ph", {'ph': "rep"}) == "a non-{ph"
+
+    def test_format_given_err(self):
+        with pytest.raises(ValueError):
+            format_given("test text with {placeholder", {}, strict=True)     # expected '}' before end of string
+        with pytest.raises(ValueError):
+            format_given("test text with placeholder}", {}, strict=True)     # Single '}' encountered in format string
 
     def test_import_module_ae_base(self):
         mod_ref = import_module('ae.base')

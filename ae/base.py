@@ -100,6 +100,9 @@ allowing also ``None`` is an accepted argument value.
 
 to extend any class with an intelligent error message handling, add the mixin :class:`ErrorMsgMixin` to it.
 
+the classes :class:`UnformattedValue` and :class:`GivenFormatter` can be used to format strings with placeholders
+enclosed in curly brackets. the function :func:`format_given` is using them to format templates with placeholders.
+
 
 generic context manager
 -----------------------
@@ -144,6 +147,7 @@ import platform
 import re
 import shutil
 import socket
+import string
 import sys
 import unicodedata
 import warnings
@@ -156,7 +160,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.48'
+__version__ = '0.3.49'
 
 
 os_path_abspath = os.path.abspath
@@ -467,6 +471,50 @@ def force_encoding(text: Union[str, bytes], encoding: str = DEF_ENCODING, errors
     """
     enc_str: bytes = text.encode(encoding=encoding, errors=errors) if isinstance(text, str) else text
     return enc_str.decode(encoding=encoding)
+
+
+class UnformattedValue:
+    """ helper class for :func:`~ae.base.format_given` to keep placeholder with format unchanged if not found. """
+    def __init__(self, key: str):
+        self.key = key
+
+    def __format__(self, format_spec: str):
+        """ overriding Python object class method to return placeholder unchanged including the curly brackets. """
+        return "{{{}{}}}".format(self.key, ":" + format_spec if format_spec else "")
+
+
+class GivenFormatter(string.Formatter):
+    """ helper class for :func:`~ae.base.format_given` to keep placeholder with format unchanged if not found. """
+    def get_value(self, key, args, kwargs):
+        """ overriding to keep placeholder unchanged if not found """
+        try:
+            return super().get_value(key, args, kwargs)
+        except KeyError:
+            return UnformattedValue(key)
+
+
+def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = False):
+    """ replacement for Python's str.format_map(), keeping intact placeholders that are not in the specified mapping.
+
+    :param text:                text/template in which the given/specified placeholders will get replaced. in contrary
+                                to str.format_map() no KeyError will be raised for placeholders not specified in
+                                :paramref:`~format_given.placeholder_map`.
+    :param placeholder_map:     dict with placeholder keys to be replaced in :paramref:`~format_given.text` argument.
+    :param strict:              pass True to raise error for text templates containing unpaired curly brackets.
+    :return:                    the specified :paramref:`~format_given.text` with only the placeholders specified in
+                                :paramref:`~format_given.placeholder_map` replaced with their respective map value.
+                                additionally any ValueError that would be thrown by str.format_map(), e.g. if the
+
+
+    inspired by the answer of CodeManX in `https://stackoverflow.com/questions/3536303`__
+    """
+    formatter = GivenFormatter()
+    try:
+        return formatter.vformat(text, (), placeholder_map)
+    except (ValueError, Exception) as ex:
+        if strict:
+            raise ex
+        return text
 
 
 def full_stack_trace(ex: Exception) -> str:
