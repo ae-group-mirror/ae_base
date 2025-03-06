@@ -792,7 +792,7 @@ class TestBaseHelpers:
         assert snake_to_camel("@special/chars!") == "@special/chars!"
 
     def test_sys_env_dict(self):
-        assert sys_env_dict().get('python_ver')
+        assert sys_env_dict().get('python ver')
         assert sys_env_dict().get('cwd')
         assert sys_env_dict().get('frozen') is False
 
@@ -805,7 +805,7 @@ class TestBaseHelpers:
 
     def test_sys_env_text(self):
         assert isinstance(sys_env_text(), str)
-        assert 'python_ver' in sys_env_text()
+        assert 'python ver' in sys_env_text()
         ret = sys_env_text(extra_sys_env_dict=dict(test_add='TstAdd'))
         assert 'test_add' in ret
         assert 'TstAdd' in ret
