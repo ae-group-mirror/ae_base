@@ -160,7 +160,7 @@ from types import ModuleType
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
 
 
-__version__ = '0.3.49'
+__version__ = '0.3.50'
 
 
 os_path_abspath = os.path.abspath
@@ -1066,15 +1066,17 @@ def sys_env_dict() -> Dict[str, Any]:
     .. hint:: see also https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     """
     sed: Dict[str, Any] = {
-        'python_ver': sys.version.replace('\n', ' '),
+        'python ver': sys.version.replace('\n', ' '),
         'platform': os_platform,
         'argv': sys.argv,
         'executable': sys.executable,
         'cwd': os.getcwd(),
         'frozen': getattr(sys, 'frozen', False),
-        'user_name': os_user_name(),
-        'host_name': os_host_name(),
+        'user name': os_user_name(),
+        'host name': os_host_name(),
+        'device id': os_device_id,
         'app_name_guess': app_name_guess(),
+        'os env': os.environ.copy(),
     }
 
     if sed['frozen']:
@@ -1220,7 +1222,39 @@ class ErrorMsgMixin:
             self._err_msg = ""
 
 
-if os_platform == 'android':                                    # pragma: no cover
+# platform-specific patches
+os_device_id = os_host_name()
+""" user-definable id/name of the device, defaults to os_host_name() on most platforms, alternatives are:
+
+on all platforms:
+    - socket.gethostname()
+on Android (check with adb shell 'settings get global device_name' and adb shell 'settings list global'):
+    - Settings.Global.DEVICE_NAME (Settings.Global.getString(context.getContentResolver(), "device_name"))
+    - android.os.Build.DEVICE/.MANUFACTURER/.BRAND/.HOST
+    - DeviceName.getDeviceName()
+on MS Windows:
+    - os.environ['COMPUTERNAME']
+"""
+if os_platform == 'android':                                        # pragma: no cover
+    # determine Android device id because os_host_name() returns mostly 'localhost' and not the user-definable device id
+    from jnius import autoclass                                     # type: ignore
+
+    # noinspection PyBroadException
+    try:
+        Settings = autoclass('android.provider.Settings$Global')
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+
+        # mActivity inherits from Context so no need to cast('android.content.Context',..) neither get app context
+        # _Context = autoclass('android.content.Context')
+        # context = cast('android.content.Context', PythonActivity.mActivity)
+        # context = PythonActivity.mActivity.getApplicationContext()
+        context = PythonActivity.mActivity
+        if _dev_id := Settings.getString(context.getContentResolver(), 'device_name'):
+            os_device_id = defuse(_dev_id)
+
+    except Exception:
+        pass
+
     # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
     # 'android' (see # `<https://bugs.python.org/issue28141>`__ and `<https://bugs.python.org/issue32073>`__). these
     # functions are used by shutil.copy2/copy/copytree/move to copy OS-specific file attributes.
@@ -1229,3 +1263,8 @@ if os_platform == 'android':                                    # pragma: no cov
     # on the destination root directory.
     shutil.copymode = dummy_function
     shutil.copystat = dummy_function
+
+
+elif os_platform in ('win32', 'cygwin'):                            # pragma: no cover
+    if _dev_id := os.environ.get('COMPUTERNAME'):
+        os_device_id = defuse(_dev_id)
