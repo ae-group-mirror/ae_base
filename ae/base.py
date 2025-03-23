@@ -40,6 +40,9 @@ and :func:`write_file` are wrapping Python's built-in :func:`open` function and 
 
 the function :func:`duplicates` returns the duplicates of an iterable type.
 
+in order to hide/mask secrets like credit card numbers, passwords or tokens in deeply nested data structures,
+before they get dumped e.g. to an app log file, the function :func:`mask_secrets` can be used.
+
 :func:`norm_line_sep` is converting any combination of line separators of a string to a single new-line character.
 
 :func:`norm_name` converts any string into a name that can be used e.g. as file name or as method/attribute name.
@@ -157,10 +160,10 @@ from contextlib import contextmanager
 from importlib.machinery import ModuleSpec
 from inspect import getinnerframes, getouterframes, getsourcefile
 from types import ModuleType
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
 
 
-__version__ = '0.3.50'
+__version__ = '0.3.51'
 
 
 os_path_abspath = os.path.abspath
@@ -272,7 +275,7 @@ def app_name_guess() -> str:
     return defuse(app_name)
 
 
-def build_config_variable_values(*names_defaults: Tuple[str, Any], section: str = 'app') -> Tuple[Any, ...]:
+def build_config_variable_values(*names_defaults: tuple[str, Any], section: str = 'app') -> tuple[Any, ...]:
     """ determine build config variable values from the ``buildozer.spec`` file in the current directory.
 
     :param names_defaults:      tuple of tuples of build config variable names and default values.
@@ -634,7 +637,7 @@ def load_env_var_defaults(start_dir: str):
         file_path = os_path_join(os_path_dirname(os_path_dirname(file_path)), DOTENV_FILE_NAME)
 
 
-def main_file_paths_parts(portion_name: str) -> Tuple[Tuple[str, ...], ...]:
+def main_file_paths_parts(portion_name: str) -> tuple[tuple[str, ...], ...]:
     """ determine tuple of supported main/version file name path part tuples.
 
     :param portion_name:        portion or package name.
@@ -648,6 +651,29 @@ def main_file_paths_parts(portion_name: str) -> Tuple[Tuple[str, ...], ...]:
         (portion_name + PY_EXT, ),
         (portion_name, PY_INIT),
     )
+
+
+def mask_secrets(data: Union[dict, Iterable], fragments: Iterable[str] = ('password', 'pwd')) -> Union[dict, Iterable]:
+    """ partially-hide secret string values like passwords/credit-card-numbers in deeply nestable data structures.
+
+    :param data:                iterable deep data structure wherein its item values get masked if their related dict
+                                item key contains one of the fragments specified in :paramref:`~mask_secrets.fragments`.
+    :param fragments:           dict key string fragments of which the related value will be masked. each fragment has
+                                to be specified in lower case! defaults to ('password', 'pwd') if not passed.
+    :return:                    specified data structure with the secrets masked (¡in-place!).
+    """
+    is_dict = isinstance(data, dict)
+
+    for idx, val in tuple(data.items()) if is_dict else enumerate(data):    # type: ignore # silly mypy not sees is_dict
+        val_is_str = isinstance(val, str)
+        if not val_is_str and isinstance(val, Iterable):
+            mask_secrets(val, fragments=fragments)
+        elif is_dict and val_is_str and isinstance(idx, str):
+            idx = idx.lower()
+            if any(_frag in idx for _frag in fragments):
+                data[idx] = val[:3] + "*" * 9                               # type: ignore # silly mypy not sees is_dict
+
+    return data
 
 
 def module_attr(import_name: str, attr_name: str = "") -> Optional[Any]:
@@ -722,7 +748,7 @@ def norm_name(name: str, allow_num_prefix: bool = False) -> str:
     :param allow_num_prefix:    pass True to allow leading digits in the returned normalized name.
     :return:                    cleaned/normalized/converted name string (e.g. for a variable-/method-/file-name).
     """
-    str_parts: List[str] = []
+    str_parts: list[str] = []
     for char in name:
         if char.isalpha() or char.isalnum() and (allow_num_prefix or str_parts):
             str_parts.append(char)
@@ -855,13 +881,13 @@ def os_user_name() -> str:
     return getpass.getuser()
 
 
-def parse_dotenv(file_path: str) -> Dict[str, str]:
+def parse_dotenv(file_path: str) -> dict[str, str]:
     """ parse ``.env`` file content and return environment variable names as dict keys and values as dict values.
 
     :param file_path:           string with the name/path of an existing ``.env``/:data:`DOTENV_FILE_NAME` file.
     :return:                    dict with environment variable names and values
     """
-    env_vars: Dict[str, str] = {}
+    env_vars: dict[str, str] = {}
     for line in cast(str, read_file(file_path)).splitlines():
         match = _env_line.search(line)
         if not match:
@@ -1017,7 +1043,7 @@ def stack_var(name: str, *skip_modules: str, scope: str = '', depth: int = 1) ->
 
 def stack_vars(*skip_modules: str,
                find_name: str = '', min_depth: int = 1, max_depth: int = 0, scope: str = ''
-               ) -> Tuple[Dict[str, Any], Dict[str, Any], int]:
+               ) -> tuple[dict[str, Any], dict[str, Any], int]:
     """ determine all global and local variables in a calling stack/frames.
 
     :param skip_modules:        module names to skip (def=see :data:`SKIPPED_MODULES` module constant).
@@ -1057,7 +1083,7 @@ def stack_vars(*skip_modules: str,
     return glo.copy(), loc, depth - 1
 
 
-def sys_env_dict() -> Dict[str, Any]:
+def sys_env_dict() -> dict[str, Any]:
     """ returns dict with python system run-time environment values.
 
     :return:                    python system run-time environment values like python_ver, argv, cwd, executable,
@@ -1065,7 +1091,7 @@ def sys_env_dict() -> Dict[str, Any]:
 
     .. hint:: see also https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     """
-    sed: Dict[str, Any] = {
+    sed: dict[str, Any] = {
         'python ver': sys.version.replace('\n', ' '),
         'platform': os_platform,
         'argv': sys.argv,
@@ -1076,7 +1102,7 @@ def sys_env_dict() -> Dict[str, Any]:
         'host name': os_host_name(),
         'device id': os_device_id,
         'app_name_guess': app_name_guess(),
-        'os env': os.environ.copy(),
+        'os env': mask_secrets(os.environ.copy()),
     }
 
     if sed['frozen']:
@@ -1086,7 +1112,7 @@ def sys_env_dict() -> Dict[str, Any]:
 
 
 def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_len: int = 15,
-                 extra_sys_env_dict: Optional[Dict[str, str]] = None) -> str:
+                 extra_sys_env_dict: Optional[dict[str, str]] = None) -> str:
     """ compile formatted text block with system environment info.
 
     :param ind_ch:              indent character (defaults to " ").

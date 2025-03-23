@@ -22,8 +22,9 @@ from ae.base import (
     URI_SEP_CHAR, app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, dummy_function,
     duplicates, env_str,
     dedefuse, force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
-    load_env_var_defaults, load_dotenvs, main_file_paths_parts, module_attr, module_file_path, module_name,
-    norm_line_sep, norm_name, norm_path, now_str, os_host_name, os_local_ip, _os_platform, os_user_name,
+    load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, module_attr,
+    module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str,
+    os_host_name, os_local_ip, _os_platform, os_user_name,
     parse_dotenv, project_main_file, read_file, round_traditional, snake_to_camel, stack_frames, stack_var, stack_vars,
     sys_env_dict, sys_env_text, to_ascii, defuse, utc_datetime, write_file, ErrorMsgMixin)
 
@@ -505,6 +506,39 @@ class TestBaseHelpers:
 
         assert ('main', PY_INIT) in main_file_paths_parts("")
         assert (por_name, PY_INIT) in main_file_paths_parts(por_name)
+
+    def test_mask_secrets(self):
+        assert mask_secrets({}) == {}
+        assert mask_secrets([]) == []
+        assert mask_secrets(tuple()) == ()
+        assert mask_secrets("") == ""
+
+        assert mask_secrets({'password': "secret"}) == {'password': "sec*********"}
+        assert mask_secrets([{'pwd': "secret"}, "any"]) == [{'pwd': "sec*********"}, "any"]
+
+        assert mask_secrets({'secret': "secret"}, fragments=('token', 'secret')) == {'secret': "sec*********"}
+        assert mask_secrets({'_token': "secret"}, fragments=('token', 'secret')) == {'_token': "sec*********"}
+        assert mask_secrets({'_token': "secret"}, fragments=('TOKEN', 'secret')) == {'_token': "secret"}
+
+        untouched = 'untouched_pw_p_a_s_s_word'
+        dat = {'key1':
+                   {'subkey1':
+                        (
+                            {'host_Pwd': "secret"},
+                            untouched,
+                        ),
+                    'passWord___': "secRet",
+                   },
+               'any_PASSWORD_to_hide': "Se",
+               untouched: untouched,
+        }
+        assert mask_secrets(dat) is dat
+        assert dat['key1']['subkey1'][0]['host_pwd'] == "sec*********"
+        assert dat['key1']['password___'] == "sec*********"
+        assert dat['any_password_to_hide'] == "Se*********"
+
+        assert dat['key1']['subkey1'][1] == untouched
+        assert dat[untouched] == untouched
 
     def test_norm_line_sep(self):
         assert norm_line_sep('a\r\nb') == 'a\nb'
