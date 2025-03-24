@@ -163,7 +163,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
 
 
-__version__ = '0.3.51'
+__version__ = '0.3.52'
 
 
 os_path_abspath = os.path.abspath
@@ -669,8 +669,8 @@ def mask_secrets(data: Union[dict, Iterable], fragments: Iterable[str] = ('passw
         if not val_is_str and isinstance(val, Iterable):
             mask_secrets(val, fragments=fragments)
         elif is_dict and val_is_str and isinstance(idx, str):
-            idx = idx.lower()
-            if any(_frag in idx for _frag in fragments):
+            idx_lower = idx.lower()
+            if any(_frag in idx_lower for _frag in fragments):
                 data[idx] = val[:3] + "*" * 9                               # type: ignore # silly mypy not sees is_dict
 
     return data
