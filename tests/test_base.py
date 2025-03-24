@@ -514,15 +514,17 @@ class TestBaseHelpers:
         assert mask_secrets("") == ""
 
         assert mask_secrets({'password': "secret"}) == {'password': "sec*********"}
+        assert mask_secrets({'PASSWORD': "secret"}) == {'PASSWORD': "sec*********"}
         assert mask_secrets([{'pwd': "secret"}, "any"]) == [{'pwd': "sec*********"}, "any"]
+        assert mask_secrets([{'Pwd': "secret"}, "Any"]) == [{'Pwd': "sec*********"}, "Any"]
 
         assert mask_secrets({'secret': "secret"}, fragments=('token', 'secret')) == {'secret': "sec*********"}
         assert mask_secrets({'_token': "secret"}, fragments=('token', 'secret')) == {'_token': "sec*********"}
         assert mask_secrets({'_token': "secret"}, fragments=('TOKEN', 'secret')) == {'_token': "secret"}
 
-        untouched = 'untouched_pw_p_a_s_s_word'
+        untouched = 'untouched_Pw_d_p_a_s_s_word'
         dat = {'key1':
-                   {'subkey1':
+                   {'subKey1':
                         (
                             {'host_Pwd': "secret"},
                             untouched,
@@ -533,11 +535,11 @@ class TestBaseHelpers:
                untouched: untouched,
         }
         assert mask_secrets(dat) is dat
-        assert dat['key1']['subkey1'][0]['host_pwd'] == "sec*********"
-        assert dat['key1']['password___'] == "sec*********"
-        assert dat['any_password_to_hide'] == "Se*********"
+        assert dat['key1']['subKey1'][0]['host_Pwd'] == "sec*********"
+        assert dat['key1']['passWord___'] == "sec*********"
+        assert dat['any_PASSWORD_to_hide'] == "Se*********"
 
-        assert dat['key1']['subkey1'][1] == untouched
+        assert dat['key1']['subKey1'][1] == untouched
         assert dat[untouched] == untouched
 
     def test_norm_line_sep(self):
