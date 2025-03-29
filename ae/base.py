@@ -32,6 +32,9 @@ sortable and compact string from a timestamp.
 base helper functions
 ---------------------
 
+in order to convert and transfer Unicode character outside the 7-bit ASCII range via internet transport protocols,
+like http, use the helper functions :func:`ascii_str` and :func:`str_ascii`.
+
 :func:`now_str` creates a timestamp string with the actual UTC date and time. the :func:`utc_datetime` provides the
 actual UTC date and time as datetime object.
 
@@ -155,6 +158,7 @@ import sys
 import unicodedata
 import warnings
 
+from ast import literal_eval
 from configparser import ConfigParser, ExtendedInterpolation
 from contextlib import contextmanager
 from importlib.machinery import ModuleSpec
@@ -163,7 +167,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
 
 
-__version__ = '0.3.52'
+__version__ = '0.3.53'
 
 
 os_path_abspath = os.path.abspath
@@ -176,7 +180,7 @@ os_path_join = os.path.join
 os_path_normpath = os.path.normpath
 os_path_realpath = os.path.realpath
 os_path_relpath = os.path.relpath
-os_path_sep = os.path.sep
+os_path_sep = os.path.sep                       # pylint: disable=invalid-name
 os_path_splitext = os.path.splitext
 
 
@@ -273,6 +277,24 @@ def app_name_guess() -> str:
             if app_name.lower() in unspecified_app_names:
                 app_name = "unguessable"
     return defuse(app_name)
+
+
+def ascii_str(unicode_str: str) -> str:
+    """ convert non-ASCII chars in str object to a revertible 7-bit/ASCII representation, e.g. to put in a http header.
+
+    :param unicode_str:         string to encode/convert.
+    :return:                    revertible representation of the specified string, using only ASCII characters.
+    """
+    return repr(unicode_str.encode())
+
+
+def str_ascii(encoded_str: str) -> str:
+    """ convert non-ASCII chars in str object encoded with :func:`ascii_str` back to their corresponding Unicode chars.
+
+    :param encoded_str:         string to decode (covert contained ASCII-encoded characters back Unicode chars).
+    :return:                    decoded string.
+    """
+    return literal_eval(encoded_str).decode()
 
 
 def build_config_variable_values(*names_defaults: tuple[str, Any], section: str = 'app') -> tuple[Any, ...]:
@@ -476,13 +498,14 @@ def force_encoding(text: Union[str, bytes], encoding: str = DEF_ENCODING, errors
     return enc_str.decode(encoding=encoding)
 
 
-class UnformattedValue:
+class UnformattedValue:                     # pylint: disable=too-few-public-methods
     """ helper class for :func:`~ae.base.format_given` to keep placeholder with format unchanged if not found. """
     def __init__(self, key: str):
         self.key = key
 
     def __format__(self, format_spec: str):
         """ overriding Python object class method to return placeholder unchanged including the curly brackets. """
+        # pylint: disable=consider-using-f-string
         return "{{{}{}}}".format(self.key, ":" + format_spec if format_spec else "")
 
 
@@ -514,7 +537,7 @@ def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = Fals
     formatter = GivenFormatter()
     try:
         return formatter.vformat(text, (), placeholder_map)
-    except (ValueError, Exception) as ex:
+    except (ValueError, Exception) as ex:                           # pylint: disable=broad-except
         if strict:
             raise ex
         return text
@@ -817,6 +840,7 @@ def os_host_name() -> str:
     return defuse(platform.node()) or "indeterminableHostName"
 
 
+# noinspection PyTypeChecker
 def os_local_ip() -> str:
     """ determine ip address of this system/machine in the local network (LAN or WLAN).
 
@@ -827,16 +851,16 @@ def os_local_ip() -> str:
     """
     socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        socket1.connect(('10.255.255.255', 1))      # doesn't even have to be reachable
+        socket1.connect(('10.255.255.255', 1))                      # doesn't even have to be reachable
         ip_address = socket1.getsockname()[0]
-    except (OSError, IOError):                      # pragma: no cover
+    except (OSError, IOError, Exception):                           # pylint: disable=broad-except # pragma: no cover
         # ConnectionAbortedError, ConnectionError, ConnectionRefusedError, ConnectionResetError inherit from OSError
         socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             socket2.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             socket2.connect(('<broadcast>', 0))
             ip_address = socket2.getsockname()[0]
-        except (OSError, IOError):
+        except (OSError, IOError, Exception):                       # pylint: disable=broad-except
             ip_address = ""
         finally:
             socket2.close()
@@ -1198,7 +1222,7 @@ def write_file(file_path: str, content: Union[str, bytes],
         file_handle.write(content)
 
 
-class ErrorMsgMixin:
+class ErrorMsgMixin:                                                # pylint: disable=too-few-public-methods
     """ mixin class providing sophisticated error message handling. """
     _err_msg: str = ""
 
@@ -1209,7 +1233,7 @@ class ErrorMsgMixin:
 
     def __init__(self):
         try:
-            from ae.core import main_app_instance       # type: ignore
+            from ae.core import main_app_instance       # type: ignore # pylint: disable=import-outside-toplevel
 
             self.cae = cae = main_app_instance()
             assert cae is not None, f"{self.__class__.__name__}.__init__() called too early; main app instance not"
@@ -1218,7 +1242,7 @@ class ErrorMsgMixin:
             self.dpo = cae.dpo
             self.vpo = cae.vpo
 
-        except (ImportError, AssertionError, Exception) as exc:
+        except (ImportError, AssertionError, Exception) as exc:                 # pylint: disable=broad-except
             print(f"{self.__class__.__name__}.__init__() raised {exc}; using print() instead of main app error loggers")
 
             # self.cae = None
@@ -1278,7 +1302,7 @@ if os_platform == 'android':                                        # pragma: no
         if _dev_id := Settings.getString(context.getContentResolver(), 'device_name'):
             os_device_id = defuse(_dev_id)
 
-    except Exception:
+    except Exception:                                               # pylint: disable=broad-except
         pass
 
     # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
