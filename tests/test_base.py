@@ -19,14 +19,15 @@ from typing import cast
 from ae.base import (
     ASCII_TO_UNICODE, BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNICODE_TO_ASCII,
     UNSET,
-    URI_SEP_CHAR, app_name_guess, build_config_variable_values, camel_to_snake, deep_dict_update, dummy_function,
-    duplicates, env_str,
-    dedefuse, force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
+    URI_SEP_CHAR, app_name_guess, ascii_str, build_config_variable_values, camel_to_snake,
+    dedefuse, deep_dict_update, defuse, dummy_function, duplicates, env_str,
+    force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
     load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, module_attr,
     module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str,
     os_host_name, os_local_ip, _os_platform, os_user_name,
     parse_dotenv, project_main_file, read_file, round_traditional, snake_to_camel, stack_frames, stack_var, stack_vars,
-    sys_env_dict, sys_env_text, to_ascii, defuse, utc_datetime, write_file, ErrorMsgMixin)
+    str_ascii, sys_env_dict, sys_env_text, to_ascii, utc_datetime, write_file,
+    ErrorMsgMixin)
 
 
 tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>|*'()[]{}#^;&=$,~" + chr(127)
@@ -144,6 +145,41 @@ class TestBaseHelpers:
         assert app_name_guess()     # app.exe name in pytest returning '_jb_pytest_runner'(PyCharm)/'__main__'(console)
         assert app_name_guess() != 'main'
         assert app_name_guess() == 'unguessable'
+
+    def test_ascii_str(self):
+        assert isinstance(ascii_str(""), str)
+
+        uni_str = "äÄßéÉíÍñÑòÒùÙ"
+        assert all(ord(_) >= 128 for _ in uni_str)
+        assert all(ord(_) < 128 for _ in ascii_str(uni_str))
+
+        uni_str = "".join(UNICODE_TO_ASCII.keys())
+        assert any(ord(_) >= 128 for _ in uni_str)
+        assert all(ord(_) < 128 for _ in ascii_str(uni_str))
+
+        asc_str = "".join(ASCII_TO_UNICODE.keys())
+        assert any(ord(_) < 128 for _ in asc_str)
+        assert all(ord(_) < 128 for _ in ascii_str(asc_str))
+
+    def test_str_ascii(self):
+        assert isinstance(str_ascii(ascii_str("tst")), str)
+
+        assert str_ascii(ascii_str("tst")) == "tst"
+        uni_str = "äÄßéÉíÍñÑòÒùÙ"
+        assert str_ascii(ascii_str(uni_str)) == uni_str
+
+        uni_str = "".join(UNICODE_TO_ASCII.keys())
+        assert str_ascii(ascii_str(uni_str)) == uni_str
+
+        asc_str = "".join(ASCII_TO_UNICODE.keys())
+        assert str_ascii(ascii_str(asc_str)) == asc_str
+
+    def test_str_ascii_errors(self):
+        with pytest.raises(SyntaxError):
+            str_ascii("")
+
+        with pytest.raises(SyntaxError):
+            str_ascii("any tst string not encoded/converted via ascii_str()")
 
     def test_build_config_variable_values_with_spec(self):
         try:
@@ -344,9 +380,9 @@ class TestBaseHelpers:
 
     def test_format_given_err(self):
         with pytest.raises(ValueError):
-            format_given("test text with {placeholder", {}, strict=True)     # expected '}' before end of string
+            format_given("test text with {placeholder", {}, strict=True)     # missing closing curly bracket
         with pytest.raises(ValueError):
-            format_given("test text with placeholder}", {}, strict=True)     # Single '}' encountered in format string
+            format_given("test text with placeholder}", {}, strict=True)     # missing opening curly bracket
 
     def test_import_module_ae_base(self):
         mod_ref = import_module('ae.base')
