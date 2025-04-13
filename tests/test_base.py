@@ -31,7 +31,7 @@ from ae.base import (
 
 
 tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>|*'()[]{}#^;&=$,~" + chr(127)
-tst_fna1 = "schema⫻user﹕pwd﹫domain⁄path_root⁄path_sub﹨path﹢file﹪␣Üml﹖ä।ït.path_ext﹡＂⟨⟩।﹡‘⟮⟯⟦⟧{}﹟＾﹔﹠﹦﹩﹐~␡"
+tst_fna1 = "schema⫻user﹕pwd﹫domain⁄path_root⁄path_sub﹨path﹢file﹪␣Üml﹖ä।ït.path_ext﹡＂⟨⟩।﹡‘⟮⟯⟦⟧﹛﹜﹟＾﹔﹠﹦﹩﹐~␡"
 tst_uri2 = "test control chars" + "".join(chr(_) for _ in range(1, 32))
 tst_fna2 = "test␣control␣chars␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟"
 

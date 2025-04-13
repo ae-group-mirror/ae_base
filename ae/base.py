@@ -167,7 +167,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
 
 
-__version__ = '0.3.53'
+__version__ = '0.3.54'
 
 
 os_path_abspath = os.path.abspath
@@ -364,6 +364,8 @@ ASCII_UNICODE = (
     (')', '⟯'),     # U+27EF: MATHEMATICAL RIGHT FLATTENED PARENTHESIS
     ('[', '⟦'),     # U+27E6: MATHEMATICAL LEFT WHITE SQUARE BRACKET
     (']', '⟧'),     # U+27E7: MATHEMATICAL RIGHT WHITE SQUARE BRACKET
+    ('{', '﹛'),     # U+FE5B: Small Left Curly Bracket
+    ('}', '﹜'),     # U+FE5C: Small Right Curly Bracket
     ('#', '﹟'),     # U+FE5F: Small Number Sign
     (';', '﹔'),     # U+FE54: Small Semicolon
     ('@', '﹫'),     # U+FE6B: Small Commercial At
