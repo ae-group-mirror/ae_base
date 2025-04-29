@@ -7,7 +7,7 @@ functions, useful classes and context managers.
 
 .. note::
     on import of this module, while running on Android OS, it will monkey patch the :mod:`shutil` module
-    to allow to use them on Android devices. therefore the import of this module should be one of the first ones
+    to allow using them on Android devices. therefore, the import of this module should be one of the first ones
     in your app's main module.
 
 
@@ -18,7 +18,7 @@ ISO format strings for ``date`` and ``datetime`` values are provided by the cons
 :data:`DATE_TIME_ISO`.
 
 the :data:`UNSET` constant is useful in cases where ``None`` is a valid data value and another special value is needed
-to specify that e.g. an argument or attribute has no (valid) value or did not get specified/passed.
+to specify that e.g., an argument or attribute has no (valid) value or did not get specified/passed.
 
 default values to compile file and folder names for a package or an app project are provided by the constants:
 :data:`DOCS_FOLDER`, :data:`TESTS_FOLDER`, :data:`TEMPLATES_FOLDER`, :data:`BUILD_CONFIG_FILE`,
@@ -36,7 +36,7 @@ in order to convert and transfer Unicode character outside the 7-bit ASCII range
 like http, use the helper functions :func:`ascii_str` and :func:`str_ascii`.
 
 :func:`now_str` creates a timestamp string with the actual UTC date and time. the :func:`utc_datetime` provides the
-actual UTC date and time as datetime object.
+actual UTC date and time as a datetime object.
 
 to write more compact and readable code for the most common file I/O operations, the helper functions :func:`read_file`
 and :func:`write_file` are wrapping Python's built-in :func:`open` function and its context manager.
@@ -44,11 +44,12 @@ and :func:`write_file` are wrapping Python's built-in :func:`open` function and 
 the function :func:`duplicates` returns the duplicates of an iterable type.
 
 in order to hide/mask secrets like credit card numbers, passwords or tokens in deeply nested data structures,
-before they get dumped e.g. to an app log file, the function :func:`mask_secrets` can be used.
+before they get dumped e.g., to an app log file, the function :func:`mask_secrets` can be used.
 
 :func:`norm_line_sep` is converting any combination of line separators of a string to a single new-line character.
 
-:func:`norm_name` converts any string into a name that can be used e.g. as file name or as method/attribute name.
+the function :func:`norm_name` converts any string into a name that can be used e.g., as a file name
+or as a method/attribute name.
 
 to normalize a file path, in order to remove `.`, `..` placeholders, to resolve symbolic links or to make it relative or
 absolute, call the function :func:`norm_path`.
@@ -57,16 +58,16 @@ absolute, call the function :func:`norm_path`.
 either as a URL slug or as a file name. use the function :func:`dedefuse` to convert this string back to the
 corresponding URL/URI or file path.
 
-:func:`camel_to_snake` and :func:`snake_to_camel` providing name conversions of class and method names.
+the functions :func:`camel_to_snake` and :func:`snake_to_camel` providing name conversions of class and method names.
 
-to encode Unicode strings to other codecs the functions :func:`force_encoding` and :func:`to_ascii` can be used.
+to encode Unicode strings to other codecs, the functions :func:`force_encoding` and :func:`to_ascii` can be used.
 
-the :func:`round_traditional` function get provided by this module for traditional rounding of float values. the
-function signature is fully compatible to Python's :func:`round` function.
+the :func:`round_traditional` function gets provided by this module for traditional rounding of float values. the
+function signature is fully compatible with Python's :func:`round` function.
 
 the function :func:`instantiate_config_parser` ensures that the :class:`~configparser.ConfigParser` instance is
-correctly configured, e.g. to support case-sensitive config variable names and to use :class:`ExtendedInterpolation` for
-the interpolation argument.
+correctly configured, e.g., to support case-sensitive config variable names and to use :class:`ExtendedInterpolation`
+as the interpolation argument.
 
 :func:`app_name_guess` guesses the name of o running Python application from the application environment, with the help
 of :func:`build_config_variable_values`, which determines config-variable-values from the build spec file of an app
@@ -79,29 +80,29 @@ operating system constants and helpers
 the string :data:`os_platform` provides the OS where your app is running, extending Python's :func:`sys.platform`
 for mobile platforms like Android and iOS.
 
-:func:`os_host_name`, :func:`os_local_ip` and :func:`os_user_name` are determining machine and user information from
-the OS.
+the functions :func:`os_host_name`, :func:`os_local_ip` and :func:`os_user_name` are determining machine and
+user information from the OS.
 
 use :func:`env_str` to determine the value of an OS environment variable with automatic variable name conversion. other
 helper functions provided by this namespace portion to determine the values of the most important system environment
 variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
 
 to integrate system environment variables from ``.env`` files into :data:`os.environ` the helper functions
-:func:parse_dotenv`, :func:`load_env_var_defaults` and :func:`load_dotenvs` are provided.
+:func:`parse_dotenv`, :func:`load_env_var_defaults` and :func:`load_dotenvs` are provided.
 
 the :mod:`ae.core` portion is providing more OS-specific constants and helper functions, like e.g.
 :func:`start_app_service` and :func:`request_app_permissions`.
 
 .. note::
-    on import of this module, while running on Android OS, it will monkey patch the :mod:`shutil` module to allow to
-    use them on Android devices, and on first app start request the permissions of your app. therefore to prevent
-    permission errors, the import of this module should be the first statement in the main module of your app.
+    on import of this module, while running on Android OS, it will monkey patch the :mod:`shutil` module to allow
+    using them on Android devices, and on the first app start requesting the permissions of your app. therefore, to
+    prevent permission errors, the import of this module should be the first statement in the main module of your app.
 
 
 types, classes and mixins
 -------------------------
 
-the :class:`UnsetType` class can be used e.g. for the declaration of optional function and method parameters,
+the :class:`UnsetType` class can be used e.g., for the declaration of optional function and method parameters,
 allowing also ``None`` is an accepted argument value.
 
 to extend any class with an intelligent error message handling, add the mixin :class:`ErrorMsgMixin` to it.
@@ -113,7 +114,7 @@ enclosed in curly brackets. the function :func:`format_given` is using them to f
 generic context manager
 -----------------------
 
-the context manager :func:`in_wd` allows to switch the current working directory temporarily. the following
+the context manager :func:`in_wd` allows switching the current working directory temporarily. the following
 example demonstrates a typical usage, together with a temporary path, created with the help of Pythons
 :class:`~tempfile.TemporaryDirectory` class::
 
@@ -129,7 +130,7 @@ call stack inspection
 :func:`module_attr` dynamically determines a reference to an attribute (variable, function, class, ...) in a module.
 
 :func:`module_name`, :func:`stack_frames`, :func:`stack_var` and :func:`stack_vars` are inspecting the call stack frames
-to determine e.g. variable values of the callers of a function/method.
+to determine e.g., variable values of the callers of a function/method.
 
 .. hint::
     the :class:`AppBase` class uses these helper functions to determine the :attr:`version <AppBase.app_version>` and
@@ -167,7 +168,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
 
 
-__version__ = '0.3.54'
+__version__ = '0.3.55'
 
 
 os_path_abspath = os.path.abspath
@@ -190,7 +191,7 @@ TEMPLATES_FOLDER = 'templates'
 """ template folder name, used in template and namespace root projects to maintain and provide common file templates """
 
 BUILD_CONFIG_FILE = 'buildozer.spec'            #: gui app build config file
-PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: file/folder names prefix included into setup package_data/ae_updater
+PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: file/folder names prefix included in setup package_data/ae_updater
 
 PY_CACHE_FOLDER = '__pycache__'                 #: python cache folder name
 PY_EXT = '.py'                                  #: file extension for modules and hooks
@@ -239,14 +240,15 @@ NAME_PARTS_SEP = '_'                                #: name parts separator char
 
 NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"    #: timestamp format of :func:`now_str`
 
-SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.dynamicod', 'ae.core', 'ae.console', 'ae.gui_app', 'ae.gui_help',
+SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.dynamicod', 'ae.core', 'ae.console',
+                   'ae.gui', 'ae.gui.app', 'ae.gui.tours', 'ae.gui.utils',
                    'ae.kivy', 'ae.kivy.apps', 'ae.kivy.behaviors', 'ae.kivy.i18n', 'ae.kivy.tours', 'ae.kivy.widgets',
                    'ae.enaml_app', 'ae.beeware_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
                    'ae.qpython_app', 'ae.appjar_app', 'importlib._bootstrap', 'importlib._bootstrap_external')
 """ skipped modules used as default by :func:`module_name`, :func:`stack_var` and :func:`stack_vars` """
 
 
-# using only object() does not provide proper representation string
+# using only object() does not provide a proper representation string
 class UnsetType:
     """ (singleton) UNSET (type) object class. """
     def __bool__(self):
@@ -280,7 +282,7 @@ def app_name_guess() -> str:
 
 
 def ascii_str(unicode_str: str) -> str:
-    """ convert non-ASCII chars in str object to a revertible 7-bit/ASCII representation, e.g. to put in a http header.
+    """ convert non-ASCII chars to a revertible 7-bit/ASCII representation, e.g., to put in an http header.
 
     :param unicode_str:         string to encode/convert.
     :return:                    revertible representation of the specified string, using only ASCII characters.
@@ -315,7 +317,7 @@ def build_config_variable_values(*names_defaults: tuple[str, Any], section: str 
 
 
 def camel_to_snake(name: str) -> str:
-    """ convert name from CamelCase to snake_case.
+    """ convert a name from CamelCase to snake_case.
 
     :param name:                name string in CamelCaseFormat.
     :return:                    name in snake_case_format.
@@ -330,9 +332,9 @@ def camel_to_snake(name: str) -> str:
 
 
 def deep_dict_update(data: dict, update: dict):
-    """ update the optionally nested data dict in-place with the items and sub-items from the update dict.
+    """ update the optionally nested data dict in-place with the items and subitems from the update dict.
 
-    :param data:                dict to be updated/extended. non-existing keys of dict-sub-items will be added.
+    :param data:                dict to be updated/extended. non-existing keys of dict-subitems will be added.
     :param update:              dict with the [sub-]items to update in the :paramref:`~deep_dict_update.data` dict.
 
     .. hint:: the module/portion :mod:`ae.deep` is providing more deep update helper functions.
@@ -349,8 +351,8 @@ def deep_dict_update(data: dict, update: dict):
 
 URI_SEP_CHAR = '⫻'  # U+2AFB: TRIPLE SOLIDUS BINARY RELATION
 ASCII_UNICODE = (
-    ('/', '⁄'),     # U+2044: Fraction Slash; '∕' U+2215: Division Slash; '⧸' U+29F8: Big Solidus
-                    # ; '╱' U+FF0F: Fullwidth Solidus; '╱' U+2571: Box Drawings Light Diagonal Upper Right to Lower Left
+    ('/', '⁄'),     # U+2044: Fraction Slash; '∕' U+2215: Division Slash; '⧸' U+29F8: Big Solidus;
+                    # '╱' U+FF0F: Fullwidth Solidus; '╱' U+2571: Box Drawings Light Diagonal Upper Right to Lower Left
     ('|', '।'),     # U+0964: Devanagari Danda
     ('\\', '﹨'),    # U+FE68: SMALL REVERSE SOLIDUS; '⑊' U+244A OCR DOUBLE BACKSLASH; '⧵' U+29F5 REV. SOLIDUS OPERATOR
     (':', '﹕'),     # U+FE55: Small Colon
@@ -384,7 +386,7 @@ ASCII_UNICODE = (
                     # ' ' U+202F: Narrow No-Break Space (NNBSP); ' ' U+205F Medium Mathematical Space;
                     # '␠' U+2420 symbol for space; '␣' U+2423 Open Box; '　' U+3000: Ideographic Space
     (chr(127), '␡'),  # U+2421: DELETE SYMBOL
-    # ('_', '𛲖'),     # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
+    # ('_', '𛲖'), # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
 )
 """ transformation table of special ASCII to Unicode alternative character,
 see https://www.compart.com/en/unicode/category/Po and https://xahlee.info/comp/unicode_naming_slash.html (http!) """
@@ -420,7 +422,7 @@ def defuse(value: str) -> str:
 
     in most unix variants only the slash and the ASCII 0 characters are not allowed in file names.
 
-    in MS Windows are not allowed: ASCII 0..31 / | \\ : * ? ” % < > ( ). some blogs recommend to also not allow
+    in MS Windows are not allowed: ASCII 0..31 / | \\ : * ? ” % < > ( ). some blogs recommend also not allowing
     (convert) the characters # and '.
 
     only old POSIX seems to be even more restricted (only allowing alphanumeric characters plus . - and _).
@@ -506,7 +508,7 @@ class UnformattedValue:                     # pylint: disable=too-few-public-met
         self.key = key
 
     def __format__(self, format_spec: str):
-        """ overriding Python object class method to return placeholder unchanged including the curly brackets. """
+        """ overriding Python object class method to return placeholder unchanged, including the curly brackets. """
         # pylint: disable=consider-using-f-string
         return "{{{}{}}}".format(self.key, ":" + format_spec if format_spec else "")
 
@@ -525,14 +527,12 @@ def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = Fals
     """ replacement for Python's str.format_map(), keeping intact placeholders that are not in the specified mapping.
 
     :param text:                text/template in which the given/specified placeholders will get replaced. in contrary
-                                to str.format_map() no KeyError will be raised for placeholders not specified in
+                                to :func:`str.format_map`, no KeyError will be raised for placeholders not specified in
                                 :paramref:`~format_given.placeholder_map`.
     :param placeholder_map:     dict with placeholder keys to be replaced in :paramref:`~format_given.text` argument.
-    :param strict:              pass True to raise error for text templates containing unpaired curly brackets.
+    :param strict:              pass True to raise an error for text templates containing unpaired curly brackets.
     :return:                    the specified :paramref:`~format_given.text` with only the placeholders specified in
                                 :paramref:`~format_given.placeholder_map` replaced with their respective map value.
-                                additionally any ValueError that would be thrown by str.format_map(), e.g. if the
-
 
     inspired by the answer of CodeManX in `https://stackoverflow.com/questions/3536303`__
     """
@@ -546,7 +546,7 @@ def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = Fals
 
 
 def full_stack_trace(ex: Exception) -> str:
-    """ get full stack trace from an exception.
+    """ get a full stack trace from an exception.
 
     :param ex:                  exception instance.
     :return:                    str with stack trace info.
@@ -577,7 +577,7 @@ def import_module(import_name: str, path: Optional[Union[str, UnsetType]] = UNSE
     :param path:                optional file path of the module to import. if this arg is not specified or has the
                                 default value (:data:`UNSET`), then the path will be determined from the import name.
                                 specify ``None`` to prevent the module search.
-    :return:                    a reference to the loaded module or ``None`` if module could not be imported.
+    :return:                    a reference to the loaded module or ``None`` if the module could not be imported.
     """
     if path is UNSET:
         path = import_name.replace('.', os_path_sep)
@@ -602,23 +602,23 @@ def instantiate_config_parser() -> ConfigParser:
     cfg_parser = ConfigParser(allow_no_value=True, interpolation=ExtendedInterpolation())
     # set optionxform to have case-sensitive var names (or use 'lambda option: option')
     # mypy V 0.740 bug - see mypy issue #5062: adding pragma "type: ignore" breaks PyCharm (showing
-    # .. inspection warning "Non-self attribute could not be type-hinted"), but
-    # .. also cast(Callable[[Arg(str, 'option')], str], str) and # type: ... is not working
-    # .. (because Arg is not available in plain mypy, only in the extra mypy_extensions package)
+    # inspection warning "Non-self attribute could not be type-hinted"), but
+    # also cast(Callable[[Arg(str, 'option')], str], str) and # type: ... is not working
+    # (because Arg is not available in plain mypy, only in the extra mypy_extensions package)
     setattr(cfg_parser, 'optionxform', str)
     return cfg_parser
 
 
 @contextmanager
 def in_wd(new_cwd: str) -> Generator[None, None, None]:
-    """ context manager to temporary switch the current working directory / cwd.
+    """ context manager to temporarily switch the current working directory / cwd.
 
     :param new_cwd:             path to the directory to switch to (within the context/with block).
                                 an empty string gets interpreted as the current working directory.
     """
     cur_dir = os.getcwd()
     try:
-        if new_cwd:             # empty new_cwd results in current working folder (no dir change needed/prevent error)
+        if new_cwd:         # empty new_cwd results in the current working folder (no dir change needed/prevent error)
             os.chdir(new_cwd)
         yield
     finally:
@@ -628,7 +628,7 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
 def load_dotenvs():
     """ detect and load multiple ``.env`` files in/above the current working directory and the calling module folder.
 
-    .. hint:: call from main module of project/app in order to also load ``.env`` files in/above the project folder.
+    .. hint:: call from the main module of project/app in order to also load ``.env`` files in/above the project folder.
     """
     load_env_var_defaults(os.getcwd())
     if file_name := stack_var('__file__'):
@@ -636,17 +636,18 @@ def load_dotenvs():
 
 
 def load_env_var_defaults(start_dir: str):
-    """ detect and load chain of ``.env`` files starting in the specified folder or one above.
+    """ detect and load a chain of ``.env`` files starting in the specified folder or one above.
 
-    :param start_dir:           folder to start search of an ``.env`` file, if not found then checks the parent folder.
-                                if a first ``.env`` file got found, then load their console/shell environment variables
-                                into Python's :data:`os.environ`. after loading the first one, repeat to check for
+    :param start_dir:           folder to start search of an ``.env`` file, if not found, then checks the parent folder.
+                                if the first ``.env `` file got found, then load their shell environment variables
+                                into Python's :data:`os.environ`. after loading the first one, it repeats to check for
                                 further ``.env`` files in the parent folder to load them too, until either detecting
                                 a folder without an ``.env`` file or until an ``.env`` got loaded from the root folder.
 
     .. note::
         only variables that are not declared in :data:`os.environ` will be added (with the
-        value specified in the ``.env`` file to be loaded).
+        value specified in the ``.env`` file to be loaded). the variable values declared in the subfolders
+        are having preference over the values declared in the parent folders.
     """
     file_path = os_path_abspath(os_path_join(start_dir, DOTENV_FILE_NAME))
     if not os_path_isfile(file_path):
@@ -684,7 +685,7 @@ def mask_secrets(data: Union[dict, Iterable], fragments: Iterable[str] = ('passw
     :param data:                iterable deep data structure wherein its item values get masked if their related dict
                                 item key contains one of the fragments specified in :paramref:`~mask_secrets.fragments`.
     :param fragments:           dict key string fragments of which the related value will be masked. each fragment has
-                                to be specified in lower case! defaults to ('password', 'pwd') if not passed.
+                                to be specified with lower case chars! defaults to ('password', 'pwd') if not passed.
     :return:                    specified data structure with the secrets masked (¡in-place!).
     """
     is_dict = isinstance(data, dict)
@@ -708,8 +709,8 @@ def module_attr(import_name: str, attr_name: str = "") -> Optional[Any]:
     :param attr_name:           name of the attribute declared within the module. do not specify or pass an empty
                                 string to get/return a reference to the imported module instance.
     :return:                    module instance or module attribute value
-                                or None if module not found
-                                or UNSET if module attribute doesn't exist.
+                                or None if the module got not found
+                                or UNSET if the module attribute doesn't exist.
 
     .. note:: a previously not imported module will *not* be added to `sys.modules` by this function.
 
@@ -722,10 +723,10 @@ def module_file_path(local_object: Optional[Callable] = None) -> str:
     """ determine the absolute path of the module from which this function got called.
 
     :param local_object:        optional local module, class, method, function, traceback, frame, or code object of the
-                                calling module (passing `lambda: 0` also works). omit to use instead the `__file__`
-                                module variable (which will not work if the module is frozen by ``py2exe`` or
-                                ``PyInstaller``).
-    :return:                    module path (inclusive module file name) or empty string if path not found/determinable.
+                                calling module (passing `lambda: 0` also works). omit this argument in order to use
+                                the `__file__` module variable (which will not work if the module is frozen by
+                                ``py2exe`` or ``PyInstaller``).
+    :return:                    module path (inclusive module file name) or empty string if not found/determinable.
     """
     if local_object:
         file_path = getsourcefile(local_object)
@@ -746,11 +747,11 @@ def module_name(*skip_modules: str, depth: int = 0) -> Optional[str]:
     """ find the first module in the call stack that is *not* in :paramref:`~module_name.skip_modules`.
 
     :param skip_modules:        module names to skip (def=this and other core modules, see :data:`SKIPPED_MODULES`).
-    :param depth:               the calling level from which on to search. the default value 0 refers the frame and
+    :param depth:               the calling level from which on to search. the default value 0 refers to the frame and
                                 the module of the caller of this function.
                                 pass 1 or an even higher value if you want to get the module name of a function/method
                                 in a deeper level in the call stack.
-    :return:                    the module name of the call stack level specified by :paramref:`~module_name.depth`.
+    :return:                    the module name of the call stack level, specified by :paramref:`~module_name.depth`.
     """
     if not skip_modules:
         skip_modules = SKIPPED_MODULES
@@ -771,7 +772,7 @@ def norm_name(name: str, allow_num_prefix: bool = False) -> str:
 
     :param name:                any string to be converted into a valid variable/method/file/... name.
     :param allow_num_prefix:    pass True to allow leading digits in the returned normalized name.
-    :return:                    cleaned/normalized/converted name string (e.g. for a variable-/method-/file-name).
+    :return:                    cleaned/normalized/converted name string (e.g., for a variable-/method-/file-name).
     """
     str_parts: list[str] = []
     for char in name:
@@ -784,10 +785,10 @@ def norm_name(name: str, allow_num_prefix: bool = False) -> str:
 
 def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "", remove_dots: bool = True,
               resolve_sym_links: bool = True) -> str:
-    """ normalize path, replacing `..`/`.` parts or the tilde character (for home folder) and transform to relative/abs.
+    """ normalize a path, replacing `..`/`.` parts or the tilde character (home folder) and transform to relative/abs.
 
     :param path:                path string to normalize/transform.
-    :param make_absolute:       pass False to not convert path to an absolute path.
+    :param make_absolute:       pass False to not convert the returned path to an absolute path.
     :param remove_base_path:    pass a valid base path to return a relative path, even if the argument values of
                                 :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links` are
                                 `True`.
@@ -797,8 +798,8 @@ def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "",
     :return:                    normalized path string: absolute if :paramref:`~norm_path.remove_base_path` is empty and
                                 either :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links`
                                 is `True`; relative if :paramref:`~norm_path.remove_base_path` is a base path of
-                                :paramref:`~norm_path.path` or if :paramref:`~norm_path.path` got specified as relative
-                                path and neither :paramref:`~norm_path.make_absolute` nor
+                                :paramref:`~norm_path.path` or if :paramref:`~norm_path.path` got specified as a
+                                relative path and neither :paramref:`~norm_path.make_absolute` nor
                                 :paramref:`~norm_path.resolve_sym_links` is `True`.
 
     .. hint:: the :func:`~ae.paths.normalize` function additionally replaces :data:`~ae.paths.PATH_PLACEHOLDERS`.
@@ -852,6 +853,7 @@ def os_local_ip() -> str:
                                 or empty string if this machine is not connected to any network.
     """
     socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    ip_address = ""
     try:
         socket1.connect(('10.255.255.255', 1))                      # doesn't even have to be reachable
         ip_address = socket1.getsockname()[0]
@@ -863,7 +865,7 @@ def os_local_ip() -> str:
             socket2.connect(('<broadcast>', 0))
             ip_address = socket2.getsockname()[0]
         except (OSError, IOError, Exception):                       # pylint: disable=broad-except
-            ip_address = ""
+            pass
         finally:
             socket2.close()
     finally:
@@ -946,13 +948,13 @@ def parse_dotenv(file_path: str) -> dict[str, str]:
 
 
 def project_main_file(import_name: str, project_path: str = "") -> str:
-    """ determine the main module file path of a project package, containing the project __version__ module variable.
+    """ determine the main module file path of a project package containing the project __version__ module variable.
 
-    :param import_name:         import name of the module/package (including namespace prefixes for namespace packages).
+    :param import_name:         name of the module/package (including namespace prefixes, separated with dots).
     :param project_path:        optional path where the project of the package/module is situated. not needed if the
                                 current working directory is the root folder of either the import_name project or of a
                                 sister project (under the same project parent folder).
-    :return:                    absolute file path/name of main module or empty string if no main/version file found.
+    :return:                    absolute file path of the main module or empty string if no main/version file is found.
     """
     *namespace_dirs, portion_name = import_name.split('.')
     project_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
@@ -970,6 +972,7 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
         for path_parts in paths_parts:
             main_file = os_path_join(module_path, *path_parts)
             if os_path_isfile(main_file):
+                # noinspection PyTypeChecker
                 return main_file
     return ""
 
@@ -978,22 +981,22 @@ def read_file(file_path: str, extra_mode: str = "", encoding: Optional[str] = No
               ) -> Union[str, bytes]:
     """ returning content of the text/binary file specified by file_path argument as string.
 
-    :param file_path:           file path/name to load into a string or a bytes array.
-    :param extra_mode:          extra open mode flag characters appended to "r" onto open() mode argument. pass "b" to
-                                read the content of a binary file returned as bytes array. in binary mode the argument
-                                passed in :paramref:`~read_file.error_handling` will be ignored.
+    :param file_path:           path/name of the file to load the content from.
+    :param extra_mode:          extra open mode flag characters appended to "r" onto the :func:`open` mode argument.
+                                pass "b" to read the content of a binary file returned of the type `bytes`. in binary
+                                mode the argument passed in :paramref:`~read_file.error_handling` will be ignored.
     :param encoding:            encoding used to load and convert/interpret the file content.
-    :param error_handling:      for files opened in text mode pass `'strict'` or ``None`` to return ``None`` (instead of
-                                an empty string) for the cases where either a decoding `ValueError` exception or any
+    :param error_handling:      for files opened in text mode, pass `'strict'` or ``None`` to return ``None`` (instead
+                                of an empty string) for the cases where either a decoding `ValueError` exception or any
                                 `OSError`, `FileNotFoundError` or `PermissionError` exception got raised.
                                 the default value `'ignore'` will ignore any decoding errors (missing some characters)
                                 and will return an empty string on any file/os exception. this parameter will be ignored
                                 if the :paramref:`~read_file.extra_mode` argument contains the 'b' character (to read
                                 the file content as binary/bytes-array).
     :return:                    file content string or bytes array.
-    :raises FileNotFoundError:  if file does not exist.
+    :raises FileNotFoundError:  if the file to read from does not exist.
     :raises OSError:            if :paramref:`~read_file.file_path` is misspelled or contains invalid characters.
-    :raises PermissionError:    if current OS user account lacks permissions to read the file content.
+    :raises PermissionError:    if the current OS user account lacks permissions to read the file content.
     :raises ValueError:         on decoding errors.
     """
     extra_kwargs = {} if "b" in extra_mode else {'errors': error_handling}
@@ -1004,7 +1007,7 @@ def read_file(file_path: str, extra_mode: str = "", encoding: Optional[str] = No
 def round_traditional(num_value: float, num_digits: int = 0) -> float:
     """ round numeric value traditional.
 
-    needed because python round() is working differently, e.g. round(0.075, 2) == 0.07 instead of 0.08
+    needed because python round() is working differently, e.g., round(0.075, 2) == 0.07 instead of 0.08
     inspired by https://stackoverflow.com/questions/31818050/python-2-7-round-number-to-nearest-integer.
 
     :param num_value:           float value to be round.
@@ -1035,7 +1038,7 @@ def stack_frames(depth: int = 1) -> Generator:  # Generator[frame, None, None]
     """ generator returning the call stack frame from the level given in :paramref:`~stack_frames.depth`.
 
     :param depth:               the stack level to start; the first returned frame by this generator. the default value
-                                (1) refers the next deeper stack frame, respectively the one of the caller of this
+                                (1) refers to the next deeper stack frame, respectively the one of the caller of this
                                 function. pass 2 or a higher value if you want to start with an even deeper frame/level.
     :return:                    generated frames of the call stack.
     """
@@ -1056,7 +1059,7 @@ def stack_var(name: str, *skip_modules: str, scope: str = '', depth: int = 1) ->
     :param scope:               pass 'locals' to only check for local variables (ignoring globals) or
                                 'globals' to only check for global variables (ignoring locals). the default value (an
                                 empty string) will not restrict the scope, returning either a local or global value.
-    :param depth:               the calling level from which on to search. the default value (1) refers the next
+    :param depth:               the calling level from which on to search. the default value (1) refers to the next
                                 deeper stack frame, which is the caller of the function. pass 2 or an even higher
                                 value if you want to start the variable search from a deeper level in the call stack.
     :return:                    the variable value of a deeper level within the call stack or UNSET if the variable was
@@ -1073,19 +1076,19 @@ def stack_vars(*skip_modules: str,
     """ determine all global and local variables in a calling stack/frames.
 
     :param skip_modules:        module names to skip (def=see :data:`SKIPPED_MODULES` module constant).
-    :param find_name:           if passed then the returned stack frame must contain a variable with the passed name.
+    :param find_name:           if passed, then the returned stack frame must contain a variable with the passed name.
     :param scope:               scope to search the variable name passed via :paramref:`~stack_vars.find_name`. pass
                                 'locals' to only search for local variables (ignoring globals) or 'globals' to only
                                 check for global variables (ignoring locals). passing an empty string will find the
-                                variable within either locals and globals.
+                                variable within either locals or globals.
     :param min_depth:           the call stack level from which on to search. the default value (1) refers the next
-                                deeper stack frame, respectively to the caller of this function. pass 2 or a higher
+                                deeper stack frame, respectively, to the caller of this function. pass 2 or a higher
                                 value if you want to get the variables from a deeper level in the call stack.
     :param max_depth:           the maximum depth in the call stack from which to return the variables. if the specified
-                                argument is not zero and no :paramref:`~stack_vars.skip_modules` are specified then the
+                                argument is not zero and no :paramref:`~stack_vars.skip_modules` are specified, then the
                                 first deeper stack frame that is not within the default :data:`SKIPPED_MODULES` will be
-                                returned. if this argument and :paramref:`~stack_vars.find_name` get not passed then the
-                                variables of the top stack frame will be returned.
+                                returned. if this argument and :paramref:`~stack_vars.find_name` get not passed,
+                                then the variables of the top stack frame will be returned.
     :return:                    tuple of the global and local variable dicts and the depth in the call stack.
     """
     if not skip_modules:
@@ -1102,8 +1105,8 @@ def stack_vars(*skip_modules: str,
             break
         if max_depth and depth > max_depth:
             break
-    # experienced strange overwrites of locals (e.g. self) when returning f_locals directly (adding .copy() fixed it)
-    # check if f_locals is a dict (because enaml is using their DynamicScope object which is missing a copy method)
+    # experienced strange overwrites of locals (e.g., self) when returning f_locals directly (adding .copy() fixed it)
+    # check if f_locals is a dict (because enaml is using their DynamicScope object, which is missing a copy method)
     if isinstance(loc, dict):
         loc = loc.copy()
     return glo.copy(), loc, depth - 1
@@ -1139,7 +1142,7 @@ def sys_env_dict() -> dict[str, Any]:
 
 def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_len: int = 15,
                  extra_sys_env_dict: Optional[dict[str, str]] = None) -> str:
-    """ compile formatted text block with system environment info.
+    """ compile a formatted text block with system environment info.
 
     :param ind_ch:              indent character (defaults to " ").
     :param ind_len:             indent depths (default=12 characters).
@@ -1185,24 +1188,24 @@ def write_file(file_path: str, content: Union[str, bytes],
     """ (over)write the file specified by :paramref:`~write_file.file_path` with text or binary/bytes content.
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
-    :param content:             new file content passed either as string or bytes array. if a bytes array get passed
+    :param content:             new file content passed either as string or as `bytes`. if a byte array gets passed,
                                 then this method will automatically write the content as binary.
     :param extra_mode:          additional open mode flag characters. passed to the `mode` argument of :func:`open` if
                                 this argument starts with 'a' or 'w', else this argument value will be appended to 'w'
-                                before it get passed to the `mode` argument of :func:`open`.
-                                if the :paramref:`~write_file.content` is a bytes array, then a 'b' character will
+                                before it gets passed to the `mode` argument of :func:`open`.
+                                if the :paramref:`~write_file.content` is of the `bytes` type, then a 'b' character will
                                 be automatically added to the `mode` argument of :func:`open` (if not already specified
                                 in this argument).
     :param encoding:            encoding used to write/convert/interpret the file content to write.
     :param make_dirs:           pass True to automatically create not existing folders specified in
                                 :paramref:`~write_file.file_path`.
-    :raises FileExistsError:    if file exists already and is write-protected.
+    :raises FileExistsError:    if the file to write to exists already and is write-protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
     :raises OSError:            if :paramref:`~write_file.file_path` is misspelled or contains invalid characters.
-    :raises PermissionError:    if current OS user account lacks permissions to read the file content.
+    :raises PermissionError:    if the current OS user account lacks permissions to read the file content.
     :raises ValueError:         on decoding errors.
 
-    to extend this function for Android 14+ see `<https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>`__
+    to extend this function for Android 14+, see `<https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>`__
     and `<https://gist.github.com/neonankiti/05922cf0a44108a2e2732671ed9ef386>`__
     Yes, to use ACTION_CREATE_DOCUMENT, you don't supply a URI in the intent. You wait for the intent result, and that
     will contain a URI which you can write to.
@@ -1307,7 +1310,7 @@ if os_platform == 'android':                                        # pragma: no
     except Exception:                                               # pylint: disable=broad-except
         pass
 
-    # monkey patch the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
+    # monkey patches the :func:`shutil.copystat` and :func:`shutil.copymode` helper functions, which are crashing on
     # 'android' (see # `<https://bugs.python.org/issue28141>`__ and `<https://bugs.python.org/issue32073>`__). these
     # functions are used by shutil.copy2/copy/copytree/move to copy OS-specific file attributes.
     # although shutil.copytree() and shutil.move() are copying/moving the files correctly when the copy_function
