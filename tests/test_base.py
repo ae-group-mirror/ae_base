@@ -18,15 +18,15 @@ from typing import cast
 # noinspection PyProtectedMember
 from ae.base import (
     ASCII_TO_UNICODE, BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNICODE_TO_ASCII,
-    UNSET,
-    URI_SEP_CHAR, app_name_guess, ascii_str, build_config_variable_values, camel_to_snake,
+    UNSET, URI_SEP_CHAR,
+    app_name_guess, ascii_str, build_config_variable_values, camel_to_snake,
     dedefuse, deep_dict_update, defuse, dummy_function, duplicates, env_str,
     force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
     load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, module_attr,
     module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str,
     os_host_name, os_local_ip, _os_platform, os_user_name,
-    parse_dotenv, project_main_file, read_file, round_traditional, snake_to_camel, stack_frames, stack_var, stack_vars,
-    str_ascii, sys_env_dict, sys_env_text, to_ascii, utc_datetime, write_file,
+    parse_dotenv, project_main_file, read_file, round_traditional, sign, snake_to_camel,
+    stack_frames, stack_var, stack_vars, str_ascii, sys_env_dict, sys_env_text, to_ascii, utc_datetime, write_file,
     ErrorMsgMixin)
 
 
@@ -39,6 +39,7 @@ env_var_name = 'env_var_nam1'
 env_var_val = 'value of env var'
 folder_name = 'fdr'
 full_folders = (0, 1, 3)
+
 
 @pytest.fixture
 def os_env_test_env():
@@ -79,7 +80,7 @@ class TestErrorMsgMixin:
         assert ins.cae is None      # in test env is no console/gui app available
         assert ins.po is ins.dpo is ins.vpo is print
 
-        with patch('ae.core.main_app_instance', lambda : None):
+        with patch('ae.core.main_app_instance', lambda: None):
             ins = ErrorMsgMixin()
             assert ins
             assert ins.cae is None
@@ -105,7 +106,7 @@ class TestErrorMsgMixin:
 
         app_ins = _AppMock()
 
-        with patch('ae.core.main_app_instance', lambda : app_ins):
+        with patch('ae.core.main_app_instance', lambda: app_ins):
             ins = ErrorMsgMixin()
             assert ins.cae is app_ins
             assert ins.po is not print
@@ -559,17 +560,15 @@ class TestBaseHelpers:
         assert mask_secrets({'_token': "secret"}, fragments=('TOKEN', 'secret')) == {'_token': "secret"}
 
         untouched = 'untouched_Pw_d_p_a_s_s_word'
-        dat = {'key1':
-                   {'subKey1':
-                        (
-                            {'host_Pwd': "secret"},
-                            untouched,
-                        ),
-                    'passWord___': "secRet",
-                   },
+        dat = {'key1': {'subKey1': (
+                                    {'host_Pwd': "secret"},
+                                    untouched,
+                                    ),
+                        'passWord___': "secRet",
+                        },
                'any_PASSWORD_to_hide': "Se",
                untouched: untouched,
-        }
+               }
         assert mask_secrets(dat) is dat
         assert dat['key1']['subKey1'][0]['host_Pwd'] == "sec*********"
         assert dat['key1']['passWord___'] == "sec*********"
@@ -634,6 +633,7 @@ class TestBaseHelpers:
         finally:
             os.environ.pop('ANDROID_ARGUMENT', None)
 
+        # noinspection PyUnreachableCode
         try:
             os.environ['KIVY_BUILD'] = 'android'
             assert _os_platform() == 'android'
@@ -802,7 +802,7 @@ class TestBaseHelpers:
 
     def test_parse_dotenv_var_not_expands_escaped_variables(self):
         with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("var_nam=var val \\$env_var \${env_var}")
+            fp.write("var_nam=var val \\$env_var \\${env_var}")
             fp.seek(0)
             loaded = parse_dotenv(fp.name)
             assert 'var_nam' in loaded
@@ -852,6 +852,31 @@ class TestBaseHelpers:
 
         assert round_traditional(0.075, 2) == 0.08
         assert round(0.075, 2) == 0.07
+
+    def test_sign_with_float_arg(self):
+        assert sign(1.11) == 1
+        assert sign(-0.000003) == -1
+        assert sign(0.0000000) == 0
+        assert sign(-0.0) == 0
+
+    def test_sign_with_int_arg(self):
+        assert sign(3) == 1
+        assert sign(-6) == -1
+        assert sign(0) == 0
+        assert sign(-0) == 0
+
+    def test_sign_with_invalid_arg(self):
+        with pytest.raises(TypeError):
+            # noinspection PyArgumentList
+            sign()
+
+        with pytest.raises(TypeError):
+            # noinspection PyArgumentList,PyTypeChecker
+            sign(None)
+
+        with pytest.raises(TypeError):
+            # noinspection PyArgumentList,PyTypeChecker
+            sign(UNSET)
 
     def test_snake_to_camel(self):
         assert snake_to_camel("_Any_Camel_Case_Name") == "AnyCamelCaseName"
@@ -981,6 +1006,7 @@ class TestModuleHelpers:
                 os.remove(module_file)
 
         # test already imported module
+        # noinspection PyUnreachableCode
         callee = module_attr('textwrap', attr_name='indent')
         assert callable(callee)
         assert callee is textwrap.indent
@@ -1033,7 +1059,7 @@ class TestModuleHelpers:
                 os.remove(module_file)
 
     def test_module_attr_not_exists_attr(self):
-        """ first test with non-existing module, second test with non-existing function. """
+        """ first test with a non-existing module, second test with a non-existing function. """
         namespace = TESTS_FOLDER
         mod_name = 'test_module_name'
         att_name = 'test_module_func'
@@ -1060,7 +1086,7 @@ class TestModuleHelpers:
                 os.remove(module_file)
 
     def test_module_attr_not_exists_module(self):
-        """ first test with non-existing module, second test with non-existing function. """
+        """ first test with a non-existing module, second test with a non-existing function. """
         mod_name = 'non_existing_test_module_name'
         att_name = 'non_existing_test_module_func'
         assert module_attr(mod_name, attr_name=att_name) is None
@@ -1102,7 +1128,7 @@ class TestStackHelpers:
         for frame in stack_frames():
             assert frame
             assert getattr(frame, 'f_globals')
-            # if pytest runs from terminal then f_locals is missing in the highest frame:
+            # if pytest runs from terminal, then f_locals is missing in the highest frame:
             # assert getattr(frame, 'f_locals')
 
     def test_stack_var_module(self):

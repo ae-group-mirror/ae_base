@@ -32,6 +32,9 @@ sortable and compact string from a timestamp.
 base helper functions
 ---------------------
 
+most programming languages providing a function to determine the sign of a number. the :func:`sign` functino,
+provided by this module/portion is filling this gap in Python.
+
 in order to convert and transfer Unicode character outside the 7-bit ASCII range via internet transport protocols,
 like http, use the helper functions :func:`ascii_str` and :func:`str_ascii`.
 
@@ -168,7 +171,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
 
 
-__version__ = '0.3.55'
+__version__ = '0.3.56'
 
 
 os_path_abspath = os.path.abspath
@@ -1016,6 +1019,15 @@ def round_traditional(num_value: float, num_digits: int = 0) -> float:
     :return:                    rounded value.
     """
     return round(num_value + 10 ** (-len(str(num_value)) - 1), num_digits)
+
+
+def sign(number: float) -> int:
+    """ return ths sign (-1, 0, 1) of a number.
+
+    :param number:              any number of type float or int.
+    :return:                    -1 if the number is negative, 0 if it is zero, or 1 if it is positive.
+    """
+    return (number > 0) - (number < 0)
 
 
 def snake_to_camel(name: str, back_convertible: bool = False) -> str:
