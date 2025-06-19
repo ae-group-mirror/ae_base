@@ -168,10 +168,10 @@ from contextlib import contextmanager
 from importlib.machinery import ModuleSpec
 from inspect import getinnerframes, getouterframes, getsourcefile
 from types import ModuleType
-from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
+from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.56'
+__version__ = '0.3.57'
 
 
 os_path_abspath = os.path.abspath
@@ -633,24 +633,24 @@ def load_dotenvs():
 
     .. hint:: call from the main module of project/app in order to also load ``.env`` files in/above the project folder.
     """
-    load_env_var_defaults(os.getcwd())
+    env_vars = os.environ
+    load_env_var_defaults(os.getcwd(), env_vars)
     if file_name := stack_var('__file__'):
-        load_env_var_defaults(os_path_dirname(os_path_abspath(file_name)))
+        load_env_var_defaults(os_path_dirname(os_path_abspath(file_name)), env_vars)
 
 
-def load_env_var_defaults(start_dir: str):
-    """ detect and load a chain of ``.env`` files starting in the specified folder or one above.
+def load_env_var_defaults(start_dir: str, env_vars: MutableMapping[str, str]):
+    """ load undeclared env var defaults from a chain of ``.env`` files starting in the specified folder or its parent.
 
-    :param start_dir:           folder to start search of an ``.env`` file, if not found, then checks the parent folder.
-                                if the first ``.env `` file got found, then load their shell environment variables
-                                into Python's :data:`os.environ`. after loading the first one, it repeats to check for
+    :param start_dir:           folder to start search of an ``.env`` file, if not found, then also checks the parent
+                                folder. if an ``.env `` file got found, then put their shell environment variable values
+                                into the  specified :paramref:`~load_env_var_defaults.env_vars` mapping if they are not
+                                already there. after processing the first ``.env`` file, it repeats to check for
                                 further ``.env`` files in the parent folder to load them too, until either detecting
                                 a folder without an ``.env`` file or until an ``.env`` got loaded from the root folder.
-
-    .. note::
-        only variables that are not declared in :data:`os.environ` will be added (with the
-        value specified in the ``.env`` file to be loaded). the variable values declared in the subfolders
-        are having preference over the values declared in the parent folders.
+    :param env_vars:            environment variables mapping to be amended with env variable values from any
+                                found ``.env`` file. pass Python's :data:`os.environ` to amend this mapping directly
+                                with all the already not declared environment variables.
     """
     file_path = os_path_abspath(os_path_join(start_dir, DOTENV_FILE_NAME))
     if not os_path_isfile(file_path):
@@ -658,8 +658,8 @@ def load_env_var_defaults(start_dir: str):
 
     while os_path_isfile(file_path):
         for var_nam, var_val in parse_dotenv(file_path).items():
-            if var_nam not in os.environ:
-                os.environ[var_nam] = var_val
+            if var_nam not in env_vars:
+                env_vars[var_nam] = var_val
 
         if os.sep not in file_path:
             break           # pragma: no cover # prevent endless-loop for ``.env`` file in root dir (os.sep == '/')
