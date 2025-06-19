@@ -526,9 +526,14 @@ class TestBaseHelpers:
         assert env_var_name not in os.environ
 
     def test_load_env_var_defaults_load_start_parent_first_no_chain(self, os_env_test_env):
-        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 4)), os.environ)
-        assert env_var_name in os.environ
-        assert os.environ[env_var_name] == env_var_val + '3'
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(os.path.join(os_env_test_env, *((folder_name, ) * 4)))
+            load_env_var_defaults("", os.environ)
+            assert env_var_name in os.environ
+            assert os.environ[env_var_name] == env_var_val + '3'
+        finally:
+            os.chdir(old_cwd)
 
     def test_load_env_var_defaults_load_start_first_no_chain(self, os_env_test_env):
         load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 3)), os.environ)

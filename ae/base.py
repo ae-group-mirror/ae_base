@@ -171,7 +171,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.57'
+__version__ = '0.3.58'
 
 
 os_path_abspath = os.path.abspath
@@ -652,7 +652,8 @@ def load_env_var_defaults(start_dir: str, env_vars: MutableMapping[str, str]):
                                 found ``.env`` file. pass Python's :data:`os.environ` to amend this mapping directly
                                 with all the already not declared environment variables.
     """
-    file_path = os_path_abspath(os_path_join(start_dir, DOTENV_FILE_NAME))
+    start_dir = norm_path(start_dir)
+    file_path = os_path_join(start_dir, DOTENV_FILE_NAME)
     if not os_path_isfile(file_path):
         file_path = os_path_join(os_path_dirname(start_dir), DOTENV_FILE_NAME)
 
