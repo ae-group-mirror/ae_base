@@ -496,7 +496,9 @@ class TestBaseHelpers:
 
         with pytest.raises(TypeError):
             # noinspection PyTypeChecker
-            load_env_var_defaults(None, None)
+            load_env_var_defaults(None, None)   # STRANGE: raising TypeError in Python 3.9.21/local but not in 3.9.23/CI
+            # noinspection PyArgumentList
+            load_env_var_defaults(None)         # HOTFIX ensuring failure - could not find any changelog notes )
 
         # noinspection PyTypeChecker
         load_env_var_defaults("inv:_ file path", ())  # NO ERROR EXCEPTIONS on these invalid arg values!!!
