@@ -13,7 +13,7 @@ import textwrap
 from collections import OrderedDict
 from configparser import ConfigParser
 from types import ModuleType
-from typing import cast
+from typing import cast, Any
 
 # noinspection PyProtectedMember
 from ae.base import (
@@ -215,52 +215,80 @@ class TestBaseHelpers:
 
     def test_deep_dict_update_empty(self):
         str_val = "str_val"
-        pev = {}
         upd = {'setup_kwargs': {'entry_points': {'console_scripts': str_val}}}
 
-        deep_dict_update(pev, upd)
-        assert pev
-        assert 'setup_kwargs' in pev
-        assert 'entry_points' in pev['setup_kwargs']
-        assert 'console_scripts' in pev['setup_kwargs']['entry_points']
-        assert pev['setup_kwargs']['entry_points']['console_scripts'] == str_val
+        ori = {}
+        deep_dict_update(ori, upd)
+        assert ori
+        assert 'setup_kwargs' in ori
+        assert 'entry_points' in ori['setup_kwargs']
+        assert 'console_scripts' in ori['setup_kwargs']['entry_points']
+        assert ori['setup_kwargs']['entry_points']['console_scripts'] == str_val
+
+        ori = {}
+        deep_dict_update(ori, upd, overwrite=False)
+        assert ori
+        assert 'setup_kwargs' in ori
+        assert 'entry_points' in ori['setup_kwargs']
+        assert 'console_scripts' in ori['setup_kwargs']['entry_points']
+        assert ori['setup_kwargs']['entry_points']['console_scripts'] == str_val
 
     def test_deep_dict_update_half_empty_ordered(self):
         str_val = "str_val"
         lst_val = [str_val]
-        pev = OrderedDict({'setup_kwargs': {'untouched_key1': "untouched val 1"}, 'untouched_key2': "untouched val 2"})
         upd = {'setup_kwargs': {'entry_points': {'console_scripts': lst_val}}}
 
-        deep_dict_update(pev, upd)
-        assert pev
-        assert 'setup_kwargs' in pev
-        assert 'entry_points' in pev['setup_kwargs']
-        assert 'console_scripts' in pev['setup_kwargs']['entry_points']
-        # noinspection PyTypeChecker
-        assert pev['setup_kwargs']['entry_points']['console_scripts'] == lst_val
-        # noinspection PyTypeChecker
-        assert pev['setup_kwargs']['entry_points']['console_scripts'][0] == str_val
+        ori: dict[str, Any] = OrderedDict({'setup_kwargs': {'untouched_key1': "untouched val 1"},
+                                           'untouched_key2': "untouched val 2"})
+        deep_dict_update(ori, upd)
+        assert ori
+        assert 'setup_kwargs' in ori
+        assert 'entry_points' in ori['setup_kwargs']
+        assert 'console_scripts' in ori['setup_kwargs']['entry_points']
+        assert ori['setup_kwargs']['entry_points']['console_scripts'] == lst_val
+        assert ori['setup_kwargs']['entry_points']['console_scripts'][0] == str_val
+        assert ori['untouched_key2'] == "untouched val 2"
+        assert ori['setup_kwargs']['untouched_key1'] == "untouched val 1"
+        assert list(ori.keys()) == ['setup_kwargs', 'untouched_key2']
+        assert list(ori['setup_kwargs'].keys()) == ['untouched_key1', 'entry_points']
 
-        assert pev['untouched_key2'] == "untouched val 2"
-        assert pev['setup_kwargs']['untouched_key1'] == "untouched val 1"
-
-        assert list(pev.keys()) == ['setup_kwargs', 'untouched_key2']
-        assert list(pev['setup_kwargs'].keys()) == ['untouched_key1', 'entry_points']
+        ori: dict[str, Any] = OrderedDict({'setup_kwargs': {'untouched_key1': "untouched val 1"},
+                                           'untouched_key2': "untouched val 2"})
+        deep_dict_update(ori, upd, overwrite=False)
+        assert ori
+        assert 'setup_kwargs' in ori
+        assert 'entry_points' in ori['setup_kwargs']
+        assert 'console_scripts' in ori['setup_kwargs']['entry_points']
+        assert ori['setup_kwargs']['entry_points']['console_scripts'] == lst_val
+        assert ori['setup_kwargs']['entry_points']['console_scripts'][0] == str_val
+        assert ori['untouched_key2'] == "untouched val 2"
+        assert ori['setup_kwargs']['untouched_key1'] == "untouched val 1"
+        assert list(ori.keys()) == ['setup_kwargs', 'untouched_key2']
+        assert list(ori['setup_kwargs'].keys()) == ['untouched_key1', 'entry_points']
 
     def test_deep_dict_update_full(self):
         str_old = "old_val"
         str_new = "new_val"
         lst_val = [str_new]
-        pev = {'setup_kwargs': {'entry_points': {'console_scripts': str_old}}}
         upd = {'setup_kwargs': {'entry_points': {'console_scripts': lst_val}}}
 
-        deep_dict_update(pev, upd)
-        assert pev
-        assert 'setup_kwargs' in pev
-        assert 'entry_points' in pev['setup_kwargs']
-        assert 'console_scripts' in pev['setup_kwargs']['entry_points']
-        assert pev['setup_kwargs']['entry_points']['console_scripts'] == lst_val
-        assert pev['setup_kwargs']['entry_points']['console_scripts'][0] == str_new
+        ori = {'setup_kwargs': {'entry_points': {'console_scripts': str_old}}}
+        deep_dict_update(ori, upd)
+        assert ori
+        assert 'setup_kwargs' in ori
+        assert 'entry_points' in ori['setup_kwargs']
+        assert 'console_scripts' in ori['setup_kwargs']['entry_points']
+        assert ori['setup_kwargs']['entry_points']['console_scripts'] == lst_val
+        assert ori['setup_kwargs']['entry_points']['console_scripts'][0] == str_new
+
+        ori = {'setup_kwargs': {'entry_points': {'console_scripts': str_old}}}
+        deep_dict_update(ori, upd, overwrite=False)
+        assert ori
+        assert 'setup_kwargs' in ori
+        assert 'entry_points' in ori['setup_kwargs']
+        assert 'console_scripts' in ori['setup_kwargs']['entry_points']
+        assert ori['setup_kwargs']['entry_points']['console_scripts'] == str_old
+        assert ori['setup_kwargs']['entry_points']['console_scripts'][0] == str_old[0]
 
     def test_dedefuse_file_name(self):
         assert dedefuse(tst_fna1) == tst_uri1

@@ -171,7 +171,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.59'
+__version__ = '0.3.60'
 
 
 os_path_abspath = os.path.abspath
@@ -334,21 +334,21 @@ def camel_to_snake(name: str) -> str:
     return "".join(str_parts)
 
 
-def deep_dict_update(data: dict, update: dict):
+def deep_dict_update(data: dict, update: dict, overwrite: bool = True):
     """ update the optionally nested data dict in-place with the items and subitems from the update dict.
 
     :param data:                dict to be updated/extended. non-existing keys of dict-subitems will be added.
     :param update:              dict with the [sub-]items to update in the :paramref:`~deep_dict_update.data` dict.
+    :param overwrite:           pass False to not overwrite an already existing value.
 
-    .. hint:: the module/portion :mod:`ae.deep` is providing more deep update helper functions.
-
+    .. hint:: see the module/portion :mod:`ae.deep` for more deep update helper functions.
     """
     for upd_key, upd_val in update.items():
         if isinstance(upd_val, dict):
             if upd_key not in data:
                 data[upd_key] = {}
-            deep_dict_update(data[upd_key], upd_val)
-        else:
+            deep_dict_update(data[upd_key], upd_val, overwrite=overwrite)
+        elif overwrite or upd_key not in data:
             data[upd_key] = upd_val
 
 
