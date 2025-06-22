@@ -171,7 +171,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.60'
+__version__ = '0.3.61'
 
 
 os_path_abspath = os.path.abspath
@@ -206,6 +206,8 @@ INI_EXT = '.ini'                                #: INI config file extension
 
 DATE_ISO = "%Y-%m-%d"                           #: ISO string format for date values (e.g. in config files/variables)
 DATE_TIME_ISO = "%Y-%m-%d %H:%M:%S.%f"          #: ISO string format for datetime values
+
+DEF_PROJECT_PARENT_FOLDER = 'src'               #: default directory name to put code project roots underneath of it
 
 DEF_ENCODE_ERRORS = 'backslashreplace'          #: default encode error handling for UnicodeEncodeErrors
 DEF_ENCODING = 'ascii'
