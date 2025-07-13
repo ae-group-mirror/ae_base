@@ -526,7 +526,7 @@ class TestBaseHelpers:
             # noinspection PyTypeChecker
             load_env_var_defaults(None, None)   # STRANGE: raising TypeError in Python 3.9.21/local but not in 3.9.23/CI
             # noinspection PyArgumentList
-            load_env_var_defaults(None)         # HOTFIX ensuring failure - could not find any changelog notes )
+            load_env_var_defaults(None)         # HOTFIX ensuring failure - could not find any changelog notes
 
         # noinspection PyTypeChecker
         load_env_var_defaults("inv:_ file path", ())  # NO ERROR EXCEPTIONS on these invalid arg values!!!
@@ -534,10 +534,14 @@ class TestBaseHelpers:
     def test_load_env_var_defaults_not_loaded(self):
         env_vars = {}
 
-        load_env_var_defaults('/', env_vars)
+        loaded = load_env_var_defaults('/', env_vars)
+        assert not env_vars
+        assert not loaded
         assert env_var_name not in env_vars
 
-        load_env_var_defaults('.', env_vars)
+        loaded = load_env_var_defaults('.', env_vars)
+        assert env_vars
+        assert loaded == env_vars
         assert env_var_name not in env_vars
 
     def test_load_env_var_defaults_not_loaded_in_os_environ(self, os_env_test_env):
@@ -559,29 +563,34 @@ class TestBaseHelpers:
         old_cwd = os.getcwd()
         try:
             os.chdir(os.path.join(os_env_test_env, *((folder_name, ) * 4)))
-            load_env_var_defaults("", os.environ)
+            loaded = load_env_var_defaults("", os.environ)
+            assert loaded == {'env_var_nam1': env_var_val + '3'}
             assert env_var_name in os.environ
             assert os.environ[env_var_name] == env_var_val + '3'
         finally:
             os.chdir(old_cwd)
 
     def test_load_env_var_defaults_load_start_first_no_chain(self, os_env_test_env):
-        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 3)), os.environ)
+        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 3)), os.environ)
+        assert loaded == {'env_var_nam1': env_var_val + '3'}
         assert env_var_name in os.environ
         assert os.environ[env_var_name] == env_var_val + '3'
 
     def test_load_env_var_defaults_load_start_parent_first_in_chain(self, os_env_test_env):
-        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 2)), os.environ)
+        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 2)), os.environ)
+        assert loaded == {'env_var_nam1': env_var_val + '1'}
         assert env_var_name in os.environ
         assert os.environ[env_var_name] == env_var_val + '1'
 
     def test_load_env_var_defaults_load_start_no_parent_first_in_chain(self, os_env_test_env):
-        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 1)), os.environ)
+        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 1)), os.environ)
+        assert loaded == {'env_var_nam1': env_var_val + '1'}
         assert env_var_name in os.environ
         assert os.environ[env_var_name] == env_var_val + '1'
 
     def test_load_env_var_defaults_load_start_on_second_within_chain(self, os_env_test_env):
-        load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 0)), os.environ)
+        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((folder_name, ) * 0)), os.environ)
+        assert loaded == {'env_var_nam1': env_var_val + '0'}
         assert env_var_name in os.environ
         assert os.environ[env_var_name] == env_var_val + '0'
 

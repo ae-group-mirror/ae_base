@@ -171,7 +171,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.61'
+__version__ = '0.3.62'
 
 
 os_path_abspath = os.path.abspath
@@ -641,7 +641,7 @@ def load_dotenvs():
         load_env_var_defaults(os_path_dirname(os_path_abspath(file_name)), env_vars)
 
 
-def load_env_var_defaults(start_dir: str, env_vars: MutableMapping[str, str]):
+def load_env_var_defaults(start_dir: str, env_vars: MutableMapping[str, str]) -> MutableMapping[str, str]:
     """ load undeclared env var defaults from a chain of ``.env`` files starting in the specified folder or its parent.
 
     :param start_dir:           folder to start search of an ``.env`` file, if not found, then also checks the parent
@@ -653,20 +653,24 @@ def load_env_var_defaults(start_dir: str, env_vars: MutableMapping[str, str]):
     :param env_vars:            environment variables mapping to be amended with env variable values from any
                                 found ``.env`` file. pass Python's :data:`os.environ` to amend this mapping directly
                                 with all the already not declared environment variables.
+    :return:                    dict with the loaded env var names (keys) and values.
     """
     start_dir = norm_path(start_dir)
     file_path = os_path_join(start_dir, DOTENV_FILE_NAME)
     if not os_path_isfile(file_path):
         file_path = os_path_join(os_path_dirname(start_dir), DOTENV_FILE_NAME)
 
+    loaded_vars = {}
     while os_path_isfile(file_path):
         for var_nam, var_val in parse_dotenv(file_path).items():
             if var_nam not in env_vars:
-                env_vars[var_nam] = var_val
+                env_vars[var_nam] = loaded_vars[var_nam] = var_val
 
         if os.sep not in file_path:
             break           # pragma: no cover # prevent endless-loop for ``.env`` file in root dir (os.sep == '/')
         file_path = os_path_join(os_path_dirname(os_path_dirname(file_path)), DOTENV_FILE_NAME)
+
+    return loaded_vars
 
 
 def main_file_paths_parts(portion_name: str) -> tuple[tuple[str, ...], ...]:
