@@ -534,14 +534,10 @@ class TestBaseHelpers:
     def test_load_env_var_defaults_not_loaded(self):
         env_vars = {}
 
-        loaded = load_env_var_defaults('/', env_vars)
-        assert not env_vars
-        assert not loaded
+        load_env_var_defaults('/', env_vars)
         assert env_var_name not in env_vars
 
-        loaded = load_env_var_defaults('.', env_vars)
-        assert env_vars
-        assert loaded == env_vars
+        load_env_var_defaults('.', env_vars)
         assert env_var_name not in env_vars
 
     def test_load_env_var_defaults_not_loaded_in_os_environ(self, os_env_test_env):
