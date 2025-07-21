@@ -77,17 +77,17 @@ class TestErrorMsgMixin:
     def test_instantiation(self):
         ins = ErrorMsgMixin()
         assert ins
-        assert ins.cae is None      # in test env is no console/gui app available
+        assert ins.main_app is None     # in test env is no console/gui app available
         assert ins.po is ins.dpo is ins.vpo is print
 
         with patch('ae.core.main_app_instance', lambda: None):
             ins = ErrorMsgMixin()
             assert ins
-            assert ins.cae is None
+            assert ins.main_app is None
             assert ins.po is ins.dpo is ins.vpo is print
 
         class _AppMock(ErrorMsgMixin):
-            cae = None
+            main_app = None
 
             @staticmethod
             def po():
@@ -108,7 +108,7 @@ class TestErrorMsgMixin:
 
         with patch('ae.core.main_app_instance', lambda: app_ins):
             ins = ErrorMsgMixin()
-            assert ins.cae is app_ins
+            assert ins.main_app is app_ins
             assert ins.po is not print
             assert ins.po() == "po"
             assert ins.dpo is not print

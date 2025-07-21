@@ -171,7 +171,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.63'
+__version__ = '0.3.64'
 
 
 os_path_abspath = os.path.abspath
@@ -1249,30 +1249,25 @@ def write_file(file_path: str, content: Union[str, bytes],
 class ErrorMsgMixin:                                                # pylint: disable=too-few-public-methods
     """ mixin class providing sophisticated error message handling. """
     _err_msg: str = ""
-
-    cae = None
-    po = print
-    dpo = print
-    vpo = print
+    main_app = None
+    po = dpo = vpo = print
 
     def __init__(self):
         try:
             from ae.core import main_app_instance       # type: ignore # pylint: disable=import-outside-toplevel
 
-            self.cae = cae = main_app_instance()
-            assert cae is not None, f"{self.__class__.__name__}.__init__() called too early; main app instance not"
+            self.main_app = main_app = main_app_instance()
+            assert main_app is not None, f"{self.__class__.__name__}.__init__() called too early; main app instance not"
 
-            self.po = cae.po
-            self.dpo = cae.dpo
-            self.vpo = cae.vpo
+            self.po = main_app.po
+            self.dpo = main_app.dpo
+            self.vpo = main_app.vpo
 
         except (ImportError, AssertionError, Exception) as exc:                 # pylint: disable=broad-except
             print(f"{self.__class__.__name__}.__init__() raised {exc}; using print() instead of main app error loggers")
 
-            # self.cae = None
-            # self.po = print
-            # self.dpo = print
-            # self.vpo = print
+            # self.main_app = None
+            # self.po = self.dpo = self.vpo = print
 
     @property
     def error_message(self) -> str:
