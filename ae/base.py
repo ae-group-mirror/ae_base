@@ -32,6 +32,10 @@ sortable and compact string from a timestamp.
 base helper functions
 ---------------------
 
+the function :func:`evaluate_literal` can be used as an replacement of :func:`ast.literal_eval` to retrieve
+basic data structure values from config, ini and .env files, while also accepting unquoted strings as a `str` type
+instance.
+
 most programming languages providing a function to determine the sign of a number. the :func:`sign` functino,
 provided by this module/portion is filling this gap in Python.
 
@@ -148,6 +152,7 @@ os.path shortcuts
 the following data items are pointers to shortcut at runtime the lookup to their related functions in the
 Python module :mod:`os.path`:
 """
+# pylint: disable=too-many-lines
 import datetime
 import getpass
 import importlib.abc
@@ -171,7 +176,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.64'
+__version__ = '0.3.65'
 
 
 os_path_abspath = os.path.abspath
@@ -492,6 +497,20 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     if convert_name:
         name = norm_name(camel_to_snake(name)).upper()
     return os.environ.get(name)
+
+
+def evaluate_literal(literal_string: str) -> Any:
+    """ evaluates a Python expression while accepting unquoted strings as str type.
+
+    :param literal_string:      any literal of the base types (like dict, list, set, tuple) which are recognized
+                                by :func:`ast.literal_eval`.
+    :return:                    an instance of the data type or the specified string, even if it is not quoted with
+                                high comma characters.
+    """
+    try:
+        return literal_eval(literal_string)
+    except (IndentationError, SyntaxError, TypeError, ValueError):
+        return literal_string
 
 
 def force_encoding(text: Union[str, bytes], encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
