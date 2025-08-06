@@ -20,7 +20,7 @@ from ae.base import (
     ASCII_TO_UNICODE, BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNICODE_TO_ASCII,
     UNSET, URI_SEP_CHAR,
     app_name_guess, ascii_str, build_config_variable_values, camel_to_snake,
-    dedefuse, deep_dict_update, defuse, dummy_function, duplicates, env_str,
+    dedefuse, deep_dict_update, defuse, dummy_function, duplicates, env_str, evaluate_literal,
     force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
     load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, module_attr,
     module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str,
@@ -360,6 +360,32 @@ class TestBaseHelpers:
         vv = "test variable value"
         os.environ['NON_ALPHA_NUM_CHARS_69'] = vv
         assert env_str(ev, convert_name=True) == vv
+
+    def test_evaluate_literal(self):
+        tst_str = "unquoted string"
+
+        assert evaluate_literal(tst_str) == tst_str                 # actually: evaluate_literal(tst_str) is tst_str
+
+        assert evaluate_literal("'" + tst_str + "'") == tst_str
+
+        tst_dict = dict(a=1, b=[dict(b3=3), (1, 2, 3), set()])
+
+        assert evaluate_literal(repr(tst_dict)) == tst_dict
+
+    def test_evaluate_literal_errors(self):
+        assert evaluate_literal("") == ""
+
+        # noinspection PyTypeChecker
+        assert evaluate_literal(None) is None                       # raising ValueError: malformed node or string: None
+
+        tst = dict(a=1, b=[dict(b3=3), (1, "22", 333), set()])
+
+        assert evaluate_literal("    " + repr(tst) + "    ") == "    " + repr(tst) + "    "  # raising IndentationError
+
+        assert evaluate_literal(repr(tst) + "    ") == tst          # trailing white space chars are ok
+
+        # noinspection PyTypeChecker
+        assert evaluate_literal(tst) is tst
 
     def test_force_encoding_bytes(self):
         s = 'äöü'
