@@ -1,4 +1,4 @@
-# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls V0.3.45
+# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.46
 """ setup of ae namespace module portion base: basic constants, helper functions and context manager. """
 # noinspection PyUnresolvedReferences
 import sys
@@ -24,15 +24,15 @@ setup_kwargs = {
     'install_requires': [],
     'keywords': ['configuration', 'development', 'environment', 'productivity'],
     'license': 'GPL-3.0-or-later',
-    'long_description': ('<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae V0.3.96 -->\n'
+    'long_description': ('<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae v0.3.96 -->\n'
  '<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.tpl_namespace_root V0.3.14 -->\n'
- '# base 0.3.65\n'
+ '# base 0.3.66\n'
  '\n'
  '[![GitLab develop](https://img.shields.io/gitlab/pipeline/ae-group/ae_base/develop?logo=python)](\n'
  '    https://gitlab.com/ae-group/ae_base)\n'
  '[![LatestPyPIrelease](\n'
- '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.64?logo=python)](\n'
- '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.64)\n'
+ '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.65?logo=python)](\n'
+ '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.65)\n'
  '[![PyPIVersions](https://img.shields.io/pypi/v/ae_base)](\n'
  '    https://pypi.org/project/ae-base/#history)\n'
  '\n'
@@ -110,7 +110,7 @@ setup_kwargs = {
     'python_requires': '>=3.9',
     'setup_requires': [],
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.65',
+    'version': '0.3.66',
     'zip_safe': True,
 }
 
