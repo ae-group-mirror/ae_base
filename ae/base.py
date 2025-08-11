@@ -32,7 +32,7 @@ sortable and compact string from a timestamp.
 base helper functions
 ---------------------
 
-the function :func:`evaluate_literal` can be used as an replacement of :func:`ast.literal_eval` to retrieve
+the function :func:`evaluate_literal` can be used as a replacement of :func:`ast.literal_eval` to retrieve
 basic data structure values from config, ini and .env files, while also accepting unquoted strings as a `str` type
 instance.
 
@@ -176,7 +176,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.65'
+__version__ = '0.3.66'
 
 
 os_path_abspath = os.path.abspath
@@ -360,6 +360,7 @@ def deep_dict_update(data: dict, update: dict, overwrite: bool = True):
 
 
 URI_SEP_CHAR = '⫻'  # U+2AFB: TRIPLE SOLIDUS BINARY RELATION
+# noinspection GrazieInspection
 ASCII_UNICODE = (
     ('/', '⁄'),     # U+2044: Fraction Slash; '∕' U+2215: Division Slash; '⧸' U+29F8: Big Solidus;
                     # '╱' U+FF0F: Fullwidth Solidus; '╱' U+2571: Box Drawings Light Diagonal Upper Right to Lower Left
@@ -433,7 +434,7 @@ def defuse(value: str) -> str:
     in most unix variants only the slash and the ASCII 0 characters are not allowed in file names.
 
     in MS Windows are not allowed: ASCII 0..31 / | \\ : * ? ” % < > ( ). some blogs recommend also not allowing
-    (convert) the characters # and '.
+    (convert) the characters `#` and `'`.
 
     only old POSIX seems to be even more restricted (only allowing alphanumeric characters plus . - and _).
 
@@ -649,14 +650,26 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
         os.chdir(cur_dir)
 
 
-def load_dotenvs():
-    """ detect and load multiple ``.env`` files in/above the current working directory and the calling module folder.
+def load_dotenvs(from_module_path: bool = False):
+    """ detect and load not defined OS environment variables from ``.env`` files.
 
-    .. hint:: call from the main module of project/app in order to also load ``.env`` files in/above the project folder.
+    :param from_module_path:    pass True to load OS environment variables (that are not already loaded from ``.env``
+                                files situated in or above the current working directory) also from/above the folder of
+                                the first module in the call stack that gets not excluded/skipped by :func:`stack_var`.
+
+                                in order to also load ``.env`` files in/above the project folder.
+                                call this function from the main module of project/app.
+
+    .. note::
+        only variables that are not already defined in the OS environment variables mapping :data:`os.environ` will be
+        loaded/added. variables will be loaded first from the first ``.env`` file found in or above the current working
+        directory, while the variable values in the deeper situated files are overwriting the values defined in the
+        ``.env`` files situated in the above folders.
     """
     env_vars = os.environ
     load_env_var_defaults(os.getcwd(), env_vars)
-    if file_name := stack_var('__file__'):
+
+    if from_module_path and (file_name := stack_var('__file__')):
         load_env_var_defaults(os_path_dirname(os_path_abspath(file_name)), env_vars)
 
 
@@ -788,11 +801,12 @@ def module_name(*skip_modules: str, depth: int = 0) -> Optional[str]:
 
 
 def norm_line_sep(text: str) -> str:
+    # noinspection GrazieInspection
     """ convert any combination of line separators in the :paramref:`~norm_line_sep.text` arg to new-line characters.
 
-    :param text:                string containing any combination of line separators ('\\\\r\\\\n' or '\\\\r').
-    :return:                    normalized/converted string with only new-line ('\\\\n') line separator characters.
-    """
+        :param text:                string containing any combination of line separators ('\\\\r\\\\n' or '\\\\r').
+        :return:                    normalized/converted string with only new-line ('\\\\n') line separator characters.
+        """
     return text.replace('\r\n', '\n').replace('\r', '\n')
 
 

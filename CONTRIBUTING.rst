@@ -1,6 +1,6 @@
 
 ..
-    THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls V0.3.45
+    THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.46
 
 contributing
 ============

@@ -543,6 +543,11 @@ class TestBaseHelpers:
         load_dotenvs()
         assert env_var_name not in os.environ
 
+    def test_load_dotenvs_from_module_path(self, os_env_test_env):
+        assert env_var_name not in os.environ
+        load_dotenvs(from_module_path=True)
+        assert env_var_name not in os.environ
+
     def test_load_env_var_defaults_errors(self):
         with pytest.raises(TypeError):
             # noinspection PyArgumentList
