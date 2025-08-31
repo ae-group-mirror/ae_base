@@ -1,5 +1,5 @@
-# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.46
-""" setup of ae namespace module portion base: basic constants, helper functions and context manager. """
+# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.53
+""" setup of ae namespace module portion base: basic constants, helper functions and context managers. """
 # noinspection PyUnresolvedReferences
 import sys
 print(f"SetUp {__name__=} {sys.executable=} {sys.argv=} {sys.path=}")
@@ -14,29 +14,28 @@ setup_kwargs = {
         'Programming Language :: Python', 'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.9', 'Topic :: Software Development :: Libraries :: Python Modules',
         'Typing :: Typed'],
-    'description': 'ae namespace module portion base: basic constants, helper functions and context manager',
+    'description': 'ae namespace module portion base: basic constants, helper functions and context managers',
     'extras_require': {       'dev': [       'aedev_project_tpls', 'ae_ae', 'anybadge', 'coverage-badge', 'aedev_git_repo_manager', 'flake8',
-                       'mypy', 'pylint', 'pytest', 'pytest-cov', 'pytest-django', 'typing', 'types-setuptools', 'wheel',
-                       'twine'],
+                       'mypy', 'pylint', 'pytest', 'pytest-cov', 'pytest-django', 'typing', 'types-setuptools'],
         'docs': [],
         'tests': [       'anybadge', 'coverage-badge', 'aedev_git_repo_manager', 'flake8', 'mypy', 'pylint', 'pytest',
-                         'pytest-cov', 'pytest-django', 'typing', 'types-setuptools', 'wheel', 'twine']},
+                         'pytest-cov', 'pytest-django', 'typing', 'types-setuptools']},
     'install_requires': [],
     'keywords': ['configuration', 'development', 'environment', 'productivity'],
     'license': 'GPL-3.0-or-later',
     'long_description': ('<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae v0.3.96 -->\n'
  '<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.tpl_namespace_root V0.3.14 -->\n'
- '# base 0.3.66\n'
+ '# base 0.3.67\n'
  '\n'
  '[![GitLab develop](https://img.shields.io/gitlab/pipeline/ae-group/ae_base/develop?logo=python)](\n'
  '    https://gitlab.com/ae-group/ae_base)\n'
  '[![LatestPyPIrelease](\n'
- '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.65?logo=python)](\n'
- '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.65)\n'
+ '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.66?logo=python)](\n'
+ '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.66)\n'
  '[![PyPIVersions](https://img.shields.io/pypi/v/ae_base)](\n'
  '    https://pypi.org/project/ae-base/#history)\n'
  '\n'
- '>ae namespace module portion base: basic constants, helper functions and context manager.\n'
+ '>ae namespace module portion base: basic constants, helper functions and context managers.\n'
  '\n'
  '[![Coverage](https://ae-group.gitlab.io/ae_base/coverage.svg)](\n'
  '    https://ae-group.gitlab.io/ae_base/coverage/index.html)\n'
@@ -108,9 +107,8 @@ setup_kwargs = {
         'Repository': 'https://gitlab.com/ae-group/ae_base',
         'Source': 'https://ae.readthedocs.io/en/latest/_modules/ae/base.html'},
     'python_requires': '>=3.9',
-    'setup_requires': [],
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.66',
+    'version': '0.3.67',
     'zip_safe': True,
 }
 

@@ -1,156 +1,221 @@
 """
-basic constants, helper functions and context manager
-=====================================================
+basic constants, helper functions and context managers
+======================================================
 
-this module is pure python, has no external dependencies, and is providing base constants, common helper
-functions, useful classes and context managers.
+this module is pure python, has no external dependencies, and provides a comprehensive toolkit of base constants,
+common helper functions, useful classes, and context managers for a wide variety of programming tasks.
 
 .. note::
-    on import of this module, while running on Android OS, it will monkey patch the :mod:`shutil` module
-    to allow using them on Android devices. therefore, the import of this module should be one of the first ones
-    in your app's main module.
+    on import, this module checks if it is running on the Android OS. if so, it will monkey patch the
+    :mod:`shutil` module to ensure functions like ``copy`` and ``move`` work correctly. to prevent
+    permission-related errors, this module should be one of the first imports in your Android app's main module.
+
+
+string manipulation
+-------------------
+
+functions for converting, cleaning, normalizing, and formatting strings.
+
+* :func:`camel_to_snake`: converts a string from CamelCase to snake_case.
+* :func:`snake_to_camel`: converts a string from snake_case to CamelCase.
+* :func:`norm_name`: normalizes a string to be a valid identifier (e.g., for variable-, method-, or file-names).
+* :func:`norm_line_sep`: converts all line separator combinations (CRLF, CR) in a string to a single newline (LF).
+* :func:`defuse`: converts special characters in string to Unicode alternatives, making it safe for use as
+  a URL slug, path or filename.
+* :func:`dedefuse`: reverses the operation of :func:`defuse`, restoring the original string.
+* :func:`force_encoding`: ensures text is in a specific encoding without raising errors, replacing characters as needed.
+* :func:`to_ascii`: converts a Unicode string into its closest ASCII representation by removing accents and diacritics.
+* :func:`ascii_str`: encodes a Unicode string into a reversible 7-bit ASCII representation, useful for transport
+  protocols like HTTP headers.
+* :func:`str_ascii`: decodes a string created by :func:`ascii_str` back to its original Unicode form.
+* :func:`format_given`: a replacement for `str.format_map` that formats a string but leaves placeholders intact if they
+  are not found in the provided mapping.
+
+
+system & environment
+--------------------
+
+inspect the operating system and manage environment variables.
+
+.. hint::
+    the :mod:`ae.core` portion is providing more OS-specific constants and helper functions, like e.g.
+    :func:`~ae.core.start_app_service` and :func:`~ae.core.request_app_permissions`.
+
+OS information
+~~~~~~~~~~~~~~
+
+* :data:`os_platform`: a string identifying the operating system (e.g., 'linux', 'win32', 'android', 'ios').
+* :data:`os_device_id`: a string with the ID/name of the device.
+* :func:`os_host_name`: determines the operating system's host/machine name.
+* :func:`os_local_ip`: determines the local IP address of the machine.
+* :func:`os_user_name`: determines the current logged-in user's name.
+* :func:`sys_env_dict`: returns a dictionary containing key Python runtime environment values.
+* :func:`sys_env_text`: compiles a formatted text block with system environment information, useful for logging.
+
+environment variables & `.env` files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* :func:`env_str`: retrieves the string value of an OS environment variable, with an option to automatically convert the
+  variable name to the conventional format.
+* :func:`parse_dotenv`: parses a `.env` file and returns its key-value pairs as a dictionary.
+* :func:`load_env_var_defaults`: recursively searches parent directories for `.env` files and loads any undeclared
+  variables.
+* :func:`load_dotenvs`: detects and loads all relevant `.env` files from the current working directory and optional
+  also from the main module's path.
+
+
+data structure utilities
+------------------------
+
+helpers for working with lists, dictionaries, and other data structures.
+
+* :func:`evaluate_literal`: replacement for :func:`ast.literal_eval` that also interprets/recognizes unquoted strings
+  as `str` type.
+* :func:`duplicates`: returns a list of all duplicate items found in any type of iterable.
+* :func:`deep_dict_update`: recursively updates a dictionary in-place with values from another dictionary.
+* :func:`mask_secrets`: hides sensitive string values (e.g., passwords, API keys) in deeply nested data structures,
+  useful for logging.
+
+
+application & project helpers
+-----------------------------
+
+functions to aid in application setup, configuration, and build introspection.
+
+* :func:`app_name_guess`: attempts to determine the name of the currently running application from its environment.
+* :func:`build_config_variable_values`: reads variable values from a `buildozer.spec` file.
+* :func:`instantiate_config_parser`: returns a `ConfigParser` instance pre-configured for case-sensitive keys and
+  extended interpolation.
+* :func:`project_main_file`: determines the absolute path to the main module file of a project package (where the
+  `__version__` of the app|package is defined).
+* :func:`main_file_paths_parts`: returns a tuple of possible main/version file path names combinations of any project.
+
+
+modules and call stack inspection
+---------------------------------
+
+dynamically inspect modules, execution frames, and variables on the call stack.
+
+* :func:`import_module`: dynamically imports a Python module from a path without adding it to `sys.modules`.
+* :func:`module_attr`: dynamically gets a reference to a module or any attribute (variable, function, class) within it.
+* :func:`module_file_path`: determines the absolute file path of the module from which it is called.
+* :func:`module_name`: finds the name of the first module in the call stack that is not in a predefined skip list.
+* :func:`stack_frames`: a generator that yields frames from the call stack, starting at a specified depth.
+* :func:`stack_var`: finds the value of a specific variable by searching up the call stack.
+* :func:`stack_vars`: returns the global and local variables from a specific frame in the call stack.
+* :func:`full_stack_trace`: generates a complete, detailed string representation of an exception's stack trace.
+
+.. hint::
+    the :class:`~ae.core.AppBase` class uses these helper functions to determine the
+    :attr:`version <ae.core.AppBase.app_version>` and :attr:`title <ae.core.AppBase.app_title>` of an application,
+    if these values are not specified in the instance initializer.
+
+
+networking utilities
+--------------------
+
+* :func:`url_failure`: determines if and why a HTTP|FTP target is unavailable.
+* :func:`mask_url`: hides or replaces the password/token portion of a URL for safe logging.
+
+
+general utilities & helpers
+---------------------------
+
+a collection of miscellaneous mathematical, date/time, and other standalone helper functions.
+
+mathematical
+~~~~~~~~~~~~
+
+* :func:`sign`: returns the sign of a number (-1 for negative, 0 for zero, 1 for positive).
+* :func:`round_traditional`: rounds a float value using traditional rounding rules (e.g., `0.5` rounds up).
+
+date & time
+~~~~~~~~~~~
+* :func:`utc_datetime`: Returns the current date and time as a timezone-naive `datetime` object in UTC.
+* :func:`now_str`: creates a compact, sortable timestamp string from the current UTC time.
+
+miscellaneous
+~~~~~~~~~~~~~
+* :func:`dummy_function`: a null function that accepts any arguments and returns `None`.
+
+
+types, classes & mixins
+-----------------------
+
+* :class:`UnsetType`: the class for the :data:`UNSET` singleton object, useful as a sentinel value when `None` is a
+  valid input.
+* :class:`ErrorMsgMixin`: a mixin class that provides any class with a sophisticated error message handling and
+  logging property.
+* :class:`UnformattedValue`: a helper class for :func:`format_given` to represent a placeholder that was not found in
+  the formatting map.
+* :class:`GivenFormatter`: a helper class for :func:`format_given` that overrides default formatting behavior to keep
+  missing placeholders.
 
 
 base constants
 --------------
 
-ISO format strings for ``date`` and ``datetime`` values are provided by the constants :data:`DATE_ISO` and
-:data:`DATE_TIME_ISO`.
+predefined constants for project structure, file conventions, and default settings.
 
-the :data:`UNSET` constant is useful in cases where ``None`` is a valid data value and another special value is needed
-to specify that e.g., an argument or attribute has no (valid) value or did not get specified/passed.
+project & file structure
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-default values to compile file and folder names for a package or an app project are provided by the constants:
-:data:`DOCS_FOLDER`, :data:`TESTS_FOLDER`, :data:`TEMPLATES_FOLDER`, :data:`BUILD_CONFIG_FILE`,
-:data:`PACKAGE_INCLUDE_FILES_PREFIX`, :data:`PY_EXT`, :data:`PY_INIT`, :data:`PY_MAIN`, :data:`CFG_EXT`
-and :data:`INI_EXT`.
+* :data:`DOCS_FOLDER`: default name for a project's documentation folder ('docs').
+* :data:`TESTS_FOLDER`: default name for a project's tests folder ('tests').
+* :data:`TEMPLATES_FOLDER`: default name for a folder containing file templates ('templates').
+* :data:`BUILD_CONFIG_FILE`: default name for a build configuration file ('buildozer.spec').
+* :data:`DEF_PROJECT_PARENT_FOLDER`: default directory name for grouping source code projects ('src').
+* :data:`PY_CACHE_FOLDER`: default name for Python's cache folder ('__pycache__').
+* :data:`PY_EXT`: file extension for Python modules ('.py').
+* :data:`PY_INIT`: the filename for a Python package initializer ('__init__.py').
+* :data:`PY_MAIN`: the filename for a Python executable's main module ('__main__.py').
+* :data:`CFG_EXT`: file extension for CFG configuration files ('.cfg').
+* :data:`INI_EXT`: file extension for INI configuration files ('.ini').
+* :data:`DOTENV_FILE_NAME`: default name for environment variable files ('.env').
+* :data:`PACKAGE_INCLUDE_FILES_PREFIX`: prefix for files/folders to be included in setup package data (used by
+  :mod:`ae.updater` and :mod:`aedev.project_manager`)
 
-with the help of the format string constant :data:`NOW_STR_FORMAT` and the function :func:`now_str` you can create a
-sortable and compact string from a timestamp.
+formats & default settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-base helper functions
----------------------
-
-the function :func:`evaluate_literal` can be used as a replacement of :func:`ast.literal_eval` to retrieve
-basic data structure values from config, ini and .env files, while also accepting unquoted strings as a `str` type
-instance.
-
-most programming languages providing a function to determine the sign of a number. the :func:`sign` functino,
-provided by this module/portion is filling this gap in Python.
-
-in order to convert and transfer Unicode character outside the 7-bit ASCII range via internet transport protocols,
-like http, use the helper functions :func:`ascii_str` and :func:`str_ascii`.
-
-:func:`now_str` creates a timestamp string with the actual UTC date and time. the :func:`utc_datetime` provides the
-actual UTC date and time as a datetime object.
-
-to write more compact and readable code for the most common file I/O operations, the helper functions :func:`read_file`
-and :func:`write_file` are wrapping Python's built-in :func:`open` function and its context manager.
-
-the function :func:`duplicates` returns the duplicates of an iterable type.
-
-in order to hide/mask secrets like credit card numbers, passwords or tokens in deeply nested data structures,
-before they get dumped e.g., to an app log file, the function :func:`mask_secrets` can be used.
-
-:func:`norm_line_sep` is converting any combination of line separators of a string to a single new-line character.
-
-the function :func:`norm_name` converts any string into a name that can be used e.g., as a file name
-or as a method/attribute name.
-
-to normalize a file path, in order to remove `.`, `..` placeholders, to resolve symbolic links or to make it relative or
-absolute, call the function :func:`norm_path`.
-
-:func:`defuse` converts special characters of a URI/URL or a file path string, resulting in a string that can be used
-either as a URL slug or as a file name. use the function :func:`dedefuse` to convert this string back to the
-corresponding URL/URI or file path.
-
-the functions :func:`camel_to_snake` and :func:`snake_to_camel` providing name conversions of class and method names.
-
-to encode Unicode strings to other codecs, the functions :func:`force_encoding` and :func:`to_ascii` can be used.
-
-the :func:`round_traditional` function gets provided by this module for traditional rounding of float values. the
-function signature is fully compatible with Python's :func:`round` function.
-
-the function :func:`instantiate_config_parser` ensures that the :class:`~configparser.ConfigParser` instance is
-correctly configured, e.g., to support case-sensitive config variable names and to use :class:`ExtendedInterpolation`
-as the interpolation argument.
-
-:func:`app_name_guess` guesses the name of o running Python application from the application environment, with the help
-of :func:`build_config_variable_values`, which determines config-variable-values from the build spec file of an app
-project.
+* :data:`DATE_ISO`: ISO format string for dates ("%Y-%m-%d").
+* :data:`DATE_TIME_ISO`: ISO format string for :mod:`datetime.datetime` dates ("%Y-%m-%d %H:%M:%S.%f").
+* :data:`NOW_STR_FORMAT`: the datetime format string, used e.g. by :func:`now_str` for creating timestamps.
+* :data:`NAME_PARTS_SEP`: the character used as a separator in name conversions ('_').
+* :data:`DEF_ENCODING`: the default encoding used for string operations ('ascii').
+* :data:`DEF_ENCODE_ERRORS`: the default error handling strategy for encoding ('backslashreplace').
+* :data:`SKIPPED_MODULES`: a tuple of module names to be ignored by stack inspection functions.
+* :data:`UNSET`: a singleton instance of :class:`UnsetType`, used where `None` is a valid data value.
 
 
-operating system constants and helpers
---------------------------------------
+file, path & I/O operations
+---------------------------
 
-the string :data:`os_platform` provides the OS where your app is running, extending Python's :func:`sys.platform`
-for mobile platforms like Android and iOS.
+simplify file system interactions with wrappers and context managers.
 
-the functions :func:`os_host_name`, :func:`os_local_ip` and :func:`os_user_name` are determining machine and
-user information from the OS.
-
-use :func:`env_str` to determine the value of an OS environment variable with automatic variable name conversion. other
-helper functions provided by this namespace portion to determine the values of the most important system environment
-variables for your application are :func:`sys_env_dict` and :func:`sys_env_text`.
-
-to integrate system environment variables from ``.env`` files into :data:`os.environ` the helper functions
-:func:`parse_dotenv`, :func:`load_env_var_defaults` and :func:`load_dotenvs` are provided.
-
-the :mod:`ae.core` portion is providing more OS-specific constants and helper functions, like e.g.
-:func:`start_app_service` and :func:`request_app_permissions`.
-
-.. note::
-    on import of this module, while running on Android OS, it will monkey patch the :mod:`shutil` module to allow
-    using them on Android devices, and on the first app start requesting the permissions of your app. therefore, to
-    prevent permission errors, the import of this module should be the first statement in the main module of your app.
-
-
-types, classes and mixins
--------------------------
-
-the :class:`UnsetType` class can be used e.g., for the declaration of optional function and method parameters,
-allowing also ``None`` is an accepted argument value.
-
-to extend any class with an intelligent error message handling, add the mixin :class:`ErrorMsgMixin` to it.
-
-the classes :class:`UnformattedValue` and :class:`GivenFormatter` can be used to format strings with placeholders
-enclosed in curly brackets. the function :func:`format_given` is using them to format templates with placeholders.
-
-
-generic context manager
------------------------
-
-the context manager :func:`in_wd` allows switching the current working directory temporarily. the following
-example demonstrates a typical usage, together with a temporary path, created with the help of Pythons
-:class:`~tempfile.TemporaryDirectory` class::
-
-    with tempfile.TemporaryDirectory() as tmp_dir, in_wd(tmp_dir):
-        # within the context the tmp_dir is set as the current working directory
-        assert os.getcwd() == tmp_dir
-    # current working directory set back to the original path and the temporary directory got removed
-
-
-call stack inspection
----------------------
-
-:func:`module_attr` dynamically determines a reference to an attribute (variable, function, class, ...) in a module.
-
-:func:`module_name`, :func:`stack_frames`, :func:`stack_var` and :func:`stack_vars` are inspecting the call stack frames
-to determine e.g., variable values of the callers of a function/method.
-
-.. hint::
-    the :class:`AppBase` class uses these helper functions to determine the :attr:`version <AppBase.app_version>` and
-    :attr:`title <AppBase.app_title>` of an application, if these values are not specified in the instance initializer.
-
-another useful helper function provided by this portion to inspect and debug your code is :func:`full_stack_trace`.
-
+* :func:`read_file`: reads the entire content of a text or binary file into a string or bytes object.
+* :func:`write_file`: writes a string or bytes object to a file, overwriting existing content.
+* :func:`norm_path`: normalizes a path by expanding user home directories (`~`), resolving `.`, `..`, symbolic links,
+  and converting between absolute and relative paths.
+* :func:`in_wd`: a context manager that temporarily switches the current working directory.
 
 os.path shortcuts
------------------
+~~~~~~~~~~~~~~~~~
 
-the following data items are pointers to shortcut at runtime the lookup to their related functions in the
-Python module :mod:`os.path`:
+the following are direct references to functions in the :mod:`os.path` module for convenient and quicker access:
+
+* :data:`os_path_abspath`: :func:`os.path.abspath`
+* :data:`os_path_basename`: :func:`os.path.basename`
+* :data:`os_path_dirname`: :func:`os.path.dirname`
+* :data:`os_path_expanduser`: :func:`os.path.expanduser`
+* :data:`os_path_isdir`: :func:`os.path.isdir`
+* :data:`os_path_isfile`: :func:`os.path.isfile`
+* :data:`os_path_join`: :func:`os.path.join`
+* :data:`os_path_normpath`: :func:`os.path.normpath`
+* :data:`os_path_realpath`: :func:`os.path.realpath`
+* :data:`os_path_relpath`: :func:`os.path.relpath`
+* :data:`os_path_sep`: :data:`os.path.sep`
+* :data:`os_path_splitext`: :func:`os.path.splitext`
 """
 # pylint: disable=too-many-lines
 import datetime
@@ -162,6 +227,7 @@ import platform
 import re
 import shutil
 import socket
+import ssl
 import string
 import sys
 import unicodedata
@@ -172,11 +238,14 @@ from configparser import ConfigParser, ExtendedInterpolation
 from contextlib import contextmanager
 from importlib.machinery import ModuleSpec
 from inspect import getinnerframes, getouterframes, getsourcefile
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse, urlunparse
+from urllib.request import urlopen
 from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.66'
+__version__ = '0.3.67'
 
 
 os_path_abspath = os.path.abspath
@@ -500,13 +569,14 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     return os.environ.get(name)
 
 
-def evaluate_literal(literal_string: str) -> Any:
+def evaluate_literal(literal_string: str
+                     ) -> Optional[Union[bool, bytes, dict, complex, float, int, list, set, str, tuple]]:
     """ evaluates a Python expression while accepting unquoted strings as str type.
 
     :param literal_string:      any literal of the base types (like dict, list, set, tuple) which are recognized
                                 by :func:`ast.literal_eval`.
-    :return:                    an instance of the data type or the specified string, even if it is not quoted with
-                                high comma characters.
+    :return:                    an instance of the data type or the specified string, even if it is not quoted with high
+                                comma characters. `None` will be returned if the specified literal is the string "None".
     """
     try:
         return literal_eval(literal_string)
@@ -623,7 +693,11 @@ def import_module(import_name: str, path: Optional[Union[str, UnsetType]] = UNSE
 
 
 def instantiate_config_parser() -> ConfigParser:
-    """ instantiate and prepare config file parser. """
+    """ instantiate and prepare config file parser.
+
+    ensures that the :class:`~configparser.ConfigParser` instance is correctly configured, e.g., to support
+    case-sensitive config variable names and to use :class:`ExtendedInterpolation` as the interpolation argument.
+    """
     cfg_parser = ConfigParser(allow_no_value=True, interpolation=ExtendedInterpolation())
     # set optionxform to have case-sensitive var names (or use 'lambda option: option')
     # mypy V 0.740 bug - see mypy issue #5062: adding pragma "type: ignore" breaks PyCharm (showing
@@ -640,6 +714,15 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
 
     :param new_cwd:             path to the directory to switch to (within the context/with block).
                                 an empty string gets interpreted as the current working directory.
+
+    the following example demonstrates a typical usage, together with a temporary path, created with the help of Pythons
+    :class:`~tempfile.TemporaryDirectory` class::
+
+        with tempfile.TemporaryDirectory() as tmp_dir, in_wd(tmp_dir):
+            # within the context the tmp_dir is set as the current working directory
+            assert os.getcwd() == tmp_dir
+        # here the current working directory got set back to the original path and the temporary directory got removed
+
     """
     cur_dir = os.getcwd()
     try:
@@ -742,6 +825,22 @@ def mask_secrets(data: Union[dict, Iterable], fragments: Iterable[str] = ('passw
                 data[idx] = val[:3] + "*" * 9                               # type: ignore # silly mypy not sees is_dict
 
     return data
+
+
+def mask_url(url: str, replacement: str = "¿¿¿") -> str:
+    """ hide|replace the password/token in a URL.
+
+    :param url:                 URL in which an optional password|token will be searched and replaced.
+    :param replacement:         optional replacement string, if not specified then the default value will be used.
+    :return:                    URL with the credentials masked/replaced.
+    """
+    parts = urlparse(url)
+    if parts.password is None:
+        return url
+    # manually split out the netloc, because using parts.hostname/,port would have to be checked for None&hostname.lower
+    parts = parts._replace(netloc=f"{parts.username}:{replacement}@{parts.netloc.rpartition('@')[-1]}")
+    # noinspection PyTypeChecker
+    return urlunparse(parts)
 
 
 def module_attr(import_name: str, attr_name: str = "") -> Optional[Any]:
@@ -920,7 +1019,8 @@ def os_local_ip() -> str:
 def _os_platform() -> str:
     """ determine the operating system where this code is running (used to initialize the :data:`os_platform` variable).
 
-    :return:                    operating system (extension) as string:
+    :return:                    operating system (extension) as string. extending Python's :func:`sys.platform`
+                                for mobile platforms like Android and iOS:
 
                                 * `'android'` for all Android systems.
                                 * `'cygwin'` for MS Windows with an installed Cygwin extension.
@@ -940,7 +1040,7 @@ os_platform = _os_platform()
 """ operating system / platform string (see :func:`_os_platform`).
 
 this string value gets determined for most of the operating systems with the help of Python's :func:`sys.platform`
-function and additionally detects the operating systems iOS and Android (not supported by Python).
+function and additionally detects the operating systems iOS and Android (currently not fully supported by Python).
 """
 
 
@@ -1227,6 +1327,38 @@ def to_ascii(unicode_str: str) -> str:
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('ß', "ss").replace('€', "Euro")
 
 
+def url_failure(url: str, timeout: Optional[float] = None) -> str:  # pylint: disable=too-many-return-statements
+    """ determine if and why an FTP or HTTP[S] target is not available via a GET request.
+
+    :param url:                 URL of an target|page|file to check (not downloaded, fetching only the header).
+    :param timeout:             connection timeout in seconds (see :func:`urllib.request.urlopen`).
+    :return:                    empty string if target header is available, else an error description. if an
+                                FTP|HTTP response error occurred then the error/status code
+                                will be returned in the first 3 characters.
+    """
+    # noinspection PyBroadException
+    try:
+        with urlopen(url, timeout=timeout) as response:             # open connection and read header
+            status = response.getcode()                             # no need to call response.read()
+            return "" if 200 <= status < 300 else f"{status} {mask_url(url)} {response.reason=}"
+
+    except HTTPError as exception:
+        return f"{exception.code} {mask_url(url)} raised HTTPError {exception.reason=}"
+
+    except URLError as exception:
+        err_prefix = f"996 {mask_url(url)} raised {exception.errno=} {exception.reason=};"
+        if isinstance(exception.reason, socket.gaierror):
+            return f"{err_prefix} could not resolve hostname"
+        if isinstance(exception.reason, socket.timeout):
+            return f"{err_prefix} connection timed out after {timeout} seconds"
+        if isinstance(exception.reason, ssl.SSLCertVerificationError):
+            return f"{err_prefix} SSL certificate verification failed"
+        return f"{err_prefix} could not reach the server"
+
+    except Exception:                                               # pylint: disable=broad-exception-caught
+        return f"999 {mask_url(url)} raised unexpected exception"   # NOT put str(_exception) because contains password
+
+
 def utc_datetime() -> datetime.datetime:
     """ return the current UTC timestamp as string (to use as suffix for file and variable/attribute names).
 
@@ -1328,14 +1460,14 @@ class ErrorMsgMixin:                                                # pylint: di
 os_device_id = os_host_name()
 """ user-definable id/name of the device, defaults to os_host_name() on most platforms, alternatives are:
 
-on all platforms:
-    - socket.gethostname()
 on Android (check with adb shell 'settings get global device_name' and adb shell 'settings list global'):
     - Settings.Global.DEVICE_NAME (Settings.Global.getString(context.getContentResolver(), "device_name"))
     - android.os.Build.DEVICE/.MANUFACTURER/.BRAND/.HOST
     - DeviceName.getDeviceName()
 on MS Windows:
     - os.environ['COMPUTERNAME']
+on all other platforms:
+    - socket.gethostname()
 """
 if os_platform == 'android':                                        # pragma: no cover
     # determine Android device id because os_host_name() returns mostly 'localhost' and not the user-definable device id
