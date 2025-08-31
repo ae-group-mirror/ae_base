@@ -1,19 +1,23 @@
 """ ae.base unit tests """
 import datetime
 import os
-import string
-import tempfile
-from unittest.mock import patch
-
 import pytest
 import shutil
+import socket
+import ssl
+import string
 import sys
+import tempfile
 import textwrap
 
 from collections import OrderedDict
 from configparser import ConfigParser
+# noinspection PyProtectedMember
+from http.client import HTTPMessage
 from types import ModuleType
 from typing import cast, Any
+from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 
 # noinspection PyProtectedMember
 from ae.base import (
@@ -22,11 +26,10 @@ from ae.base import (
     app_name_guess, ascii_str, build_config_variable_values, camel_to_snake,
     dedefuse, deep_dict_update, defuse, dummy_function, duplicates, env_str, evaluate_literal,
     force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
-    load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, module_attr,
-    module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str,
-    os_host_name, os_local_ip, _os_platform, os_user_name,
-    parse_dotenv, project_main_file, read_file, round_traditional, sign, snake_to_camel,
-    stack_frames, stack_var, stack_vars, str_ascii, sys_env_dict, sys_env_text, to_ascii, utc_datetime, write_file,
+    load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, mask_url, module_attr, module_file_path,
+    module_name, norm_line_sep, norm_name, norm_path, now_str, os_host_name, os_local_ip, _os_platform, os_user_name,
+    parse_dotenv, project_main_file, read_file, round_traditional, sign, snake_to_camel, stack_frames, stack_var,
+    stack_vars, str_ascii, sys_env_dict, sys_env_text, to_ascii, url_failure, utc_datetime, write_file,
     ErrorMsgMixin)
 
 
@@ -669,6 +672,19 @@ class TestBaseHelpers:
         assert dat['key1']['subKey1'][1] == untouched
         assert dat[untouched] == untouched
 
+    def test_mask_url(self):
+        assert mask_url("") == ""
+
+        password, domain, path = "toBeMaskedPassword", "any-not_existing-host_domain.zzz", "any/not/existing/url/path"
+
+        url = f"https://username:{password}@{domain}/{path}"
+        assert password not in mask_url(url)
+        assert domain in mask_url(url)
+        assert path in mask_url(url)
+
+        url = f"https://username@{domain}:8081/{path}"
+        assert mask_url(url) == url
+
     def test_norm_line_sep(self):
         assert norm_line_sep('a\r\nb') == 'a\nb'
         assert norm_line_sep('a\rb') == 'a\nb'
@@ -1048,6 +1064,141 @@ class TestBaseHelpers:
 
         assert to_ascii('ß') == 'ss'
         assert to_ascii('€') == 'Euro'
+
+    def test_url_failure(self):
+        assert not url_failure("https://gitlab.com/ae-group/ae_base")
+
+        assert not url_failure("https://gitlab.com/ae-group/ae_base.git")
+
+        assert not url_failure("https://www.google.com")
+
+        assert not url_failure(f"https://httpbin.org/status/200")
+
+    def test_url_failure_errors(self):
+        assert url_failure("")
+
+        password, domain, path = "toBeMaskedPassword", "any-not_existing-host_domain.zzz", "any/not/existing/url/path"
+        url = f"https://username:{password}@{domain}/{path}"
+        err_msg = "raised exception error message"
+
+        ret = url_failure(url)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
+
+        ret = url_failure(url2 := f"https://httpbin.org/status/504")
+
+        assert ret
+        assert int(ret[:3]) == 504
+        assert ret[4:].startswith(mask_url(url2))
+
+        ret = url_failure(f"https://httpbin.org/delay/3", timeout=0.9)
+
+        assert ret
+        assert int(ret[:3]) > 0
+
+        ret = url_failure(f"https://expired.badssl.com")
+
+        assert ret
+        assert int(ret[:3]) > 0
+
+        with pytest.raises(AttributeError):
+            url_failure(cast(str, 123456))
+
+        mocked_headers = cast(HTTPMessage, {})
+
+        def mock_raise_http_error404(*_args, **_kwargs):
+            raise HTTPError(url=url, code=404, msg=err_msg, hdrs=mocked_headers, fp=None)
+
+        with patch('ae.base.urlopen', mock_raise_http_error404):
+            ret = url_failure(url)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
+        assert err_msg in ret
+
+        def mock_raise_http_error503(*_args, **_kwargs):
+            raise HTTPError(url=url, code=503, msg=err_msg, hdrs=mocked_headers, fp=None)
+
+        with patch('ae.base.urlopen', mock_raise_http_error503):
+            ret = url_failure(url)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
+        assert err_msg in ret
+
+        def mock_raise_gai_error(*_args, **_kwargs):
+            raise URLError(reason=socket.gaierror(err_msg))
+
+        with patch('ae.base.urlopen', mock_raise_gai_error):
+            ret = url_failure(url)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
+        assert err_msg in ret
+
+        def mock_raise_timeout(*_args, **_kwargs):
+            raise URLError(reason=socket.timeout(err_msg))
+
+        with patch('ae.base.urlopen', mock_raise_timeout):
+            ret = url_failure(url)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
+        assert err_msg in ret
+
+        def mock_raise_ssl_error(*_args, **_kwargs):
+            raise URLError(reason=ssl.SSLCertVerificationError(1, err_msg))
+
+        with patch('ae.base.urlopen', mock_raise_ssl_error):
+            ret = url_failure(url)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
+        assert err_msg in ret
+
+        def mock_raise_generic_url_error(*_args, **_kwargs):
+            raise URLError(reason=err_msg)
+
+        with patch('ae.base.urlopen', mock_raise_generic_url_error):
+            ret = url_failure(url)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
+        assert err_msg in ret
+
+        def mock_raise_unexpected_error(*_args, **_kwargs):
+            raise ValueError(err_msg)
+
+        with patch('ae.base.urlopen', mock_raise_unexpected_error):
+            ret = url_failure(url)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
 
     def test_utc_datetime(self):
         dt1 = utc_datetime()
