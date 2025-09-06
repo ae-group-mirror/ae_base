@@ -245,7 +245,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.67'
+__version__ = '0.3.68'
 
 
 os_path_abspath = os.path.abspath
@@ -428,7 +428,6 @@ def deep_dict_update(data: dict, update: dict, overwrite: bool = True):
             data[upd_key] = upd_val
 
 
-URI_SEP_CHAR = '⫻'  # U+2AFB: TRIPLE SOLIDUS BINARY RELATION
 # noinspection GrazieInspection
 ASCII_UNICODE = (
     ('/', '⁄'),     # U+2044: Fraction Slash; '∕' U+2215: Division Slash; '⧸' U+29F8: Big Solidus;
@@ -466,13 +465,19 @@ ASCII_UNICODE = (
                     # ' ' U+202F: Narrow No-Break Space (NNBSP); ' ' U+205F Medium Mathematical Space;
                     # '␠' U+2420 symbol for space; '␣' U+2423 Open Box; '　' U+3000: Ideographic Space
     (chr(127), '␡'),  # U+2421: DELETE SYMBOL
-    # ('_', '𛲖'), # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
-)
-""" transformation table of special ASCII to Unicode alternative character,
+    # ('_', '𛲖'),     # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
+) + tuple((chr(low_asc_ord), chr(0x2400 + low_asc_ord)) for low_asc_ord in range(32))
+""" transformation table of special ASCII characters to a similar/alternative non-functional/-escaping Unicode char,
 see https://www.compart.com/en/unicode/category/Po and https://xahlee.info/comp/unicode_naming_slash.html (http!) """
 
-ASCII_TO_UNICODE = dict(ASCII_UNICODE)  #: map to convert ASCII to an alternative defused Unicode character
-UNICODE_TO_ASCII = {unicode_char: ascii_char for ascii_char, unicode_char in ASCII_UNICODE}     #: Unicode to ASCII map
+URI_SEP_STR = '://'             #: separator between service and address(host/path) in URIs
+URI_SEP_UNICODE_CHAR = '⫻'      #: single Unicode char for :data:`URI_SEP_STR`  U+2AFB: TRIPLE SOLIDUS BINARY RELATION
+
+ASCII_TO_UNICODE = str.maketrans(dict(ASCII_UNICODE))
+""" :func:`str.translate` map to convert ASCII to an alternative defused Unicode character - used by :func:`defuse` """
+UNICODE_TO_ASCII = str.maketrans({unicode_char: ascii_char for ascii_char, unicode_char in
+                                  ASCII_UNICODE + ((URI_SEP_STR, URI_SEP_UNICODE_CHAR), )})
+""" :func:`str.translate` Unicode to ASCII map - used by :func:`dedefuse` """
 
 
 def dedefuse(value: str) -> str:
@@ -481,15 +486,7 @@ def dedefuse(value: str) -> str:
     :param value:               string defused with the function :func:`defuse`.
     :return:                    re-activated form of the string (with all ASCII special characters recovered).
     """
-    original = ""
-    for char in value:
-        if char in UNICODE_TO_ASCII:
-            char = UNICODE_TO_ASCII[char]
-        elif 0x2400 <= (code := ord(char)) <= 0x241F:
-            char = chr(code - 0x2400)
-        original += char
-
-    return original.replace(URI_SEP_CHAR, '://')
+    return value.translate(UNICODE_TO_ASCII)
 
 
 def defuse(value: str) -> str:
@@ -515,15 +512,7 @@ def defuse(value: str) -> str:
     .. hint:: use the :func:`dedefuse` function to convert the defused string back to the corresponding URI/file-path.
 
     """
-    defused = ""
-    value = value.replace('://', URI_SEP_CHAR)  # make URIs shorter
-    for char in value:
-        if char in ASCII_TO_UNICODE:
-            char = ASCII_TO_UNICODE[char]
-        elif (code := ord(char)) <= 31:
-            char = chr(0x2400 + code)
-        defused += char
-    return defused
+    return value.replace(URI_SEP_STR, URI_SEP_UNICODE_CHAR).translate(ASCII_TO_UNICODE)  # replace makes URIs shorter
 
 
 def dummy_function(*_args, **_kwargs):
