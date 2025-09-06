@@ -21,8 +21,8 @@ from urllib.error import HTTPError, URLError
 
 # noinspection PyProtectedMember
 from ae.base import (
-    ASCII_TO_UNICODE, BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNICODE_TO_ASCII,
-    UNSET, URI_SEP_CHAR,
+    ASCII_TO_UNICODE, ASCII_UNICODE, BUILD_CONFIG_FILE, DOTENV_FILE_NAME, PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER,
+    UNICODE_TO_ASCII, UNSET, URI_SEP_STR, URI_SEP_UNICODE_CHAR,
     app_name_guess, ascii_str, build_config_variable_values, camel_to_snake,
     dedefuse, deep_dict_update, defuse, dummy_function, duplicates, env_str, evaluate_literal,
     force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
@@ -157,11 +157,11 @@ class TestBaseHelpers:
         assert all(ord(_) >= 128 for _ in uni_str)
         assert all(ord(_) < 128 for _ in ascii_str(uni_str))
 
-        uni_str = "".join(UNICODE_TO_ASCII.keys())
+        uni_str = "".join(_uco for _asc, _uco in ASCII_UNICODE)
         assert any(ord(_) >= 128 for _ in uni_str)
         assert all(ord(_) < 128 for _ in ascii_str(uni_str))
 
-        asc_str = "".join(ASCII_TO_UNICODE.keys())
+        asc_str = "".join(_asc for _asc, _uco in ASCII_UNICODE)
         assert any(ord(_) < 128 for _ in asc_str)
         assert all(ord(_) < 128 for _ in ascii_str(asc_str))
 
@@ -172,10 +172,10 @@ class TestBaseHelpers:
         uni_str = "äÄßéÉíÍñÑòÒùÙ"
         assert str_ascii(ascii_str(uni_str)) == uni_str
 
-        uni_str = "".join(UNICODE_TO_ASCII.keys())
+        uni_str = "".join(_uco for _asc, _uco in ASCII_UNICODE)
         assert str_ascii(ascii_str(uni_str)) == uni_str
 
-        asc_str = "".join(ASCII_TO_UNICODE.keys())
+        asc_str = "".join(_asc for _asc, _uco in ASCII_UNICODE)
         assert str_ascii(ascii_str(asc_str)) == asc_str
 
     def test_str_ascii_errors(self):
@@ -320,16 +320,18 @@ class TestBaseHelpers:
                 os.remove(tst_fna2)
 
     def test_defuse_maps_integrity(self):
-        assert URI_SEP_CHAR not in UNICODE_TO_ASCII
-        assert len(UNICODE_TO_ASCII) == len(ASCII_TO_UNICODE)   # check for duplicates in the ASCII_UNICODE map
+        assert len(ASCII_TO_UNICODE) == len(ASCII_UNICODE)      # duplicates check in ASCII_UNICODE map
+        assert len(UNICODE_TO_ASCII) == len(ASCII_UNICODE) + 1  # -"-, having also the ord(URI_SEP_UNICODE_CHAR) key
+        assert ord(URI_SEP_UNICODE_CHAR) in UNICODE_TO_ASCII
+        assert UNICODE_TO_ASCII[ord(URI_SEP_UNICODE_CHAR)] == URI_SEP_STR
 
     def test_defuse_maps_not_touching_chars_allowed_as_slug_and_filename(self):
-        assert '-' not in ASCII_TO_UNICODE
-        assert '_' not in ASCII_TO_UNICODE
-        assert '.' not in ASCII_TO_UNICODE
-        assert '~' not in ASCII_TO_UNICODE
+        assert ord('-') not in ASCII_TO_UNICODE
+        assert ord('_') not in ASCII_TO_UNICODE
+        assert ord('.') not in ASCII_TO_UNICODE
+        assert ord('~') not in ASCII_TO_UNICODE
         for char in string.ascii_letters + string.digits:
-            assert char not in ASCII_TO_UNICODE
+            assert ord(char) not in ASCII_TO_UNICODE
 
     def test_dummy_function(self):
         assert dummy_function() is None
