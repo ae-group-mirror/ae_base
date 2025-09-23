@@ -42,7 +42,7 @@ inspect the operating system and manage environment variables.
     :func:`~ae.core.start_app_service` and :func:`~ae.core.request_app_permissions`.
 
 OS information
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 * :data:`os_platform`: a string identifying the operating system (e.g., 'linux', 'win32', 'android', 'ios').
 * :data:`os_device_id`: a string with the ID/name of the device.
@@ -53,7 +53,7 @@ OS information
 * :func:`sys_env_text`: compiles a formatted text block with system environment information, useful for logging.
 
 environment variables & `.env` files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * :func:`env_str`: retrieves the string value of an OS environment variable, with an option to automatically convert the
   variable name to the conventional format.
@@ -124,18 +124,18 @@ general utilities & helpers
 a collection of miscellaneous mathematical, date/time, and other standalone helper functions.
 
 mathematical
-~~~~~~~~~~~~
+^^^^^^^^^^^^
 
 * :func:`sign`: returns the sign of a number (-1 for negative, 0 for zero, 1 for positive).
 * :func:`round_traditional`: rounds a float value using traditional rounding rules (e.g., `0.5` rounds up).
 
 date & time
-~~~~~~~~~~~
+^^^^^^^^^^^
 * :func:`utc_datetime`: Returns the current date and time as a timezone-naive `datetime` object in UTC.
 * :func:`now_str`: creates a compact, sortable timestamp string from the current UTC time.
 
 miscellaneous
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 * :func:`dummy_function`: a null function that accepts any arguments and returns `None`.
 
 
@@ -158,7 +158,7 @@ base constants
 predefined constants for project structure, file conventions, and default settings.
 
 project & file structure
-~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 * :data:`DOCS_FOLDER`: default name for a project's documentation folder ('docs').
 * :data:`TESTS_FOLDER`: default name for a project's tests folder ('tests').
@@ -176,7 +176,7 @@ project & file structure
   :mod:`ae.updater` and :mod:`aedev.project_manager`)
 
 formats & default settings
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * :data:`DATE_ISO`: ISO format string for dates ("%Y-%m-%d").
 * :data:`DATE_TIME_ISO`: ISO format string for :mod:`datetime.datetime` dates ("%Y-%m-%d %H:%M:%S.%f").
@@ -200,7 +200,7 @@ simplify file system interactions with wrappers and context managers.
 * :func:`in_wd`: a context manager that temporarily switches the current working directory.
 
 os.path shortcuts
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 
 the following are direct references to functions in the :mod:`os.path` module for convenient and quicker access:
 
@@ -245,7 +245,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.68'
+__version__ = '0.3.69'
 
 
 os_path_abspath = os.path.abspath
