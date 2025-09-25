@@ -114,7 +114,7 @@ dynamically inspect modules, execution frames, and variables on the call stack.
 networking utilities
 --------------------
 
-* :func:`url_failure`: determines if and why a HTTP|FTP target is unavailable.
+* :func:`url_failure`: determines if and why an HTTP|FTP target is unavailable.
 * :func:`mask_url`: hides or replaces the password/token portion of a URL for safe logging.
 
 
@@ -218,6 +218,7 @@ the following are direct references to functions in the :mod:`os.path` module fo
 * :data:`os_path_splitext`: :func:`os.path.splitext`
 """
 # pylint: disable=too-many-lines
+import base64
 import datetime
 import getpass
 import importlib.abc
@@ -240,12 +241,12 @@ from importlib.machinery import ModuleSpec
 from inspect import getinnerframes, getouterframes, getsourcefile
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.69'
+__version__ = '0.3.70'
 
 
 os_path_abspath = os.path.abspath
@@ -1316,18 +1317,44 @@ def to_ascii(unicode_str: str) -> str:
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('ß', "ss").replace('€', "Euro")
 
 
-def url_failure(url: str, timeout: Optional[float] = None) -> str:  # pylint: disable=too-many-return-statements
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments,too-many-return-statements
+def url_failure(url: str, token: str = "", username: str = "", password: str = "", git_repo: bool = False,
+                timeout: Optional[float] = None) -> str:
     """ determine if and why an FTP or HTTP[S] target is not available via a GET request.
 
-    :param url:                 URL of an target|page|file to check (not downloaded, fetching only the header).
+    :param url:                 URL of a target|page|file to check (not downloaded, fetching only the header).
+    :param token:               optional bearer token to authenticate (only for HTTPS protocol).
+    :param username:            optional username to authenticate (for HTTPS, together with the password argument).
+    :param password:            optional password to authenticate (for HTTPS, together with the username argument).
+    :param git_repo:            optimized check for Git repository HTTP servers/sites (like GitHub, GitLab, Bitbucket,
+                                Gitea, SourceHut, Mercury, etc. as long as they implement Smart HTTP).
     :param timeout:             connection timeout in seconds (see :func:`urllib.request.urlopen`).
     :return:                    empty string if target header is available, else an error description. if an
                                 FTP|HTTP response error occurred then the error/status code
                                 will be returned in the first 3 characters.
+
+    .. note::
+        credentials for server authentication can be specified either (1) embedded into the specified url argument,
+        (2) as bearer token in the token argument or (3) via the username/password arguments. in all cases the
+        functino will remove these secrets from the returned error description string.
     """
+    if git_repo:
+        if not url.endswith(".git"):
+            url += ".git"
+        url += "/info/refs?service=git-upload-pack"
+
+    headers = {}
+    if token:
+        assert not username and not password, "url_failure accepts either a token or username/password, not both"
+        headers['Authorization'] = "Bearer " + token
+    elif username or password:
+        creds = f"{username}:{password}".encode('utf-8')
+        headers['Authorization'] = "Basic " + base64.b64encode(creds).decode('utf-8')
+
     # noinspection PyBroadException
     try:
-        with urlopen(url, timeout=timeout) as response:             # open connection and read header
+        request = Request(url, method='GET', headers=headers)
+        with urlopen(request, timeout=timeout) as response:         # open connection and only read the header
             status = response.getcode()                             # no need to call response.read()
             return "" if 200 <= status < 300 else f"{status} {mask_url(url)} {response.reason=}"
 

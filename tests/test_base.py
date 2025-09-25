@@ -1,6 +1,8 @@
 """ ae.base unit tests """
 import datetime
 import os
+import time
+
 import pytest
 import shutil
 import socket
@@ -1072,16 +1074,39 @@ class TestBaseHelpers:
 
         assert not url_failure("https://gitlab.com/ae-group/ae_base.git")
 
+        assert not url_failure("https://gitlab.com/ae-group/ae_base", git_repo=True)
+
         assert not url_failure("https://www.google.com")
 
-        assert not url_failure(f"https://httpbin.org/status/200")
+        retries = 9
+        while True:
+            err_msg = url_failure(f"https://httpbin.org/status/200")
+            if not err_msg or retries == 0:
+                break
+            time.sleep(3)
+            retries -= 1
+        assert not err_msg, f"httpbin is sometimes unavailable with error 503 - retry later; {err_msg=}"
 
-    def test_url_failure_errors(self):
-        assert url_failure("")
-
+    def test_url_failure_authentication_errors(self):
         password, domain, path = "toBeMaskedPassword", "any-not_existing-host_domain.zzz", "any/not/existing/url/path"
         url = f"https://username:{password}@{domain}/{path}"
         err_msg = "raised exception error message"
+
+        ret = url_failure(url, token=password)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
+
+        ret = url_failure(url, username="any user name", password=password)
+
+        assert ret
+        assert int(ret[:3]) > 0
+        assert password not in ret
+        assert domain in ret
+        assert path in ret
 
         ret = url_failure(url)
 
@@ -1090,25 +1115,6 @@ class TestBaseHelpers:
         assert password not in ret
         assert domain in ret
         assert path in ret
-
-        ret = url_failure(url2 := f"https://httpbin.org/status/504")
-
-        assert ret
-        assert int(ret[:3]) == 504
-        assert ret[4:].startswith(mask_url(url2))
-
-        ret = url_failure(f"https://httpbin.org/delay/3", timeout=0.9)
-
-        assert ret
-        assert int(ret[:3]) > 0
-
-        ret = url_failure(f"https://expired.badssl.com")
-
-        assert ret
-        assert int(ret[:3]) > 0
-
-        with pytest.raises(AttributeError):
-            url_failure(cast(str, 123456))
 
         mocked_headers = cast(HTTPMessage, {})
 
@@ -1201,6 +1207,30 @@ class TestBaseHelpers:
         assert password not in ret
         assert domain in ret
         assert path in ret
+
+    def test_url_failure_ssl_errors(self):
+        ret = url_failure(f"https://expired.badssl.com")
+
+        assert ret
+        assert int(ret[:3]) > 0
+
+    def test_url_failure_timeout_errors(self):
+        ret = url_failure(f"https://httpbin.org/delay/3", timeout=0.9)
+
+        assert ret
+        assert int(ret[:3]) > 0
+
+    def test_url_failure_url_errors(self):
+        assert url_failure("")
+
+        ret = url_failure(url2 := f"https://httpbin.org/status/504")
+
+        assert ret
+        assert int(ret[:3]) == 504
+        assert ret[4:].startswith(mask_url(url2))
+
+        with pytest.raises(AttributeError):
+            url_failure(cast(str, 123456))
 
     def test_utc_datetime(self):
         dt1 = utc_datetime()
