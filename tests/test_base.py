@@ -1,9 +1,6 @@
 """ ae.base unit tests """
 import datetime
 import os
-import time
-
-import pytest
 import shutil
 import socket
 import ssl
@@ -11,15 +8,19 @@ import string
 import sys
 import tempfile
 import textwrap
+import time
+import timeit
 
 from collections import OrderedDict
 from configparser import ConfigParser
 # noinspection PyProtectedMember
 from http.client import HTTPMessage
 from types import ModuleType
-from typing import cast, Any
+from typing import cast, Any, Optional
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
+
+import pytest
 
 # noinspection PyProtectedMember
 from ae.base import (
@@ -69,13 +70,30 @@ def os_env_test_env():
 module_test_var = 'module_test_var_val'   # used for stack_var()/try_exec() tests
 
 
-def test_unset_truthiness():
+def test_unset_truthiness_and_null_length():
     assert not UNSET
     assert bool(UNSET) is False
 
-
-def test_unset_null_length():
     assert len(UNSET) == 0
+
+
+def test_proof_os_path_shortcuts_performance_win():
+    att_call_setup = textwrap.dedent("""
+    import os
+    path1, path2, path3 = "folder1", "folder2", "file.tst"
+    """)
+    sho_call_setup = att_call_setup + textwrap.dedent("""
+    os_path_join = os.path.join
+    """)
+
+    att_call_code = "os.path.join(path1, path2, path3)"
+    sho_call_code = "os_path_join(path1, path2, path3)"
+
+    time_att = timeit.timeit(att_call_code, setup=att_call_setup, number=3_000_000)
+    time_sho = timeit.timeit(sho_call_code, setup=sho_call_setup, number=3_000_000)
+
+    assert time_sho < time_att
+    print(f"\n¡!¡!¡! os_path_* shortcuts are ~{((time_att - time_sho) / time_att) * 100:.2f}% faster")
 
 
 class TestErrorMsgMixin:
@@ -1069,6 +1087,17 @@ class TestBaseHelpers:
         assert to_ascii('ß') == 'ss'
         assert to_ascii('€') == 'Euro'
 
+    @staticmethod
+    def url_failure_httpbin_503_retryer(url: str, timeout: Optional[float] = None) -> tuple[str, str]:
+        retries = 9
+        while True:
+            err_msg = url_failure(url, timeout=timeout)
+            if not err_msg or int(err_msg[:3]) != 503 or retries == 0:
+                break
+            time.sleep(3)
+            retries -= 1
+        return err_msg, f"url_failure({url=}, {timeout=}) httpbin is sometimes unavailable/503. retry later; {err_msg=}"
+
     def test_url_failure(self):
         assert not url_failure("https://gitlab.com/ae-group/ae_base")
 
@@ -1078,14 +1107,8 @@ class TestBaseHelpers:
 
         assert not url_failure("https://www.google.com")
 
-        retries = 9
-        while True:
-            err_msg = url_failure(f"https://httpbin.org/status/200")
-            if not err_msg or retries == 0:
-                break
-            time.sleep(3)
-            retries -= 1
-        assert not err_msg, f"httpbin is sometimes unavailable with error 503 - retry later; {err_msg=}"
+        ret, message = self.url_failure_httpbin_503_retryer("https://httpbin.org/status/200")
+        assert not ret, message
 
     def test_url_failure_authentication_errors(self):
         password, domain, path = "toBeMaskedPassword", "any-not_existing-host_domain.zzz", "any/not/existing/url/path"
@@ -1215,19 +1238,19 @@ class TestBaseHelpers:
         assert int(ret[:3]) > 0
 
     def test_url_failure_timeout_errors(self):
-        ret = url_failure(f"https://httpbin.org/delay/3", timeout=0.9)
+        ret, message = self.url_failure_httpbin_503_retryer("https://httpbin.org/delay/3", timeout=0.9)
 
-        assert ret
-        assert int(ret[:3]) > 0
+        assert ret, message
+        assert ret[:3] == '997', message
 
     def test_url_failure_url_errors(self):
         assert url_failure("")
 
-        ret = url_failure(url2 := f"https://httpbin.org/status/504")
+        ret, message = self.url_failure_httpbin_503_retryer(url2 := "https://httpbin.org/status/504")
 
-        assert ret
-        assert int(ret[:3]) == 504
-        assert ret[4:].startswith(mask_url(url2))
+        assert ret, message
+        assert ret[:3] == '504', message
+        assert ret[4:].startswith(mask_url(url2)), message
 
         with pytest.raises(AttributeError):
             url_failure(cast(str, 123456))

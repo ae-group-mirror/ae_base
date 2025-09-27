@@ -246,7 +246,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.70'
+__version__ = '0.3.71'
 
 
 os_path_abspath = os.path.abspath
@@ -1362,17 +1362,20 @@ def url_failure(url: str, token: str = "", username: str = "", password: str = "
         return f"{exception.code} {mask_url(url)} raised HTTPError {exception.reason=}"
 
     except URLError as exception:
-        err_prefix = f"996 {mask_url(url)} raised {exception.errno=} {exception.reason=};"
+        err_msg = f" {mask_url(url)} raised {exception.errno=} {exception.reason=};"
         if isinstance(exception.reason, socket.gaierror):
-            return f"{err_prefix} could not resolve hostname"
-        if isinstance(exception.reason, socket.timeout):
-            return f"{err_prefix} connection timed out after {timeout} seconds"
+            return '995' + f"{err_msg} could not resolve hostname"
         if isinstance(exception.reason, ssl.SSLCertVerificationError):
-            return f"{err_prefix} SSL certificate verification failed"
-        return f"{err_prefix} could not reach the server"
+            return '996' + f"{err_msg} SSL certificate verification failed"
+        if isinstance(exception.reason, socket.timeout):
+            return '997' + f"{err_msg} connection timed out after {timeout} seconds"
+        return '998' + f"{err_msg} could not reach the server"
 
-    except Exception:                                               # pylint: disable=broad-exception-caught
-        return f"999 {mask_url(url)} raised unexpected exception"   # NOT put str(_exception) because contains password
+    except socket.timeout as _exception:    # noqa: F841 # str(_exception) could contain password|token
+        return '997' + f" {mask_url(url)} raised socket-timeout exception after {timeout} seconds"
+
+    except Exception as _exception:         # noqa: F841 # pylint: disable=broad-exception-caught
+        return '999' + f" {mask_url(url)} raised unexpected exception"   # str(_exception) COULD contain password
 
 
 def utc_datetime() -> datetime.datetime:
