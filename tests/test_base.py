@@ -846,6 +846,24 @@ class TestBaseHelpers:
             loaded = parse_dotenv(fp.name)
             assert 'var_nam' not in loaded      # added warning
 
+    def test_parse_dotenv_literal_dict_with_list(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            var_val = "{'key': {'sub-key': ['list-item', 'list-item with = char', ]}}"
+            fp.write("var_nam=" + var_val)
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == var_val
+
+    def test_parse_dotenv_multi_line_var_value(self):
+        with tempfile.NamedTemporaryFile(mode="w") as fp:
+            var_val = "{'key': {'sub-key':\\\n    ['list-item',\\\n     'list-item with = char', ]}}"
+            fp.write("var_nam=" + var_val)
+            fp.seek(0)
+            loaded = parse_dotenv(fp.name)
+            assert 'var_nam' in loaded
+            assert loaded['var_nam'] == var_val.replace('\\\n', "")
+
     def test_parse_dotenv_single_in_double_quoted_value(self):
         with tempfile.NamedTemporaryFile(mode="w") as fp:
             fp.write('''var_nam="'var val'"''')
@@ -861,15 +879,6 @@ class TestBaseHelpers:
             loaded = parse_dotenv(fp.name)
             assert 'var_nam' in loaded
             assert loaded['var_nam'] == "var val"
-
-    def test_parse_dotenv_literal_dict_with_list(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            var_val = "{'key': {'sub-key': ['list-item', 'list-item with = char', ]}}"
-            fp.write("var_nam=" + var_val)
-            fp.seek(0)
-            loaded = parse_dotenv(fp.name)
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == var_val
 
     def test_parse_dotenv_literal_dict_with_list_quoted(self):
         with tempfile.NamedTemporaryFile(mode="w") as fp:
