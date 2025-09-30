@@ -246,7 +246,7 @@ from types import ModuleType
 from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.71'
+__version__ = '0.3.72'
 
 
 os_path_abspath = os.path.abspath
@@ -1048,8 +1048,17 @@ def parse_dotenv(file_path: str) -> dict[str, str]:
     :param file_path:           string with the name/path of an existing ``.env``/:data:`DOTENV_FILE_NAME` file.
     :return:                    dict with environment variable names and values
     """
-    env_vars: dict[str, str] = {}
+    lines = []          # unwrap multi-line .env variable values with backslash at line end (Docker/UNIX-style format)
+    prev_lines = ""
     for line in cast(str, read_file(file_path)).splitlines():
+        if line.endswith('\\'):
+            prev_lines += line[:-1]
+            continue
+        lines.append(prev_lines + line)
+        prev_lines = ""
+
+    env_vars: dict[str, str] = {}
+    for line in lines:
         match = _env_line.search(line)
         if not match:
             if not re.search(r'^\s*(?:#.*)?$', line):  # not comment or blank
