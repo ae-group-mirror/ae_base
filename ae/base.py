@@ -44,6 +44,7 @@ inspect the operating system and manage environment variables.
 OS information
 ^^^^^^^^^^^^^^
 
+* :func:`on_ci_host`: detects if it is running on the CI of a Git repository server (GitHub or GitLab).
 * :data:`os_platform`: a string identifying the operating system (e.g., 'linux', 'win32', 'android', 'ios').
 * :data:`os_device_id`: a string with the ID/name of the device.
 * :func:`os_host_name`: determines the operating system's host/machine name.
@@ -58,10 +59,11 @@ environment variables & `.env` files
 * :func:`env_str`: retrieves the string value of an OS environment variable, with an option to automatically convert the
   variable name to the conventional format.
 * :func:`parse_dotenv`: parses a `.env` file and returns its key-value pairs as a dictionary.
-* :func:`load_env_var_defaults`: recursively searches parent directories for `.env` files and loads any undeclared
-  variables.
+* :func:`late_env_var_resolver`: substitutes environment variables within the value of other environment variables.
 * :func:`load_dotenvs`: detects and loads all relevant `.env` files from the current working directory and optional
   also from the main module's path.
+* :func:`load_env_var_defaults`: recursively searches parent directories for `.env` files and loads any undeclared
+  variables.
 
 
 data structure utilities
@@ -243,10 +245,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 from types import ModuleType
-from typing import Any, Callable, Generator, Iterable, MutableMapping, Optional, Union, cast
+from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.72'
+__version__ = '0.3.73'
 
 
 os_path_abspath = os.path.abspath
@@ -290,41 +292,45 @@ DEF_ENCODING = 'ascii'
 """
 
 DOTENV_FILE_NAME = '.env'                       #: name of the file containing console/shell environment variables
-_env_line = re.compile(r"""
+DOTENV_LINE_MATCHER = re.compile(r"""
     ^
-    (?:export\s+)?      # optional export
-    ([\w.]+)            # key
-    (?:\s*=\s*|:\s+?)   # separator
-    (                   # optional value begin
-        '(?:\'|[^'])*'  #   single quoted value
-        |               #   or
-        "(?:\"|[^"])*"  #   double quoted value
-        |               #   or
-        [^#\n]+         #   unquoted value
-    )?                  # value end
-    (?:\s*\#.*)?        # optional comment
+    (?:export\s+)?          # optional export
+    ([\w.]+)                # env variable name
+    (?:\s*=\s*|:\s+?)       # separator
+    (                       # optional value begin
+        '(?:\'|[^'])*'      #   single quoted value
+        |                   #   or
+        "(?:\"|[^"])*"      #   double quoted value
+        |                   #   or
+        [^#\n]+             #   unquoted value
+    )?                      # value end
+    (?:\s*\#.*)?            # optional comment
     $
     """, re.VERBOSE)
-_env_variable = re.compile(r"""
-    (\\)?               # is it escaped with a backslash?
-    (\$)                # literal $
-    (                   # collect braces with var for sub
-        \{?             #   allow brace wrapping
-        ([A-Z0-9_]+)    #   match the variable
-        }?              #   closing brace
-    )                   # braces end
+DOTENV_VAR_IN_VAL_MATCHER = re.compile(r"""
+    (\\)?                   # is it escaped with a backslash? (env variable name matcher groups item 0 | evn_groups[0])
+    (\$)                    # literal $ (matcher evn_groups[1])
+    (                       # group for easier subsitution via evn_groups[0:-1] (matcher evn_groups[2])
+        \{?                 #   allow brace wrapping
+        ([A-Za-z0-9_]+)     #   match var name; allowing lowercase letters in env var names (matcher evn_groups[3|-1]
+        }?                  #   closing brace
+    )                       # braces end
     """, re.IGNORECASE | re.VERBOSE)
 
+EnvVarsType = MutableMapping[str, str]               #: environment variables dict/mapping
+EnvVarsLateResolvedType = dict[str, list[tuple[str, str, str, str]]]     #: mapping of DOTENV_VAR_IN_VAL_MATCHER results
 
 NAME_PARTS_SEP = '_'                                #: name parts separator character, e.g. for :func:`norm_name`
 
 NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"    #: timestamp format of :func:`now_str`
 
-SKIPPED_MODULES = ('ae.base', 'ae.paths', 'ae.dynamicod', 'ae.core', 'ae.console',
+SKIPPED_MODULES = ('ae.base', 'ae.files', 'ae.paths', 'ae.dynamicod',
+                   'ae.core', 'ae.console', 'ae.snell', 'ae.templates', 'ae.dev_ops',
                    'ae.gui', 'ae.gui.app', 'ae.gui.tours', 'ae.gui.utils',
                    'ae.kivy', 'ae.kivy.apps', 'ae.kivy.behaviors', 'ae.kivy.i18n', 'ae.kivy.tours', 'ae.kivy.widgets',
-                   'ae.enaml_app', 'ae.beeware_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
-                   'ae.qpython_app', 'ae.appjar_app', 'importlib._bootstrap', 'importlib._bootstrap_external')
+                   'ae.enaml_app', 'ae.toga_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
+                   'ae.qpython_app', 'ae.appjar_app',
+                   'importlib._bootstrap', 'importlib._bootstrap_external')
 """ skipped modules used as default by :func:`module_name`, :func:`stack_var` and :func:`stack_vars` """
 
 
@@ -723,6 +729,51 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
         os.chdir(cur_dir)
 
 
+def late_env_var_resolver(env_vars: EnvVarsType, loaded_vars: EnvVarsType, late_resolved: EnvVarsLateResolvedType):
+    """ late resolve/expand/substitute of env variables in env var values.
+
+    :param env_vars:            all cached environment variables (preferred to os.environ), will get substituted.
+                                also used to search&resolve env var values (if not found then searched in os.environ).
+    :param loaded_vars:         recently loaded environment variables, will get substituted.
+    :param late_resolved:       matches of loaded env vars to be resolve late (after all env vars got detected and
+                                loaded). the key of this dict is the name of the env variable which has other env vars
+                                in its values to be resolved/substituted. the item value of this dict is a list of
+                                matcher group tuples for each found env variable. the group/tuple items are
+                                (0) escape character, (1) the dollar character, (2) the env var name literal (optionally
+                                in curly brackets) and (3/-1) the env var name.
+    """
+    retries = len(late_resolved)                            # retry if later-/not-yet-replaced env var in env var value
+    while late_resolved and retries:                        # pylint: disable=too-many-nested-blocks
+        for var_nam, matches in late_resolved.copy().items():
+            # substitute declared and not escaped env variables found via :data:`DOTENV_VAR_IN_VAL_MATCHER` in a value
+            for evn_groups in matches.copy():   # try to replace env vars with its values, removed from matches
+                if evn_groups[0] == '\\':                               # if escaped '$' character
+                    replace: Optional[str] = "".join(evn_groups[1:-1])  # then only unescape (no var search&substitute)
+                elif (replace := env_vars.get(evn_groups[-1])) is None:
+                    replace = os.environ.get(evn_groups[-1])
+
+                if replace is not None:
+                    var_val = loaded_vars[var_nam]
+                    env_vars[var_nam] = loaded_vars[var_nam] = var_val.replace("".join(evn_groups[0:-1]), replace)
+                    matches.remove(evn_groups)
+                    if replacement_matches := DOTENV_VAR_IN_VAL_MATCHER.findall(replace):
+                        if any(_[-1] == var_nam for _ in replacement_matches):
+                            warnings.warn(f"   ## ignoring recursive environment variable {var_nam} ({var_val=})")
+                            replacement_matches = [_ for _ in replacement_matches if _[-1] != var_nam]
+                        matches.extend(replacement_matches)     # extend matches with env vars in replaced var value
+                        retries += len(replacement_matches)
+
+            if not matches:
+                late_resolved.pop(var_nam)
+
+        retries -= 1
+
+    for var_nam, matches in late_resolved.items():
+        warnings.warn(f"   ## {var_nam=} has unresolved environment variables in its value: {[_[-1] for _ in matches]}"
+                      f"; env_vars['{var_nam}']={env_vars.get(var_nam, 'not in dict')}"
+                      f" loaded_vars['{var_nam}']={loaded_vars.get(var_nam, 'not in dict')}")
+
+
 def load_dotenvs(from_module_path: bool = False):
     """ detect and load not defined OS environment variables from ``.env`` files.
 
@@ -746,7 +797,7 @@ def load_dotenvs(from_module_path: bool = False):
         load_env_var_defaults(os_path_dirname(os_path_abspath(file_name)), env_vars)
 
 
-def load_env_var_defaults(start_dir: str, env_vars: MutableMapping[str, str]) -> MutableMapping[str, str]:
+def load_env_var_defaults(start_dir: str, env_vars: EnvVarsType) -> EnvVarsType:
     """ load undeclared env var defaults from a chain of ``.env`` files starting in the specified folder or its parent.
 
     :param start_dir:           folder to start search of an ``.env`` file, if not found, then also checks the parent
@@ -758,7 +809,7 @@ def load_env_var_defaults(start_dir: str, env_vars: MutableMapping[str, str]) ->
     :param env_vars:            environment variables mapping to be amended with env variable values from any
                                 found ``.env`` file. pass Python's :data:`os.environ` to amend this mapping directly
                                 with all the already not declared environment variables.
-    :return:                    dict with the loaded env var names (keys) and values.
+    :return:                    env var names (keys) and values added to :paramref:`~load_env_var_defaults.env_vars`.
     """
     start_dir = norm_path(start_dir)
     file_path = os_path_join(start_dir, DOTENV_FILE_NAME)
@@ -766,14 +817,16 @@ def load_env_var_defaults(start_dir: str, env_vars: MutableMapping[str, str]) ->
         file_path = os_path_join(os_path_dirname(start_dir), DOTENV_FILE_NAME)
 
     loaded_vars = {}
+    late_resolved: EnvVarsLateResolvedType = {}
     while os_path_isfile(file_path):
-        for var_nam, var_val in parse_dotenv(file_path).items():
-            if var_nam not in env_vars:
-                env_vars[var_nam] = loaded_vars[var_nam] = var_val
+        for var_nam, var_val in parse_dotenv(file_path, late_resolved, exclude_vars=env_vars).items():
+            env_vars[var_nam] = loaded_vars[var_nam] = var_val
 
         if os.sep not in file_path:
             break           # pragma: no cover # prevent endless-loop for ``.env`` file in root dir (os.sep == '/')
         file_path = os_path_join(os_path_dirname(os_path_dirname(file_path)), DOTENV_FILE_NAME)
+
+    late_env_var_resolver(env_vars, loaded_vars, late_resolved)
 
     return loaded_vars
 
@@ -967,6 +1020,16 @@ def now_str(sep: str = "") -> str:
     return utc_datetime().strftime(NOW_STR_FORMAT.format(sep=sep))
 
 
+def on_ci_host() -> bool:
+    """ check and return True if it is running on the GitLab/GitHub CI host/server.
+
+    :return:                    True if running on CI host, else False.
+
+    .. note:: env vars always available: 'CI' on GitHub (Pre-pipeline); 'CI_PROJECT_ID' (internal ProjectId) on GitLab
+    """
+    return 'CI' in os.environ or 'CI_PROJECT_ID' in os.environ
+
+
 def os_host_name() -> str:
     """ determine the operating system host/machine name.
 
@@ -1042,11 +1105,13 @@ def os_user_name() -> str:
     return getpass.getuser()
 
 
-def parse_dotenv(file_path: str) -> dict[str, str]:
+def parse_dotenv(file_path: str, late_resolved: EnvVarsLateResolvedType, exclude_vars: Container = ()) -> EnvVarsType:
     """ parse ``.env`` file content and return environment variable names as dict keys and values as dict values.
 
     :param file_path:           string with the name/path of an existing ``.env``/:data:`DOTENV_FILE_NAME` file.
-    :return:                    dict with environment variable names and values
+    :param late_resolved:       mapping extended with matches of env vars found in the returned env var values.
+    :param exclude_vars:        names of env vars to preserve their value (do not return).
+    :return:                    mapping with parsed environment variable names and values.
     """
     lines = []          # unwrap multi-line .env variable values with backslash at line end (Docker/UNIX-style format)
     prev_lines = ""
@@ -1057,15 +1122,17 @@ def parse_dotenv(file_path: str) -> dict[str, str]:
         lines.append(prev_lines + line)
         prev_lines = ""
 
-    env_vars: dict[str, str] = {}
+    env_vars: EnvVarsType = {}
     for line in lines:
-        match = _env_line.search(line)
+        match = DOTENV_LINE_MATCHER.search(line)
         if not match:
             if not re.search(r'^\s*(?:#.*)?$', line):  # not comment or blank
                 warnings.warn(f"'{line!r}' in '{file_path}' doesn't match {DOTENV_FILE_NAME} format", SyntaxWarning)
             continue
 
         var_nam, var_val = match.groups()
+        if var_nam in exclude_vars:
+            continue
         var_val = "" if var_val is None else var_val.strip()
 
         # remove surrounding quotes, unescape all chars except $ so variables can be escaped properly
@@ -1076,13 +1143,9 @@ def parse_dotenv(file_path: str) -> dict[str, str]:
                 var_val = re.sub(r'\\([^$])', r'\1', var_val)
         else:
             delimiter = None
-        if delimiter != "'":
-            for parts in _env_variable.findall(var_val):
-                # substitute env variables in a value with its value, if declared and not escaped
-                if parts[0] == '\\' or (replace := env_vars.get(parts[-1], os.environ.get(parts[-1], UNSET))) is UNSET:
-                    replace = "".join(parts[1:-1])  # don't replace escaped/undeclared vars to prevent value cut at '$'
-
-                var_val = var_val.replace("".join(parts[0:-1]), cast(str, replace))
+        if delimiter != "'":    # https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Single-Quotes
+            if matches := DOTENV_VAR_IN_VAL_MATCHER.findall(var_val):
+                late_resolved[var_nam] = matches
 
         env_vars[var_nam] = var_val
 
@@ -1292,7 +1355,7 @@ def sys_env_dict() -> dict[str, Any]:
 
 
 def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_len: int = 15,
-                 extra_sys_env_dict: Optional[dict[str, str]] = None) -> str:
+                 extra_sys_env_dict: Optional[EnvVarsType] = None) -> str:
     """ compile a formatted text block with system environment info.
 
     :param ind_ch:              indent character (defaults to " ").
@@ -1336,7 +1399,8 @@ def url_failure(url: str, token: str = "", username: str = "", password: str = "
     :param username:            optional username to authenticate (for HTTPS, together with the password argument).
     :param password:            optional password to authenticate (for HTTPS, together with the username argument).
     :param git_repo:            optimized check for Git repository HTTP servers/sites (like GitHub, GitLab, Bitbucket,
-                                Gitea, SourceHut, Mercury, etc. as long as they implement Smart HTTP).
+                                Gitea, SourceHut, Mercury, etc. as long as they implement Smart HTTP). if specified
+                                then the :paramref:`~url_failure.url` has to point to a repository.
     :param timeout:             connection timeout in seconds (see :func:`urllib.request.urlopen`).
     :return:                    empty string if target header is available, else an error description. if an
                                 FTP|HTTP response error occurred then the error/status code
@@ -1458,9 +1522,7 @@ class ErrorMsgMixin:                                                # pylint: di
 
         except (ImportError, AssertionError, Exception) as exc:                 # pylint: disable=broad-except
             print(f"{self.__class__.__name__}.__init__() raised {exc}; using print() instead of main app error loggers")
-
-            # self.main_app = None
-            # self.po = self.dpo = self.vpo = print
+            # fallbacks assigned as/in class attributes: self.main_app = None; self.po = self.dpo = self.vpo = print
 
     @property
     def error_message(self) -> str:
