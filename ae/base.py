@@ -248,7 +248,7 @@ from types import ModuleType
 from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.73'
+__version__ = '0.3.74'
 
 
 os_path_abspath = os.path.abspath
@@ -325,7 +325,7 @@ NAME_PARTS_SEP = '_'                                #: name parts separator char
 NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"    #: timestamp format of :func:`now_str`
 
 SKIPPED_MODULES = ('ae.base', 'ae.files', 'ae.paths', 'ae.dynamicod',
-                   'ae.core', 'ae.console', 'ae.snell', 'ae.templates', 'ae.dev_ops',
+                   'ae.core', 'ae.console', 'ae.snell', 'ae.template',
                    'ae.gui', 'ae.gui.app', 'ae.gui.tours', 'ae.gui.utils',
                    'ae.kivy', 'ae.kivy.apps', 'ae.kivy.behaviors', 'ae.kivy.i18n', 'ae.kivy.tours', 'ae.kivy.widgets',
                    'ae.enaml_app', 'ae.toga_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
