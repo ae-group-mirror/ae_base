@@ -1,4 +1,4 @@
-# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.58
+# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.68
 """ setup of ae namespace module portion base: basic constants, helper functions and context managers. """
 # noinspection PyUnresolvedReferences
 import sys
@@ -12,7 +12,7 @@ setup_kwargs = {
     'author_email': 'aecker2@gmail.com',
     'classifiers': [       'Development Status :: 3 - Alpha', 'Natural Language :: English', 'Operating System :: OS Independent',
         'Programming Language :: Python', 'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.9', 'Topic :: Software Development :: Libraries :: Python Modules',
+        'Programming Language :: Python :: 3.12', 'Topic :: Software Development :: Libraries :: Python Modules',
         'Typing :: Typed'],
     'description': 'ae namespace module portion base: basic constants, helper functions and context managers',
     'extras_require': {       'dev': [       'aedev_project_tpls', 'ae_ae', 'anybadge', 'coverage-badge', 'aedev_project_manager', 'flake8',
@@ -23,15 +23,15 @@ setup_kwargs = {
     'install_requires': [],
     'keywords': ['configuration', 'development', 'environment', 'productivity'],
     'license': 'GPL-3.0-or-later',
-    'long_description': ('<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae v0.3.100 -->\n'
- '<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.namespace_root_tpls v0.3.21 -->\n'
- '# base 0.3.73\n'
+    'long_description': ('<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae v0.3.101 -->\n'
+ '<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.namespace_root_tpls v0.3.22 -->\n'
+ '# base 0.3.74\n'
  '\n'
  '[![GitLab develop](https://img.shields.io/gitlab/pipeline/ae-group/ae_base/develop?logo=python)](\n'
  '    https://gitlab.com/ae-group/ae_base)\n'
  '[![LatestPyPIrelease](\n'
- '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.73?logo=python)](\n'
- '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.73)\n'
+ '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.74?logo=python)](\n'
+ '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.74)\n'
  '[![PyPIVersions](https://img.shields.io/pypi/v/ae_base)](\n'
  '    https://pypi.org/project/ae-base/#history)\n'
  '\n'
@@ -108,7 +108,7 @@ setup_kwargs = {
         'Source': 'https://ae.readthedocs.io/en/latest/_modules/ae/base.html'},
     'python_requires': '>=3.9',
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.73',
+    'version': '0.3.74',
     'zip_safe': True,
 }
 
