@@ -1,4 +1,4 @@
-# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.68
+# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.70
 """ setup of ae namespace module portion base: basic constants, helper functions and context managers. """
 # noinspection PyUnresolvedReferences
 import sys
@@ -15,23 +15,23 @@ setup_kwargs = {
         'Programming Language :: Python :: 3.12', 'Topic :: Software Development :: Libraries :: Python Modules',
         'Typing :: Typed'],
     'description': 'ae namespace module portion base: basic constants, helper functions and context managers',
-    'extras_require': {       'dev': [       'aedev_project_tpls', 'ae_ae', 'anybadge', 'coverage-badge', 'aedev_project_manager', 'flake8',
-                       'mypy', 'pylint', 'pytest', 'pytest-cov', 'pytest-django', 'typing', 'types-setuptools'],
+    'extras_require': {       'dev': [       'aedev_project_tpls', 'ae_ae', 'anybadge', 'coverage-badge', 'flake8', 'mypy', 'pylint',
+                       'pytest', 'pytest-cov', 'pytest-django', 'typing', 'types-setuptools'],
         'docs': [],
-        'tests': [       'anybadge', 'coverage-badge', 'aedev_project_manager', 'flake8', 'mypy', 'pylint', 'pytest',
-                         'pytest-cov', 'pytest-django', 'typing', 'types-setuptools']},
+        'tests': [       'anybadge', 'coverage-badge', 'flake8', 'mypy', 'pylint', 'pytest', 'pytest-cov',
+                         'pytest-django', 'typing', 'types-setuptools']},
     'install_requires': [],
     'keywords': ['configuration', 'development', 'environment', 'productivity'],
     'license': 'GPL-3.0-or-later',
     'long_description': ('<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae v0.3.101 -->\n'
  '<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.namespace_root_tpls v0.3.22 -->\n'
- '# base 0.3.74\n'
+ '# base 0.3.75\n'
  '\n'
  '[![GitLab develop](https://img.shields.io/gitlab/pipeline/ae-group/ae_base/develop?logo=python)](\n'
  '    https://gitlab.com/ae-group/ae_base)\n'
  '[![LatestPyPIrelease](\n'
- '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.74?logo=python)](\n'
- '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.74)\n'
+ '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.75?logo=python)](\n'
+ '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.75)\n'
  '[![PyPIVersions](https://img.shields.io/pypi/v/ae_base)](\n'
  '    https://pypi.org/project/ae-base/#history)\n'
  '\n'
@@ -106,9 +106,9 @@ setup_kwargs = {
         'Documentation': 'https://ae.readthedocs.io/en/latest/_autosummary/ae.base.html',
         'Repository': 'https://gitlab.com/ae-group/ae_base',
         'Source': 'https://ae.readthedocs.io/en/latest/_modules/ae/base.html'},
-    'python_requires': '>=3.9',
+    'python_requires': '>=3.12',
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.74',
+    'version': '0.3.75',
     'zip_safe': True,
 }
 

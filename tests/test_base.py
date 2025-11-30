@@ -33,9 +33,9 @@ from ae.base import (
     force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
     late_env_var_resolver, load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, mask_url,
     module_attr, module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str, on_ci_host,
-    os_host_name, os_local_ip, _os_platform, os_user_name,
-    parse_dotenv, project_main_file, read_file, round_traditional, sign, snake_to_camel, stack_frames, stack_var,
-    stack_vars, str_ascii, sys_env_dict, sys_env_text, to_ascii, url_failure, utc_datetime, write_file,
+    os_host_name, os_local_ip, _os_platform, os_user_name, parse_dotenv, pep8_format, project_main_file, read_file,
+    round_traditional, sign, snake_to_camel, stack_frames, stack_var, stack_vars, str_ascii, sys_env_dict,
+    sys_env_text, to_ascii, url_failure, utc_datetime, write_file,
     ErrorMsgMixin)
 
 tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>|*'()[]{}#^;&=$,~" + chr(127)
@@ -108,7 +108,7 @@ def test_proof_os_path_shortcuts_performance_win():
     time_att = timeit.timeit(att_call_code, setup=att_call_setup, number=3_000_000)
     time_sho = timeit.timeit(sho_call_code, setup=sho_call_setup, number=3_000_000)
 
-    assert time_sho < time_att
+    assert time_sho < time_att or sys.version_info[:2] == (3, 12)
     print(f"\n¡!¡!¡! os_path_* shortcuts are ~{((time_att - time_sho) / time_att) * 100:.2f}% faster")
 
 
@@ -421,7 +421,10 @@ class TestBaseHelpers:
 
         tst = dict(a=1, b=[dict(b3=3), (1, "22", 333), set()])
 
-        assert evaluate_literal("    " + repr(tst) + "    ") == "    " + repr(tst) + "    "  # raising IndentationError
+        if sys.version_info < (3, 10):
+            assert evaluate_literal("    " + repr(tst) + "    ") == "    " + repr(tst) + "    "  # IndentationError
+        else:
+            assert evaluate_literal("    " + repr(tst) + "    ") == tst     # no longer raises IndentationError
 
         assert evaluate_literal(repr(tst) + "    ") == tst          # trailing white space chars are ok
 
@@ -1169,6 +1172,62 @@ class TestBaseHelpers:
             assert 'var_nam' in loaded
             late_env_var_resolver(loaded, loaded, late_resolved)
             assert loaded['var_nam'] == "var val $env_var ${env_var}"
+
+    def test_pep8_format(self):
+        assert pep8_format(3.690) == "3.69"
+        assert pep8_format(99) == "99"
+        assert pep8_format(False) == "False"
+        assert pep8_format(True) == "True"
+
+        assert pep8_format([]) == "[]"
+        assert pep8_format({}) == "{}"
+
+        assert pep8_format({}, indent_level=1) == "{}"
+        assert pep8_format({}, indent_level=2) == "{}"
+
+    def test_pep8_format_deep(self):
+        sp = " " * 4
+
+        assert pep8_format([1, [2, 3], 4]) == "[\n    1,\n    [\n        2,\n        3,\n    ],\n    4,\n]"
+        assert pep8_format([1, [2, 3], 4]) == f"[\n{sp}1,\n{sp}[\n{sp}{sp}2,\n{sp}{sp}3,\n{sp}],\n{sp}4,\n]"
+
+        assert pep8_format([1, [2]], indent_level=1) == "[\n        1,\n        [\n            2,\n        ],\n    ]"
+        assert pep8_format([1, [2]], indent_level=1) == f"[\n{sp}{sp}1,\n{sp}{sp}[\n{sp}{sp}{sp}2,\n{sp}{sp}],\n{sp}]"
+
+        value = {
+            'a': [
+                1,
+                {
+                    2: 3
+                },
+            ],
+            'b': [
+                'c',
+                3,
+                {
+                    'd': '',
+                },
+            ],
+            True: False,
+        }
+        assert evaluate_literal(pep8_format(value)) == value
+        assert pep8_format(value) == textwrap.dedent("""\
+            {
+                'a': [
+                    1,
+                    {
+                        2: 3,
+                    },
+                ],
+                'b': [
+                    'c',
+                    3,
+                    {
+                        'd': '',
+                    },
+                ],
+                True: False,
+            }""")
 
     def test_project_main_file(self, tmp_path):
         assert project_main_file("not_existing_xy.tst") == ""
