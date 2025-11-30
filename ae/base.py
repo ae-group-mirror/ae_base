@@ -248,7 +248,7 @@ from types import ModuleType
 from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.74'
+__version__ = '0.3.75'
 
 
 os_path_abspath = os.path.abspath
@@ -356,13 +356,13 @@ def app_name_guess() -> str:
     """
     app_name = build_config_variable_values(('package.name', ""))[0]
     if not app_name:
-        unspecified_app_names = ('ae_base', 'app', '_jb_pytest_runner', 'main', '__main__', 'pydevconsole', 'src')
+        unspecified_names = ('ae_base', 'app', '_jb_pytest_runner', 'main', '__main__', 'pydevconsole', 'pytest', 'src')
         path = sys.argv[0]
         app_name = os_path_splitext(os_path_basename(path))[0]
-        if app_name.lower() in unspecified_app_names:
+        if app_name.lower() in unspecified_names:
             path = os.getcwd()
             app_name = os_path_basename(path)
-            if app_name.lower() in unspecified_app_names:
+            if app_name.lower() in unspecified_names:
                 app_name = "unguessable"
     return defuse(app_name)
 
@@ -1150,6 +1150,37 @@ def parse_dotenv(file_path: str, late_resolved: EnvVarsLateResolvedType, exclude
         env_vars[var_nam] = var_val
 
     return env_vars
+
+
+def pep8_format(value: Any, indent_level: int = 0):
+    """ PEP-8-conform representation code string of deep dict/list structures, superseding :func:`pprint.pformat`.
+
+    :param value:               value to format PEP-8-conform (hanging indent always with 4 spaces)..
+    :param indent_level:        level of indentation. pass e.g. 1 to indent the output with 4 spaces.
+    :return:                    representation string of the specified value.
+    """
+    spaces = " " * 4  # PEP-8: 4 spaces
+    indent_spaces = spaces * indent_level
+
+    parts = []
+    if value and isinstance(value, dict):
+        parts.append("{")
+        for key, val in value.items():
+            formatted = pep8_format(val, indent_level=indent_level + 1)
+            parts.append(f"{indent_spaces}{spaces}{repr(key)}: {formatted},")
+        parts.append(indent_spaces + "}")
+
+    elif value and isinstance(value, list):
+        parts.append("[")
+        for item in value:
+            formatted = pep8_format(item, indent_level + 1)
+            parts.append(f"{indent_spaces}{spaces}{formatted},")
+        parts.append(indent_spaces + "]")
+
+    else:
+        parts.append(repr(value))
+
+    return "\n".join(parts)
 
 
 def project_main_file(import_name: str, project_path: str = "") -> str:
