@@ -119,7 +119,9 @@ class TestErrorMsgMixin:
         assert ins.main_app is None     # in test env is no console/gui app available
         assert ins.po is ins.dpo is ins.vpo is print
 
-        with patch('ae.core.main_app_instance', lambda: None):
+    @skip_gitlab_ci
+    def test_instantiation_locally(self):
+        with patch('ae.core.main_app_instance', lambda: None):  # ae.core not available on CI(removed pjm from tst_reqs)
             ins = ErrorMsgMixin()
             assert ins
             assert ins.main_app is None

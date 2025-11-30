@@ -25,13 +25,13 @@ setup_kwargs = {
     'license': 'GPL-3.0-or-later',
     'long_description': ('<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project ae.ae v0.3.101 -->\n'
  '<!-- THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.namespace_root_tpls v0.3.22 -->\n'
- '# base 0.3.75\n'
+ '# base 0.3.76\n'
  '\n'
  '[![GitLab develop](https://img.shields.io/gitlab/pipeline/ae-group/ae_base/develop?logo=python)](\n'
  '    https://gitlab.com/ae-group/ae_base)\n'
  '[![LatestPyPIrelease](\n'
- '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.75?logo=python)](\n'
- '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.75)\n'
+ '    https://img.shields.io/gitlab/pipeline/ae-group/ae_base/release0.3.76?logo=python)](\n'
+ '    https://gitlab.com/ae-group/ae_base/-/tree/release0.3.76)\n'
  '[![PyPIVersions](https://img.shields.io/pypi/v/ae_base)](\n'
  '    https://pypi.org/project/ae-base/#history)\n'
  '\n'
@@ -108,7 +108,7 @@ setup_kwargs = {
         'Source': 'https://ae.readthedocs.io/en/latest/_modules/ae/base.html'},
     'python_requires': '>=3.12',
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.75',
+    'version': '0.3.76',
     'zip_safe': True,
 }
 
