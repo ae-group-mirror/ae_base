@@ -248,7 +248,7 @@ from types import ModuleType
 from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.76'
+__version__ = '0.3.77'
 
 
 os_path_abspath = os.path.abspath
