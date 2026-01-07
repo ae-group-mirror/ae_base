@@ -730,7 +730,7 @@ class TestBaseHelpers:
         assert len(main_file_paths_parts(""))
         assert isinstance(main_file_paths_parts("")[0], tuple)
 
-        assert any("main" + PY_EXT in _ for _ in main_file_paths_parts(""))
+        assert any('main' + PY_EXT in _ for _ in main_file_paths_parts(""))
         assert any(PY_MAIN in _ for _ in main_file_paths_parts(""))
         assert any(PY_INIT in _ for _ in main_file_paths_parts(""))
         por_name = "portion_tst_name"
