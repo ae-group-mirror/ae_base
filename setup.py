@@ -1,4 +1,4 @@
-# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.72
+# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.75
 """ setup of ae namespace module portion base: basic constants, helper functions and context managers. """
 import sys
 # noinspection PyUnresolvedReferences
@@ -77,7 +77,7 @@ setup_kwargs = {
     },
     'python_requires': '>=3.12',
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.77',
+    'version': '0.3.78',
     'zip_safe': True,
 }
 
