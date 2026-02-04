@@ -248,7 +248,7 @@ from types import ModuleType
 from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.77'
+__version__ = '0.3.78'
 
 
 os_path_abspath = os.path.abspath
@@ -325,7 +325,7 @@ NAME_PARTS_SEP = '_'                                #: name parts separator char
 NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"    #: timestamp format of :func:`now_str`
 
 SKIPPED_MODULES = ('ae.base', 'ae.files', 'ae.paths', 'ae.dynamicod',
-                   'ae.core', 'ae.console', 'ae.snell', 'ae.template',
+                   'ae.core', 'ae.console', 'ae.snell', 'ae.managed_files',
                    'ae.gui', 'ae.gui.app', 'ae.gui.tours', 'ae.gui.utils',
                    'ae.kivy', 'ae.kivy.apps', 'ae.kivy.behaviors', 'ae.kivy.i18n', 'ae.kivy.tours', 'ae.kivy.widgets',
                    'ae.enaml_app', 'ae.toga_app', 'ae.pyglet_app', 'ae.pygobject_app', 'ae.dabo_app',
@@ -735,7 +735,7 @@ def late_env_var_resolver(env_vars: EnvVarsType, loaded_vars: EnvVarsType, late_
     :param env_vars:            all cached environment variables (preferred to os.environ), will get substituted.
                                 also used to search&resolve env var values (if not found then searched in os.environ).
     :param loaded_vars:         recently loaded environment variables, will get substituted.
-    :param late_resolved:       matches of loaded env vars to be resolve late (after all env vars got detected and
+    :param late_resolved:       matches of loaded env vars to be resolved late (after all env vars got detected and
                                 loaded). the key of this dict is the name of the env variable which has other env vars
                                 in its values to be resolved/substituted. the item value of this dict is a list of
                                 matcher group tuples for each found env variable. the group/tuple items are
