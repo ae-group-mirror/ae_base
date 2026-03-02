@@ -249,7 +249,7 @@ from types import ModuleType
 from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.79'
+__version__ = '0.3.80'
 
 
 os_path_abspath = os.path.abspath
@@ -1551,15 +1551,15 @@ class ErrorMsgMixin:                                                # pylint: di
     po = dpo = vpo = print
 
     def __init__(self):
-        try:
+        try:                                            # pragma: no cover
             from ae.core import main_app_instance       # type: ignore # pylint: disable=import-outside-toplevel
 
             self.main_app = main_app = main_app_instance()
             assert main_app is not None, f"{self.__class__.__name__}.__init__() called too early; main app instance not"
 
-            self.po = main_app.po                       # pragma: no cover
-            self.dpo = main_app.dpo                     # pragma: no cover
-            self.vpo = main_app.vpo                     # pragma: no cover
+            self.po = main_app.po
+            self.dpo = main_app.dpo
+            self.vpo = main_app.vpo
 
         except (ImportError, AssertionError, Exception) as exc:                 # pylint: disable=broad-except
             print(f"{self.__class__.__name__}.__init__() raised {exc}; using print() instead of main app error loggers")
