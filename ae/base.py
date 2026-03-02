@@ -105,7 +105,7 @@ dynamically inspect modules, execution frames, and variables on the call stack.
 * :func:`stack_frames`: a generator that yields frames from the call stack, starting at a specified depth.
 * :func:`stack_var`: finds the value of a specific variable by searching up the call stack.
 * :func:`stack_vars`: returns the global and local variables from a specific frame in the call stack.
-* :func:`full_stack_trace`: generates a complete, detailed string representation of an exception's stack trace.
+* :func:`full_stack_trace`: generates a complete, detailed stack trace including local variables from an exception.
 
 .. hint::
     the :class:`~ae.core.AppBase` class uses these helper functions to determine the
@@ -225,6 +225,7 @@ import datetime
 import getpass
 import importlib.abc
 import importlib.util
+import inspect
 import os
 import platform
 import re
@@ -248,7 +249,7 @@ from types import ModuleType
 from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.78'
+__version__ = '0.3.79'
 
 
 os_path_abspath = os.path.abspath
@@ -636,28 +637,36 @@ def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = Fals
         return text
 
 
-def full_stack_trace(ex: Exception) -> str:
-    """ get a full stack trace from an exception.
+def full_stack_trace(ex: Exception, frames_with_locals: int = 3) -> str:
+    """ generates a complete, detailed stack trace including local variables from an exception.
 
     :param ex:                  exception instance.
-    :return:                    str with stack trace info.
+    :param frames_with_locals:  number of the deepest frames to show also the local variables for.
+    :return:                    text block string (formatted by os.linesep) with stack trace info.
     """
-    ret = f"Exception {ex!r}. Traceback:" + os.linesep
+    ret = f"Exception {ex!r}. Full traceback (last {frames_with_locals} frames with locals):" + os.linesep
     trace_back = sys.exc_info()[2]
     if trace_back:
-        def ext_ret(item):
+        def ext_ret(frame_info: inspect.FrameInfo):
             """ process traceback frame and add as str to ret """
             nonlocal ret
-            ret += f'File "{item[1]}", line {item[2]}, in {item[3]}' + os.linesep
-            lines = item[4]  # mypy does not detect item[]
+            ret += f'File "{frame_info[1]}", line {frame_info[2]}, in {frame_info[3]}' + os.linesep
+            lines = frame_info[4]  # mypy does not detect item[]
             if lines:
                 for line in lines:
                     ret += ' ' * 4 + line.lstrip()
 
-        for frame in reversed(getouterframes(trace_back.tb_frame)[1:]):
-            ext_ret(frame)
-        for frame in getinnerframes(trace_back):
-            ext_ret(frame)
+        for info in reversed(getouterframes(trace_back.tb_frame)[1:]):
+            ext_ret(info)
+        inner_frames = getinnerframes(trace_back)
+        locals_frame_idx = len(inner_frames) - frames_with_locals
+        for idx, info in enumerate(inner_frames):
+            ext_ret(info)
+            if idx >= locals_frame_idx:
+                for nam, val in info.frame.f_locals.items():
+                    val = repr(val).replace(os.linesep, "\\n")
+                    ret += ' ' * 6 + f"= {nam}: {val}" + os.linesep
+
     return ret
 
 
@@ -1115,6 +1124,7 @@ def parse_dotenv(file_path: str, late_resolved: EnvVarsLateResolvedType, exclude
     """
     lines = []          # unwrap multi-line .env variable values with backslash at line end (Docker/UNIX-style format)
     prev_lines = ""
+    # noinspection PyUnnecessaryCast
     for line in cast(str, read_file(file_path)).splitlines():
         if line.endswith('\\'):
             prev_lines += line[:-1]
@@ -1547,9 +1557,9 @@ class ErrorMsgMixin:                                                # pylint: di
             self.main_app = main_app = main_app_instance()
             assert main_app is not None, f"{self.__class__.__name__}.__init__() called too early; main app instance not"
 
-            self.po = main_app.po
-            self.dpo = main_app.dpo
-            self.vpo = main_app.vpo
+            self.po = main_app.po                       # pragma: no cover
+            self.dpo = main_app.dpo                     # pragma: no cover
+            self.vpo = main_app.vpo                     # pragma: no cover
 
         except (ImportError, AssertionError, Exception) as exc:                 # pylint: disable=broad-except
             print(f"{self.__class__.__name__}.__init__() raised {exc}; using print() instead of main app error loggers")

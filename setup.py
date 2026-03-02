@@ -1,4 +1,4 @@
-# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.75
+# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.76
 """ setup of ae namespace module portion base: basic constants, helper functions and context managers. """
 import sys
 # noinspection PyUnresolvedReferences
@@ -28,7 +28,6 @@ setup_kwargs = {
             'aedev_project_tpls',
             'ae_ae',
             'anybadge',
-            'coverage-badge',
             'flake8',
             'mypy',
             'pylint',
@@ -41,7 +40,6 @@ setup_kwargs = {
         'docs': [],
         'tests': [
             'anybadge',
-            'coverage-badge',
             'flake8',
             'mypy',
             'pylint',
@@ -77,7 +75,7 @@ setup_kwargs = {
     },
     'python_requires': '>=3.12',
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.78',
+    'version': '0.3.79',
     'zip_safe': True,
 }
 
