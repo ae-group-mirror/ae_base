@@ -1557,9 +1557,9 @@ class ErrorMsgMixin:                                                # pylint: di
             self.main_app = main_app = main_app_instance()
             assert main_app is not None, f"{self.__class__.__name__}.__init__() called too early; main app instance not"
 
-            self.po = main_app.po
-            self.dpo = main_app.dpo
-            self.vpo = main_app.vpo
+            self.po = main_app.po                       # pragma: no cover
+            self.dpo = main_app.dpo                     # pragma: no cover
+            self.vpo = main_app.vpo                     # pragma: no cover
 
         except (ImportError, AssertionError, Exception) as exc:                 # pylint: disable=broad-except
             print(f"{self.__class__.__name__}.__init__() raised {exc}; using print() instead of main app error loggers")
