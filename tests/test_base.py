@@ -119,7 +119,6 @@ class TestErrorMsgMixin:
         assert ins.main_app is None     # in test env is no console/gui app available
         assert ins.po is ins.dpo is ins.vpo is print
 
-    @skip_gitlab_ci
     def test_instantiation_locally(self):
         with patch('ae.core.main_app_instance', lambda: None):  # ae.core not available on CI(removed pjm from tst_reqs)
             ins = ErrorMsgMixin()
@@ -497,6 +496,7 @@ class TestBaseHelpers:
 
     def test_import_module_local_module(self, monkeypatch, tmp_path):
         module = "mod_2_tst"
+        # noinspection PyUnnecessaryCast
         mod_file = cast(str, os.path.join(str(tmp_path), module + PY_EXT))
         write_file(mod_file, "mod_var = 'mod_var_val'")
 
@@ -766,6 +766,7 @@ class TestBaseHelpers:
                untouched: untouched,
                }
         assert mask_secrets(dat) is dat
+        # noinspection PyTypeChecker
         assert dat['key1']['subKey1'][0]['host_Pwd'] == "sec*********"
         assert dat['key1']['passWord___'] == "sec*********"
         assert dat['any_PASSWORD_to_hide'] == "Se*********"
@@ -1574,6 +1575,7 @@ class TestModuleHelpers:
         namespace = TESTS_FOLDER
         mod_name = 'test_module_name'
         att_name = 'test_module_func'
+        # noinspection PyUnnecessaryCast
         module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
         try:
             write_file(module_file, f"def {att_name}(*args, **kwargs):\n    return args, kwargs\n")
@@ -1603,6 +1605,7 @@ class TestModuleHelpers:
         namespace = TESTS_FOLDER
         mod_name = 'test_module_name'
         att_name = 'test_module_func'
+        # noinspection PyUnnecessaryCast
         module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
         try:
             write_file(module_file, f"def {att_name}(arg1, args2, kwarg1='default'):\n    return arg1, arg2, kwarg1\n")
@@ -1628,6 +1631,7 @@ class TestModuleHelpers:
     def test_module_attr_module_ref(self, monkeypatch, tmp_path):
         namespace = str(tmp_path)
         mod_name = 'test_module_name'
+        # noinspection PyUnnecessaryCast
         module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
 
         write_file(module_file, "# empty module")
@@ -1645,6 +1649,7 @@ class TestModuleHelpers:
         namespace = str(tmp_path)
         mod_name = 'test_module_name'
         att_name = 'test_module_func'
+        # noinspection PyUnnecessaryCast
         module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
         write_file(module_file, f"""def {att_name}(*args, **kwargs):\n    pass\n""")
 
@@ -1694,11 +1699,31 @@ class TestModuleHelpers:
 
 class TestStackHelpers:
     def test_full_stack_trace(self):
+        local_var = 'test_local_variable_value'
         try:
-            raise ValueError
+            raise ValueError('tst val err')
         except ValueError as ex:
-            # print(full_stack_trace(ex))
             assert full_stack_trace(ex)
+            assert 'ValueError' in full_stack_trace(ex)
+            assert 'tst val err' in full_stack_trace(ex)
+            assert 'test_full_stack_trace' in full_stack_trace(ex)
+            assert 'TestStackHelpers' in full_stack_trace(ex)
+            assert 'local_var' in full_stack_trace(ex)
+            assert local_var in full_stack_trace(ex)
+
+    def test_full_stack_trace_without_locals(self):
+        local_var = 'test_local_variable_value'
+        try:
+            raise SyntaxError('tst error xyz')
+        except SyntaxError as ex:
+            assert full_stack_trace(ex)
+            assert 'SyntaxError' in full_stack_trace(ex, frames_with_locals=0)
+            assert 'tst error xyz' in full_stack_trace(ex, frames_with_locals=0)
+            assert 'test_full_stack_trace_without_locals' in full_stack_trace(ex, frames_with_locals=0)
+
+            assert 'TestStackHelpers' not in full_stack_trace(ex, frames_with_locals=0)
+            assert 'local_var' not in full_stack_trace(ex, frames_with_locals=0)
+            assert local_var not in full_stack_trace(ex, frames_with_locals=0)
 
     def test_stack_frames(self):
         for frame in stack_frames():
