@@ -249,7 +249,7 @@ from types import ModuleType
 from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.80'
+__version__ = '0.3.81'
 
 
 os_path_abspath = os.path.abspath
@@ -756,6 +756,7 @@ def late_env_var_resolver(env_vars: EnvVarsType, loaded_vars: EnvVarsType, late_
         for var_nam, matches in late_resolved.copy().items():
             # substitute declared and not escaped env variables found via :data:`DOTENV_VAR_IN_VAL_MATCHER` in a value
             for evn_groups in matches.copy():   # try to replace env vars with its values, removed from matches
+                # noinspection PyUnresolvedReferences
                 if evn_groups[0] == '\\':                               # if escaped '$' character
                     replace: Optional[str] = "".join(evn_groups[1:-1])  # then only unescape (no var search&substitute)
                 elif (replace := env_vars.get(evn_groups[-1])) is None:
@@ -1190,7 +1191,7 @@ def pep8_format(value: Any, indent_level: int = 0):
     else:
         parts.append(repr(value))
 
-    return "\n".join(parts)
+    return os.linesep.join(parts)
 
 
 def project_main_file(import_name: str, project_path: str = "") -> str:
@@ -1376,7 +1377,7 @@ def sys_env_dict() -> dict[str, Any]:
     .. hint:: see also https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     """
     sed: dict[str, Any] = {
-        'python ver': sys.version.replace('\n', ' '),
+        'python ver': sys.version_info,
         'platform': os_platform,
         'argv': sys.argv,
         'executable': sys.executable,
@@ -1412,7 +1413,7 @@ def sys_env_text(ind_ch: str = " ", ind_len: int = 12, key_ch: str = "=", key_le
     key_len = max([key_len] + [len(key) + 1 for key in sed])
 
     ind = ""
-    text = "\n".join([f"{ind:{ind_ch}>{ind_len}}{key:{key_ch}<{key_len}}{val}" for key, val in sed.items()])
+    text = os.linesep.join([f"{ind:{ind_ch}>{ind_len}}{key:{key_ch}<{key_len}}{val}" for key, val in sed.items()])
 
     return text
 

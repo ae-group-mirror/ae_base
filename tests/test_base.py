@@ -1393,10 +1393,10 @@ class TestBaseHelpers:
         # noinspection PyInvalidCast
         mocked_headers = cast(HTTPMessage, {})
 
-        def mock_raise_http_error404(*_args, **_kwargs):
+        def _mock_raise_http_error404(*_args, **_kwargs):
             raise HTTPError(url=url, code=404, msg=err_msg, hdrs=mocked_headers, fp=None)
 
-        with patch('ae.base.urlopen', mock_raise_http_error404):
+        with patch('ae.base.urlopen', _mock_raise_http_error404):
             ret = url_failure(url)
 
         assert ret
@@ -1406,10 +1406,10 @@ class TestBaseHelpers:
         assert path in ret
         assert err_msg in ret
 
-        def mock_raise_http_error503(*_args, **_kwargs):
+        def _mock_raise_http_error503(*_args, **_kwargs):
             raise HTTPError(url=url, code=503, msg=err_msg, hdrs=mocked_headers, fp=None)
 
-        with patch('ae.base.urlopen', mock_raise_http_error503):
+        with patch('ae.base.urlopen', _mock_raise_http_error503):
             ret = url_failure(url)
 
         assert ret
@@ -1419,10 +1419,10 @@ class TestBaseHelpers:
         assert path in ret
         assert err_msg in ret
 
-        def mock_raise_gai_error(*_args, **_kwargs):
+        def _mock_raise_gai_error(*_args, **_kwargs):
             raise URLError(reason=socket.gaierror(err_msg))
 
-        with patch('ae.base.urlopen', mock_raise_gai_error):
+        with patch('ae.base.urlopen', _mock_raise_gai_error):
             ret = url_failure(url)
 
         assert ret
@@ -1432,10 +1432,10 @@ class TestBaseHelpers:
         assert path in ret
         assert err_msg in ret
 
-        def mock_raise_timeout(*_args, **_kwargs):
+        def _mock_raise_timeout(*_args, **_kwargs):
             raise URLError(reason=socket.timeout(err_msg))
 
-        with patch('ae.base.urlopen', mock_raise_timeout):
+        with patch('ae.base.urlopen', _mock_raise_timeout):
             ret = url_failure(url)
 
         assert ret
@@ -1445,10 +1445,10 @@ class TestBaseHelpers:
         assert path in ret
         assert err_msg in ret
 
-        def mock_raise_socket_timeout(*_args, **_kwargs):
+        def _mock_raise_socket_timeout(*_args, **_kwargs):
             raise socket.timeout(err_msg)
 
-        with patch('ae.base.urlopen', mock_raise_socket_timeout):
+        with patch('ae.base.urlopen', _mock_raise_socket_timeout):
             ret = url_failure(url)
 
         assert ret
@@ -1458,10 +1458,10 @@ class TestBaseHelpers:
         assert path in ret
         assert f"{mask_url(url)} raised socket-timeout exception" in ret
 
-        def mock_raise_ssl_error(*_args, **_kwargs):
+        def _mock_raise_ssl_error(*_args, **_kwargs):
             raise URLError(reason=ssl.SSLCertVerificationError(1, err_msg))
 
-        with patch('ae.base.urlopen', mock_raise_ssl_error):
+        with patch('ae.base.urlopen', _mock_raise_ssl_error):
             ret = url_failure(url)
 
         assert ret
@@ -1471,10 +1471,10 @@ class TestBaseHelpers:
         assert path in ret
         assert err_msg in ret
 
-        def mock_raise_generic_url_error(*_args, **_kwargs):
+        def _mock_raise_generic_url_error(*_args, **_kwargs):
             raise URLError(reason=err_msg)
 
-        with patch('ae.base.urlopen', mock_raise_generic_url_error):
+        with patch('ae.base.urlopen', _mock_raise_generic_url_error):
             ret = url_failure(url)
 
         assert ret
@@ -1484,10 +1484,10 @@ class TestBaseHelpers:
         assert path in ret
         assert err_msg in ret
 
-        def mock_raise_unexpected_error(*_args, **_kwargs):
+        def _mock_raise_unexpected_error(*_args, **_kwargs):
             raise ValueError(err_msg)
 
-        with patch('ae.base.urlopen', mock_raise_unexpected_error):
+        with patch('ae.base.urlopen', _mock_raise_unexpected_error):
             ret = url_failure(url)
 
         assert ret

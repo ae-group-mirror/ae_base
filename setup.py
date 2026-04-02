@@ -1,4 +1,4 @@
-# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.76
+# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.77
 """ setup of ae namespace module portion base: basic constants, helper functions and context managers. """
 import sys
 # noinspection PyUnresolvedReferences
@@ -33,7 +33,6 @@ setup_kwargs = {
             'pylint',
             'pytest',
             'pytest-cov',
-            'pytest-django',
             'typing',
             'types-setuptools',
         ],
@@ -45,7 +44,6 @@ setup_kwargs = {
             'pylint',
             'pytest',
             'pytest-cov',
-            'pytest-django',
             'typing',
             'types-setuptools',
         ],
@@ -75,7 +73,7 @@ setup_kwargs = {
     },
     'python_requires': '>=3.12',
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.80',
+    'version': '0.3.81',
     'zip_safe': True,
 }
 
