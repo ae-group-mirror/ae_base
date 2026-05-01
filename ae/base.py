@@ -88,6 +88,7 @@ functions to aid in application setup, configuration, and build introspection.
 * :func:`build_config_variable_values`: reads variable values from a `buildozer.spec` file.
 * :func:`instantiate_config_parser`: returns a `ConfigParser` instance pre-configured for case-sensitive keys and
   extended interpolation.
+* :func:`namespace_guess`: determines and returns the optional namespace name of a python package.
 * :func:`project_main_file`: determines the absolute path to the main module file of a project package (where the
   `__version__` of the app|package is defined).
 * :func:`main_file_paths_parts`: returns a tuple of possible main/version file path names combinations of any project.
@@ -98,9 +99,10 @@ modules and call stack inspection
 
 dynamically inspect modules, execution frames, and variables on the call stack.
 
-* :func:`import_module`: dynamically imports a Python module from a path without adding it to `sys.modules`.
 * :func:`module_attr`: dynamically gets a reference to a module or any attribute (variable, function, class) within it.
 * :func:`module_file_path`: determines the absolute file path of the module from which it is called.
+* :func:`module_find`: determine the file path of a Python module.
+* :func:`module_load`: search, import and execute a Python module dynamically without adding it to sys.modules.
 * :func:`module_name`: finds the name of the first module in the call stack that is not in a predefined skip list.
 * :func:`stack_frames`: a generator that yields frames from the call stack, starting at a specified depth.
 * :func:`stack_var`: finds the value of a specific variable by searching up the call stack.
@@ -108,7 +110,7 @@ dynamically inspect modules, execution frames, and variables on the call stack.
 * :func:`full_stack_trace`: generates a complete, detailed stack trace including local variables from an exception.
 
 .. hint::
-    the :class:`~ae.core.AppBase` class uses these helper functions to determine the
+    the :class:`ae.core.AppBase` class uses these helper functions to determine the
     :attr:`version <ae.core.AppBase.app_version>` and :attr:`title <ae.core.AppBase.app_title>` of an application,
     if these values are not specified in the instance initializer.
 
@@ -249,7 +251,7 @@ from types import ModuleType
 from typing import Any, Callable, Container, Generator, Iterable, MutableMapping, Optional, Union, cast
 
 
-__version__ = '0.3.81'
+__version__ = '0.3.82'
 
 
 os_path_abspath = os.path.abspath
@@ -498,6 +500,7 @@ def dedefuse(value: str) -> str:
 
 
 def defuse(value: str) -> str:
+    # noinspection GrazieInspection
     """ convert a file path or a URI into a defused/presentational form to be usable as URL slug or file/folder name.
 
     :param value:               any string to defuse (replace special chars with Unicode alternatives).
@@ -596,7 +599,7 @@ def force_encoding(text: Union[str, bytes], encoding: str = DEF_ENCODING, errors
 
 class UnformattedValue:                     # pylint: disable=too-few-public-methods
     """ helper class for :func:`~ae.base.format_given` to keep placeholder with format unchanged if not found. """
-    def __init__(self, key: str):
+    def __init__(self, key: int | str):
         self.key = key
 
     def __format__(self, format_spec: str):
@@ -668,33 +671,6 @@ def full_stack_trace(ex: Exception, frames_with_locals: int = 3) -> str:
                     ret += ' ' * 6 + f"= {nam}: {val}" + os.linesep
 
     return ret
-
-
-def import_module(import_name: str, path: Optional[Union[str, UnsetType]] = UNSET) -> Optional[ModuleType]:
-    """ search, import and execute a Python module dynamically without adding it to sys.modules.
-
-    :param import_name:         dot-name of the module to import.
-    :param path:                optional file path of the module to import. if this arg is not specified or has the
-                                default value (:data:`UNSET`), then the path will be determined from the import name.
-                                specify ``None`` to prevent the module search.
-    :return:                    a reference to the loaded module or ``None`` if the module could not be imported.
-    """
-    if path is UNSET:
-        path = import_name.replace('.', os_path_sep)
-        path += PY_EXT if os_path_isfile(path + PY_EXT) else os_path_sep + PY_INIT
-    mod_ref = None
-
-    spec = importlib.util.spec_from_file_location(import_name, path)    # type: ignore # silly mypy
-    if isinstance(spec, ModuleSpec):
-        mod_ref = importlib.util.module_from_spec(spec)
-        # added isinstance and imported importlib.abc to suppress PyCharm+mypy inspections
-        if isinstance(spec.loader, importlib.abc.Loader):
-            try:
-                spec.loader.exec_module(mod_ref)
-            except FileNotFoundError:
-                mod_ref = None
-
-    return mod_ref
 
 
 def instantiate_config_parser() -> ConfigParser:
@@ -804,7 +780,7 @@ def load_dotenvs(from_module_path: bool = False):
     load_env_var_defaults(os.getcwd(), env_vars)
 
     if from_module_path and (file_name := stack_var('__file__')):
-        load_env_var_defaults(os_path_dirname(os_path_abspath(file_name)), env_vars)
+        load_env_var_defaults(os_path_dirname(os_path_abspath(cast(str, file_name))), env_vars)
 
 
 def load_env_var_defaults(start_dir: str, env_vars: EnvVarsType) -> EnvVarsType:
@@ -842,18 +818,19 @@ def load_env_var_defaults(start_dir: str, env_vars: EnvVarsType) -> EnvVarsType:
 
 
 def main_file_paths_parts(portion_name: str) -> tuple[tuple[str, ...], ...]:
-    """ determine tuple of supported main/version file name path part tuples.
+    """ determine possible/supported main/version file name and path parts, relative to the project root folder.
 
     :param portion_name:        portion or package name.
     :return:                    tuple of tuples of main/version file name path parts.
     """
     return (
-        ('main' + PY_EXT, ),
-        (PY_MAIN, ),
         (PY_INIT, ),
-        ('main', PY_INIT),          # django main project
+        (PY_MAIN, ),
+        ('main' + PY_EXT, ),
+        # ('main', PY_INIT),
         (portion_name + PY_EXT, ),
-        (portion_name, PY_INIT),
+        (portion_name, PY_INIT),    # django main project
+        # (portion_name, PY_MAIN),
     )
 
 
@@ -896,21 +873,20 @@ def mask_url(url: str, replacement: str = "¿¿¿") -> str:
     return urlunparse(parts)
 
 
-def module_attr(import_name: str, attr_name: str = "") -> Optional[Any]:
-    """ determine dynamically a reference to a module or to any attribute (variable/func/class) declared in the module.
+def module_attr(import_name: str, attr_name: str) -> Any | UnsetType | None:
+    """ determine dynamically a reference to any attribute (variable/func/class) declared in a module.
 
     :param import_name:         import-/dot-name of the distribution/module/package to load/import.
-    :param attr_name:           name of the attribute declared within the module. do not specify or pass an empty
-                                string to get/return a reference to the imported module instance.
-    :return:                    module instance or module attribute value
+    :param attr_name:           name of the attribute declared within the module.
+    :return:                    module attribute value,
                                 or None if the module got not found
                                 or UNSET if the module attribute doesn't exist.
 
     .. note:: a previously not imported module will *not* be added to `sys.modules` by this function.
 
     """
-    mod_ref = sys.modules.get(import_name, None) or import_module(import_name)
-    return getattr(mod_ref, attr_name, UNSET) if mod_ref and attr_name else mod_ref
+    mod_ref = sys.modules.get(import_name, None) or module_load(import_name)
+    return getattr(mod_ref, attr_name, UNSET) if isinstance(mod_ref, ModuleType) else None
 
 
 def module_file_path(local_object: Optional[Callable] = None) -> str:
@@ -935,6 +911,73 @@ def module_file_path(local_object: Optional[Callable] = None) -> str:
         except (AttributeError, Exception):                         # pylint: disable=broad-except # pragma: no cover
             file_path = ""
     return file_path
+
+
+def module_find(import_name: str) -> Union[str, list[str]]:
+    """ determine the file path of a Python module.
+
+    :param import_name:         dot-name of the module to find.
+    :return:                    absolute file path of the found module, else a list of error strings.
+    """
+    errors: list[str] = []
+    path = ""
+    try:
+        spec = importlib.util.find_spec(import_name)
+        if spec is None:
+            errors.append(f"find_spec({import_name=}) did not find any module spec")
+        elif spec.origin in (None, "", "built-in", "frozen"):
+            if spec.loader_state and spec.loader_state.filename:
+                path = spec.loader_state.filename
+            elif spec.submodule_search_locations:           # pragma: no cover
+                path = spec.submodule_search_locations[0]   # take 1st dir of Namespace package with multiple locations
+            else:
+                errors.append(f"path not available for {spec.origin or ""} module {import_name}")  # pragma: no cover
+        else:
+            # noinspection PyUnnecessaryCast
+            path = cast(str, spec.origin)
+    except (ValueError, Exception) as exc:  # pragma: no cover # pylint: disable=broad-exception-caught
+        errors.append(f"find_spec({import_name=}) raised {exc=}")
+
+    return errors or path
+
+
+def module_load(import_name: str, path: str | UnsetType | None = UNSET) -> ModuleType | list[str]:
+    """ search, import and execute a Python module dynamically without adding it to sys.modules.
+
+    :param import_name:         dot-name of the module to import.
+    :param path:                optional file path of the module to import. if this arg is not specified or has the
+                                default value (:data:`UNSET`), then the path will be determined from the import name.
+                                specify ``None`` to prevent the module search.
+    :return:                    a reference to the module if the module could be loaded, else a list of error strings.
+    """
+    errors: list[str] = []
+
+    if path is UNSET:
+        path = import_name.replace('.', os_path_sep)
+        if os_path_isfile(path + PY_EXT):
+            path += PY_EXT
+        elif os_path_isfile(os_path_join(path, PY_INIT)):
+            path = os_path_join(path, PY_INIT)
+        else:
+            path = _path_or_err if isinstance(_path_or_err := module_find(import_name), str) else None
+
+    mod_ref: ModuleType | list[str] = [f"unexpected error in load of module {import_name}"]
+    # noinspection PyUnnecessaryCast
+    spec = importlib.util.spec_from_file_location(import_name, cast(str | None, path), submodule_search_locations=[])
+    if isinstance(spec, ModuleSpec):
+        try:
+            mod_ref = importlib.util.module_from_spec(spec)
+            # added isinstance calls to suppress PyCharm+mypy inspections
+            if isinstance(spec.loader, importlib.abc.Loader) and isinstance(mod_ref, ModuleType):
+                spec.loader.exec_module(mod_ref)
+            else:
+                errors.append(f"spec.loader ({type(spec.loader)=} is not of importlib.abs.loader")  # pragma: no cover
+        except (FileNotFoundError, Exception) as exc:   # pragma: no cover # pylint: disable=broad-exception-caught
+            errors.append(f"module_from_spec/exec_module({spec=}) raised {exc=}")
+    else:
+        errors.append(f"spec_from_file_location({import_name=}) could not load module at {path=}")
+
+    return errors or mod_ref
 
 
 def module_name(*skip_modules: str, depth: int = 0) -> Optional[str]:
@@ -1203,7 +1246,7 @@ def project_main_file(import_name: str, project_path: str = "") -> str:
                                 sister project (under the same project parent folder).
     :return:                    absolute file path of the main module or empty string if no main/version file is found.
     """
-    *namespace_dirs, portion_name = import_name.split('.')
+    *namespace_dirs, portion_name = import_name.split('.')  # similar conversions done also by :class:`aedev.base.PyMo`
     project_name = ('_'.join(namespace_dirs) + '_' if namespace_dirs else "") + portion_name
     paths_parts = main_file_paths_parts(portion_name)
 
@@ -1547,11 +1590,12 @@ def write_file(file_path: str, content: Union[str, bytes],
 
 class ErrorMsgMixin:                                                # pylint: disable=too-few-public-methods
     """ mixin class providing sophisticated error message handling. """
-    _err_msg: str = ""
-    main_app = None
-    po = dpo = vpo = print
+    error_sep = "\n\n"          #: error messages separator (reading the :attr:`~ErrorMsgMixin.error_message` property)
+    main_app = None             #: main :class:`ae.core.AppBase` instance
+    po = dpo = vpo = print      #: default print functions for normal/debug/verbose console output
 
     def __init__(self):
+        self._errors: list[str] = []
         try:                                            # pragma: no cover
             from ae.core import main_app_instance       # type: ignore # pylint: disable=import-outside-toplevel
 
@@ -1571,10 +1615,10 @@ class ErrorMsgMixin:                                                # pylint: di
         """ error message string if an error occurred or an empty string if not.
 
         :getter:                return the accumulated error message of the recently occurred error(s).
-        :setter:                any assigned error message will be accumulated to recent error messages.
-                                pass an empty string to reset the error message.
+        :setter:                any assigned error message will be accumulated/added to recent error messages.
+                                assign an empty string to reset all the previously accumulated error messages.
         """
-        return self._err_msg
+        return self.error_sep.join(self._errors)
 
     @error_message.setter
     def error_message(self, next_err_msg: str):
@@ -1583,9 +1627,19 @@ class ErrorMsgMixin:                                                # pylint: di
                 self.vpo(f" .::. {next_err_msg}")
             else:
                 self.dpo(f" .::. {next_err_msg}")
-            self._err_msg += ("\n\n" if self._err_msg else "") + next_err_msg
+            self._errors.append(next_err_msg)
         else:
-            self._err_msg = ""
+            self._errors = []
+
+    # def flush_error_lines_to(self, callee: Callable[[str], None]):
+    #     """ pass all the collected error message lines
+    #
+    #     :param callee:          will be called with
+    #     :return:
+    #     """
+    #     for err_msg in self._errors:
+    #         callee(err_msg)
+    #     self._errors = []
 
 
 # platform-specific patches

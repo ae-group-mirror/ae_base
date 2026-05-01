@@ -26,16 +26,18 @@ from tests.conftest import skip_gitlab_ci
 
 # noinspection PyProtectedMember
 from ae.base import (
-    ASCII_TO_UNICODE, ASCII_UNICODE, BUILD_CONFIG_FILE, DOTENV_FILE_NAME, DOTENV_VAR_IN_VAL_MATCHER,
+    ASCII_TO_UNICODE, ASCII_UNICODE, BUILD_CONFIG_FILE,
+    DOTENV_FILE_NAME, DOTENV_VAR_IN_VAL_MATCHER,
     PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNICODE_TO_ASCII, UNSET, URI_SEP_STR, URI_SEP_UNICODE_CHAR,
     app_name_guess, ascii_str, build_config_variable_values, camel_to_snake,
     dedefuse, deep_dict_update, defuse, dummy_function, duplicates, env_str, evaluate_literal,
-    force_encoding, format_given, full_stack_trace, import_module, instantiate_config_parser, in_wd,
+    force_encoding, format_given, full_stack_trace, instantiate_config_parser, in_wd,
     late_env_var_resolver, load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, mask_url,
-    module_attr, module_file_path, module_name, norm_line_sep, norm_name, norm_path, now_str, on_ci_host,
-    os_host_name, os_local_ip, _os_platform, os_user_name, parse_dotenv, pep8_format, project_main_file, read_file,
-    round_traditional, sign, snake_to_camel, stack_frames, stack_var, stack_vars, str_ascii, sys_env_dict,
-    sys_env_text, to_ascii, url_failure, utc_datetime, write_file,
+    module_attr, module_file_path, module_find, module_load, module_name, norm_line_sep, norm_name, norm_path, now_str,
+    on_ci_host, os_host_name, os_local_ip, os_path_dirname, _os_platform, os_user_name,
+    parse_dotenv, pep8_format, project_main_file, read_file, round_traditional, sign, snake_to_camel,
+    stack_frames, stack_var, stack_vars,
+    str_ascii, sys_env_dict, sys_env_text, to_ascii, url_failure, utc_datetime, write_file,
     ErrorMsgMixin)
 
 tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>|*'()[]{}#^;&=$,~" + chr(127)
@@ -486,81 +488,6 @@ class TestBaseHelpers:
         with pytest.raises(ValueError):
             format_given("test text with placeholder}", {}, strict=True)     # missing opening curly bracket
 
-    def test_import_module_ae_base(self):
-        mod_ref = import_module('ae.base')
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'TESTS_FOLDER') == TESTS_FOLDER
-
-    def test_import_module_built_ins(self):
-        assert import_module('os') is None
-        assert import_module('textwrap') is None
-
-    def test_import_module_local_module(self, monkeypatch, tmp_path):
-        module = "mod_2_tst"
-        # noinspection PyUnnecessaryCast
-        mod_file = cast(str, os.path.join(str(tmp_path), module + PY_EXT))
-        write_file(mod_file, "mod_var = 'mod_var_val'")
-
-        mod_ref = import_module(module, path=mod_file)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
-
-        mod_ref = import_module(str(tmp_path) + '.' + module)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
-
-        mod_ref = import_module(module)
-        assert mod_ref is None
-
-        monkeypatch.chdir(str(tmp_path))
-
-        mod_ref = import_module(module, path=module + PY_EXT)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
-
-        mod_ref = import_module(module)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
-
-    def test_import_module_local_package(self, monkeypatch, tmp_path):
-        namespace = "zy"
-        portion = "por_2_tst"
-        pkg_root = os.path.join(str(tmp_path), namespace)
-        pkg_path = os.path.join(pkg_root, portion)
-        pkg_file = os.path.join(pkg_path, PY_INIT)
-
-        os.makedirs(pkg_path)
-        write_file(pkg_file, "pkg_var = 'pkg_var_val'")
-
-        mod_ref = import_module(portion, path=pkg_file)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-        mod_ref = import_module(namespace + '.' + portion, path=pkg_file)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-        mod_ref = import_module(str(tmp_path) + '.' + namespace + '.' + portion, path=pkg_file)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-        mod_ref = import_module(str(tmp_path) + '.' + namespace + '.' + portion)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-        monkeypatch.chdir(str(tmp_path))
-
-        mod_ref = import_module(namespace + '.' + portion)
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-        mod_ref = import_module(namespace + '.' + portion, path=os.path.relpath(pkg_file, str(tmp_path)))
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-    def test_import_module_not_exists(self):
-        assert import_module('not_existing_import_name') is None
-
     def test_instantiate_config_parser(self):
         cfg_parser = instantiate_config_parser()
         assert isinstance(cfg_parser, ConfigParser)
@@ -581,6 +508,7 @@ class TestBaseHelpers:
 
             late_env_var_resolver({}, {}, {'unresolvable_var': [('', '$', '{NOT_EXISTENT_VAR}', 'NOT_EXISTENT_VAR')]})
 
+            assert warnings_list is not None
             assert len(warnings_list) == 1
             assert "has unresolved environment variables in its value" in str(warnings_list[0].message)
 
@@ -592,6 +520,7 @@ class TestBaseHelpers:
 
             late_env_var_resolver(env_vars, env_vars, late_resolved)
 
+            assert warnings_list is not None
             assert len(warnings_list) == 1
             assert "ignoring recursive environment variable" in str(warnings_list[0].message)
 
@@ -731,15 +660,15 @@ class TestBaseHelpers:
         assert len(main_file_paths_parts(""))
         assert isinstance(main_file_paths_parts("")[0], tuple)
 
-        assert any('main' + PY_EXT in _ for _ in main_file_paths_parts(""))
+        assert ('main' + PY_EXT, ) in main_file_paths_parts("")
         assert any(PY_MAIN in _ for _ in main_file_paths_parts(""))
         assert any(PY_INIT in _ for _ in main_file_paths_parts(""))
+
         por_name = "portion_tst_name"
+        assert ('main' + PY_EXT, ) in main_file_paths_parts(por_name)
+        assert (por_name, PY_INIT) in main_file_paths_parts(por_name)
         assert any(por_name in _ for _ in main_file_paths_parts(por_name))
         assert any(por_name + PY_EXT in _ for _ in main_file_paths_parts(por_name))
-
-        assert ('main', PY_INIT) in main_file_paths_parts("")
-        assert (por_name, PY_INIT) in main_file_paths_parts(por_name)
 
     def test_mask_secrets(self):
         assert mask_secrets({}) == {}
@@ -1583,7 +1512,7 @@ class TestModuleHelpers:
             args = (1, '2')
             kwargs = dict(kwarg1=1, kwarg2='2')
 
-            ret = module_attr(namespace + '.' + mod_name, attr_name=att_name)
+            ret = module_attr(namespace + '.' + mod_name, att_name)
             assert ret
             assert callable(type(ret))
 
@@ -1598,7 +1527,7 @@ class TestModuleHelpers:
 
         # test already imported module
         # noinspection PyUnreachableCode
-        callee = module_attr('textwrap', attr_name='indent')
+        callee = module_attr('textwrap', 'indent')
         assert callable(callee)
         assert callee is textwrap.indent
 
@@ -1611,7 +1540,7 @@ class TestModuleHelpers:
         try:
             write_file(module_file, f"def {att_name}(arg1, args2, kwarg1='default'):\n    return arg1, arg2, kwarg1\n")
 
-            callee = module_attr(namespace + '.' + mod_name, attr_name=att_name)
+            callee = module_attr(namespace + '.' + mod_name, att_name)
             assert callable(callee)
 
             args = (1, '2')
@@ -1625,25 +1554,25 @@ class TestModuleHelpers:
 
     def test_module_attr_imported(self):
         """ test with module w/ and w/o namespace. """
-        assert isinstance(module_attr('os'), ModuleType)
-        assert isinstance(module_attr('textwrap'), ModuleType)
-        assert isinstance(module_attr('ae.base'), ModuleType)
+        assert isinstance(module_attr('os', 'path'), ModuleType)
+        assert module_attr('textwrap', 'dedent') is textwrap.dedent
+        assert callable(module_attr('ae.base', 'module_attr'))
 
     def test_module_attr_module_ref(self, monkeypatch, tmp_path):
         namespace = str(tmp_path)
         mod_name = 'test_module_name'
+        attr_nam = 'module_var'
+        attr_val = 369
         # noinspection PyUnnecessaryCast
         module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
 
-        write_file(module_file, "# empty module")
+        write_file(module_file, f"# unregistered tst module\n{attr_nam} = {attr_val}")
 
-        ret = module_attr(namespace + '.' + mod_name)
-        assert isinstance(ret, ModuleType)
+        assert module_attr(namespace + '.' + mod_name, attr_nam) == attr_val
 
         monkeypatch.chdir(namespace)
 
-        ret = module_attr(mod_name)
-        assert isinstance(ret, ModuleType)
+        assert module_attr(mod_name, attr_nam) == attr_val
 
     def test_module_attr_not_exists_attr(self, monkeypatch, tmp_path):
         """ first test with a non-existing module, second test with a non-existing function. """
@@ -1654,27 +1583,125 @@ class TestModuleHelpers:
         module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
         write_file(module_file, f"""def {att_name}(*args, **kwargs):\n    pass\n""")
 
-        ret = module_attr(namespace + '.' + mod_name, attr_name="not_existing_func_or_attr")
-        assert ret is UNSET
+        assert module_attr(namespace + '.' + mod_name, "not_existing_func_or_attr") is UNSET
 
-        ret = module_attr(namespace + '.' + mod_name, attr_name=att_name)
-        assert callable(ret)
+        assert callable(module_attr(namespace + '.' + mod_name, att_name))
 
         monkeypatch.chdir(namespace)
 
-        ret = module_attr(mod_name)
-        assert ret
-        assert type(ret) is ModuleType
+        assert module_attr(mod_name, "") is UNSET
+        assert module_attr(mod_name, "not-existing-attr-name") is UNSET
 
     def test_module_attr_not_exists_module(self):
-        """ first test with a non-existing module, second test with a non-existing function. """
-        mod_name = 'non_existing_test_module_name'
-        att_name = 'non_existing_test_module_func'
-        assert module_attr(mod_name, attr_name=att_name) is None
+        assert module_attr('non_existing_test_module_name', 'non_existing_test_module_func') is None
 
     def test_module_file_path(self):
         assert module_file_path() == __file__
         assert module_file_path(lambda: 0) == __file__
+
+    def test_module_find_builtins(self):
+        path_or_err = module_find('textwrap')
+        assert isinstance(path_or_err, str)
+
+        path_or_err = module_find('os.path')
+        assert isinstance(path_or_err, str)
+
+        path_or_err = module_find('os')
+        assert isinstance(path_or_err, str)
+
+    def test_module_find_local_module(self, monkeypatch, tmp_path):
+        module = "tst_mod_nam"
+        mod_file = os.path.join(str(tmp_path), module + PY_EXT)
+        write_file(mod_file, f"# module_find test module\nsome_var = 'some_var_val'")
+
+        assert isinstance(module_find(module), list)    # not found because neither under sys.path nor in sys.modules
+
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        mod_path = module_find(module)
+
+        assert isinstance(mod_path, str)
+
+    def test_module_load_builtins(self):
+        assert isinstance(module_load('textwrap'), ModuleType)
+        assert isinstance(module_load('os.path'), ModuleType)
+        assert isinstance(module_load('os'), ModuleType)
+
+    def test_module_load_local_module(self, monkeypatch, tmp_path):
+        module = "mod_2_tst"
+        mod_file = os.path.join(str(tmp_path), module + PY_EXT)
+        write_file(mod_file, "mod_var = 'mod_var_val'")
+
+        mod_ref = module_load(module, path=os_path_dirname(mod_file))
+
+        assert isinstance(mod_ref, list)    # load error
+        assert isinstance(mod_ref[0], str)
+
+        mod_ref = module_load(str(tmp_path) + '.' + module)
+
+        assert isinstance(mod_ref, ModuleType)
+        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
+
+        mod_ref = module_load(module)
+
+        assert isinstance(mod_ref, list)    # load error
+        assert isinstance(mod_ref[0], str)
+
+        monkeypatch.chdir(str(tmp_path))
+
+        mod_ref = module_load(module, path=module + PY_EXT)
+
+        assert isinstance(mod_ref, ModuleType)
+        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
+
+        mod_ref = module_load(module)
+
+        assert isinstance(mod_ref, ModuleType)
+        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
+
+    def test_module_load_local_package(self, monkeypatch, tmp_path):
+        namespace = "zy"
+        portion = "por_2_tst"
+
+        pkg_path = os.path.join(str(tmp_path), namespace, portion)
+        pkg_file = os.path.join(pkg_path, PY_INIT)
+        write_file(pkg_file, "pkg_var = 'pkg_var_val'", make_dirs=True)
+
+        mod_ref = module_load(portion, path=pkg_path)
+
+        assert isinstance(mod_ref, list)
+        assert isinstance(mod_ref[0], str)
+
+        mod_ref = module_load(namespace + '.' + portion, path=os_path_dirname(pkg_path))
+
+        assert isinstance(mod_ref, list)
+        assert isinstance(mod_ref[0], str)
+
+        mod_ref = module_load(str(tmp_path) + '.' + namespace + '.' + portion, path=pkg_path)
+
+        assert isinstance(mod_ref, list)
+        assert isinstance(mod_ref[0], str)
+
+        mod_ref = module_load(str(tmp_path) + '.' + namespace + '.' + portion)
+
+        assert isinstance(mod_ref, ModuleType)
+        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+        monkeypatch.chdir(str(tmp_path))
+
+        mod_ref = module_load(namespace + '.' + portion)
+
+        assert isinstance(mod_ref, ModuleType)
+        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+        mod_ref = module_load(namespace + '.' + portion, path=os.path.relpath(pkg_file, str(tmp_path)))
+
+        assert isinstance(mod_ref, ModuleType)
+        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
+
+    def test_module_load_not_exists(self):
+        assert (err_or_mod := module_load('not_existing_import_name'))
+        assert isinstance(err_or_mod, list)
 
     def test_module_name(self):
         assert module_name() == 'test_base'
