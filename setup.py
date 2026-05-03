@@ -1,5 +1,5 @@
 # THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.77
-""" setup of ae namespace module portion base: basic constants, helper functions and context managers. """
+""" setup of ae namespace module portion base: basic constants, helper functions, classes and context managers. """
 import sys
 # noinspection PyUnresolvedReferences
 import pathlib
@@ -22,7 +22,7 @@ setup_kwargs = {
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Typing :: Typed',
     ],
-    'description': 'ae namespace module portion base: basic constants, helper functions and context managers',
+    'description': 'ae namespace module portion base: basic constants, helper functions, classes and context managers',
     'extras_require': {
         'dev': [
             'aedev_project_tpls',
@@ -73,7 +73,7 @@ setup_kwargs = {
     },
     'python_requires': '>=3.12',
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.82',
+    'version': '0.3.83',
     'zip_safe': True,
 }
 

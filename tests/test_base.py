@@ -5,17 +5,13 @@ import socket
 import ssl
 import string
 import sys
-import tempfile
 import textwrap
 import time
 import timeit
-import warnings
 
 from collections import OrderedDict
-from configparser import ConfigParser
 # noinspection PyProtectedMember
 from http.client import HTTPMessage
-from types import ModuleType
 from typing import cast, Any, Optional
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
@@ -24,78 +20,26 @@ import pytest
 
 from tests.conftest import skip_gitlab_ci
 
-# noinspection PyProtectedMember
+
 from ae.base import (
-    ASCII_TO_UNICODE, ASCII_UNICODE, BUILD_CONFIG_FILE,
-    DOTENV_FILE_NAME, DOTENV_VAR_IN_VAL_MATCHER,
-    PY_EXT, PY_INIT, PY_MAIN, TESTS_FOLDER, UNICODE_TO_ASCII, UNSET, URI_SEP_STR, URI_SEP_UNICODE_CHAR,
-    app_name_guess, ascii_str, build_config_variable_values, camel_to_snake,
-    dedefuse, deep_dict_update, defuse, dummy_function, duplicates, env_str, evaluate_literal,
-    force_encoding, format_given, full_stack_trace, instantiate_config_parser, in_wd,
-    late_env_var_resolver, load_env_var_defaults, load_dotenvs, main_file_paths_parts, mask_secrets, mask_url,
-    module_attr, module_file_path, module_find, module_load, module_name, norm_line_sep, norm_name, norm_path, now_str,
-    on_ci_host, os_host_name, os_local_ip, os_path_dirname, _os_platform, os_user_name,
-    parse_dotenv, pep8_format, project_main_file, read_file, round_traditional, sign, snake_to_camel,
-    stack_frames, stack_var, stack_vars,
-    str_ascii, sys_env_dict, sys_env_text, to_ascii, url_failure, utc_datetime, write_file,
-    ErrorMsgMixin)
+    ASCII_TO_UNICODE, ASCII_UNICODE,
+    TESTS_FOLDER, UNICODE_TO_ASCII, UNSET, URI_SEP_STR, URI_SEP_UNICODE_CHAR,
+    ascii_dec_str, ascii_enc_lit, camel_to_snake, dedefuse, deep_dict_update, defuse, dummy_function, duplicates,
+    env_str, evaluate_literal, force_encoding, format_given, in_wd, mask_secrets, mask_url,
+    norm_line_sep, norm_name, norm_path, now_str, on_ci_host,
+    pep8_format, read_file, round_traditional, sign, snake_to_camel,
+    to_ascii, url_failure, utc_datetime, write_file)
+
+
+tst_uni_str = "äáàâÄÁÀÂëéèêËÉÈÊïíìîÏÍÌÎńǹñŃǸÑöóòôÖÓÒÔßüúùûÜÚÙÛźẑŹẐ"
 
 tst_uri1 = "schema://user:pwd@domain/path_root/path_sub\\path+file% Üml?ä|ït.path_ext*\"<>|*'()[]{}#^;&=$,~" + chr(127)
 tst_fna1 = "schema⫻user﹕pwd﹫domain⁄path_root⁄path_sub﹨path﹢file﹪␣Üml﹖ä।ït.path_ext﹡＂⟨⟩।﹡‘⟮⟯⟦⟧﹛﹜﹟＾﹔﹠﹦﹩﹐~␡"
 tst_uri2 = "test control chars" + "".join(chr(_) for _ in range(1, 32))
 tst_fna2 = "test␣control␣chars␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟"
 
-DOTENV_VAR_NAME = 'env_var_nam1'
-DOTENV_VAR_VAL = 'value of env var'
-DOTENV_LATE_VAR_PRE = 'late_var_nam'
-DOTENV_LATE_VAL_PRE = '-late Pre Val'
-DOTENV_DIR_NAME = 'fdr'
-DOTENV_FULL_DIRS = (0, 1, 3)
-DOTENV_DIR_RANGE = 6
-DOTENV_LIT_VALUES = {}
-DOTENV_LATE_VALUES = {}
-for _level in range(DOTENV_DIR_RANGE):
-    if _level in DOTENV_FULL_DIRS:
-        _val_lit = "".join("$" + ("{" if _ % 2 else "") + DOTENV_LATE_VAR_PRE + str(_) + ("}" if _ % 2 else "")
-                           for _ in range(_level) if _ in DOTENV_FULL_DIRS)
-        DOTENV_LIT_VALUES[_level] = DOTENV_LATE_VAL_PRE + _val_lit + "  " + str(_level)
-        DOTENV_LATE_VALUES[_level] = DOTENV_LATE_VAL_PRE + "".join(
-                DOTENV_LATE_VALUES[_var_level] for _var_level in range(_level) if _var_level in DOTENV_FULL_DIRS
-            ) + "  " + str(_level)
 
-
-@pytest.fixture
-def os_env_test_env():
-    """ create .env files to test and backup os.environ. """
-    with tempfile.TemporaryDirectory() as tmp_path:
-        for level in range(DOTENV_DIR_RANGE):
-            file_path = os.path.join(tmp_path, *((DOTENV_DIR_NAME, ) * level))
-            os.makedirs(file_path, exist_ok=True)
-            if level in DOTENV_FULL_DIRS:
-                content = (os.linesep + DOTENV_VAR_NAME + "='" + DOTENV_VAR_VAL + str(level) + "'" +
-                           os.linesep + DOTENV_LATE_VAR_PRE + str(level) + '="' + DOTENV_LIT_VALUES[level] + '"' +
-                           os.linesep + "RecursiveWithLowerCase = $RecursiveWithLowerCase")
-                write_file(os.path.join(file_path, DOTENV_FILE_NAME), content)
-
-        old_env = os.environ
-        os.environ = old_env.copy()
-
-        yield tmp_path
-
-        os.environ = old_env
-
-
-module_test_var = 'module_test_var_val'   # used for stack_var()/try_exec() tests
-
-
-def test_unset_truthiness_and_null_length():
-    assert not UNSET
-    assert bool(UNSET) is False
-
-    assert len(UNSET) == 0
-
-
-def test_proof_os_path_shortcuts_performance_win():
+def test_proof_os_path_join_shortcut_performance_win():
     att_call_setup = textwrap.dedent("""
     import os
     path1, path2, path3 = "folder1", "folder2", "file.tst"
@@ -110,143 +54,63 @@ def test_proof_os_path_shortcuts_performance_win():
     time_att = timeit.timeit(att_call_code, setup=att_call_setup, number=3_000_000)
     time_sho = timeit.timeit(sho_call_code, setup=sho_call_setup, number=3_000_000)
 
-    assert time_sho < time_att or sys.version_info[:2] == (3, 12)
-    print(f"\n¡!¡!¡! os_path_* shortcuts are ~{((time_att - time_sho) / time_att) * 100:.2f}% faster")
+    assert time_sho < time_att or sys.version_info[:2] == (3, 12)  # sometimes equal/not-faster in Python 3.12
+    print(f"\n¡!¡!¡! os_path_join shortcut is ~{((time_att - time_sho) / time_att) * 100:.2f}% faster")
 
 
-class TestErrorMsgMixin:
-    def test_instantiation(self):
-        ins = ErrorMsgMixin()
-        assert ins
-        assert ins.main_app is None     # in test env is no console/gui app available
-        assert ins.po is ins.dpo is ins.vpo is print
+def test_proof_os_path_sep_shortcut_performance_win():
+    att_call_setup = textwrap.dedent("""
+    import os
+    """)
+    sho_call_setup = att_call_setup + textwrap.dedent("""
+    import os
+    os_path_sep = os.path.sep
+    """)
 
-    @skip_gitlab_ci
-    def test_instantiation_locally(self):
-        with patch('ae.core.main_app_instance', lambda: None):  # ae.core not available on CI(removed pjm from tst_reqs)
-            ins = ErrorMsgMixin()
-            assert ins
-            assert ins.main_app is None
-            assert ins.po is ins.dpo is ins.vpo is print
+    att_call_code = "var = os.path.sep"
+    sho_call_code = "var = os_path_sep"
 
-        class _AppMock(ErrorMsgMixin):
-            main_app = None
+    time_att = timeit.timeit(att_call_code, setup=att_call_setup, number=3_000_000)
+    time_sho = timeit.timeit(sho_call_code, setup=sho_call_setup, number=3_000_000)
 
-            @staticmethod
-            def po():
-                """ po() mock """
-                return "po"
-
-            @staticmethod
-            def dpo():
-                """ dpo() mock """
-                return "dpo"
-
-            @staticmethod
-            def vpo():
-                """ vpo() mock """
-                return "vpo"
-
-        app_ins = _AppMock()
-
-        with patch('ae.core.main_app_instance', lambda: app_ins):
-            ins = ErrorMsgMixin()
-            assert ins.main_app is app_ins
-            assert ins.po is not print
-            assert ins.po() == "po"
-            assert ins.dpo is not print
-            assert ins.dpo() == "dpo"
-            assert ins.vpo is not print
-            assert ins.vpo() == "vpo"
-
-    def test_error_message_property(self):
-        ins = ErrorMsgMixin()
-        assert ins.error_message == ""
-
-        err_msg = "set new error message"
-        ins.error_message = err_msg
-        assert ins.error_message == err_msg
-
-        err_msg2 = "added error message"
-        ins.error_message = err_msg2
-        assert err_msg in ins.error_message
-        assert err_msg2 in ins.error_message
-
-        ins.error_message = ""
-        assert ins.error_message == ""
-
-    def test_error_message_property_for_warnings(self):
-        ins = ErrorMsgMixin()
-
-        err_msg = "error message with the word warning"
-        ins.error_message = err_msg
-        ins.error_message = "another message"
-        assert err_msg in ins.error_message
+    assert time_sho < time_att
+    print(f"\n¡!¡!¡! os_path_sep shortcut is ~{((time_att - time_sho) / time_att) * 100:.2f}% faster")  # 40-50% faster!
 
 
 class TestBaseHelpers:
-    def test_app_name_guess(self):
-        assert app_name_guess()     # app.exe name in pytest returning '_jb_pytest_runner'(PyCharm)/'__main__'(console)
-        assert app_name_guess() != 'main'
-        assert app_name_guess() == 'unguessable'
+    def test_ascii_dec_str(self):
+        assert isinstance(ascii_dec_str(ascii_enc_lit("tst")), str)
 
-    def test_ascii_str(self):
-        assert isinstance(ascii_str(""), str)
+        assert ascii_dec_str(ascii_enc_lit("tst")) == "tst"
 
-        uni_str = "äÄßéÉíÍñÑòÒùÙ"
-        assert all(ord(_) >= 128 for _ in uni_str)
-        assert all(ord(_) < 128 for _ in ascii_str(uni_str))
+        assert ascii_dec_str(ascii_enc_lit(tst_uni_str)) == tst_uni_str
+
+        uni_str = "".join(_uco for _asc, _uco in ASCII_UNICODE)
+        assert ascii_dec_str(ascii_enc_lit(uni_str)) == uni_str
+
+        asc_str = "".join(_asc for _asc, _uco in ASCII_UNICODE)
+        assert ascii_dec_str(ascii_enc_lit(asc_str)) == asc_str
+
+    def test_ascii_dec_str_errors(self):
+        with pytest.raises(SyntaxError):
+            ascii_dec_str("")
+
+        with pytest.raises(SyntaxError):
+            ascii_dec_str("any tst string not detected as string literal (not encoded/converted via ascii_enc_lit())")
+
+    def test_ascii_enc_lit(self):
+        assert isinstance(ascii_enc_lit(""), str)
+
+        assert all(ord(_) >= 128 for _ in tst_uni_str)
+        assert all(ord(_) < 128 for _ in ascii_enc_lit(tst_uni_str))
 
         uni_str = "".join(_uco for _asc, _uco in ASCII_UNICODE)
         assert any(ord(_) >= 128 for _ in uni_str)
-        assert all(ord(_) < 128 for _ in ascii_str(uni_str))
+        assert all(ord(_) < 128 for _ in ascii_enc_lit(uni_str))
 
         asc_str = "".join(_asc for _asc, _uco in ASCII_UNICODE)
         assert any(ord(_) < 128 for _ in asc_str)
-        assert all(ord(_) < 128 for _ in ascii_str(asc_str))
-
-    def test_str_ascii(self):
-        assert isinstance(str_ascii(ascii_str("tst")), str)
-
-        assert str_ascii(ascii_str("tst")) == "tst"
-        uni_str = "äÄßéÉíÍñÑòÒùÙ"
-        assert str_ascii(ascii_str(uni_str)) == uni_str
-
-        uni_str = "".join(_uco for _asc, _uco in ASCII_UNICODE)
-        assert str_ascii(ascii_str(uni_str)) == uni_str
-
-        asc_str = "".join(_asc for _asc, _uco in ASCII_UNICODE)
-        assert str_ascii(ascii_str(asc_str)) == asc_str
-
-    def test_str_ascii_errors(self):
-        with pytest.raises(SyntaxError):
-            str_ascii("")
-
-        with pytest.raises(SyntaxError):
-            str_ascii("any tst string not encoded/converted via ascii_str()")
-
-    def test_build_config_variable_values_with_spec(self):
-        try:
-            with open(BUILD_CONFIG_FILE, "w") as file_handle:
-                file_handle.write("""[app]\nexisting = tst""")
-            existing, not_existing = build_config_variable_values(
-                ('existing', ""),
-                ('not_existing', "default_value")
-            )
-            assert existing == "tst"
-            assert not_existing == "default_value"
-        finally:
-            if os.path.exists(BUILD_CONFIG_FILE):
-                os.remove(BUILD_CONFIG_FILE)
-
-    def test_build_config_variable_values_no_spec(self):
-        assert not os.path.exists(BUILD_CONFIG_FILE)
-        existing, not_existing = build_config_variable_values(
-            ('not_existing1', "default_value1"),
-            ('not_existing2', "default_value2")
-        )
-        assert existing == "default_value1"
-        assert not_existing == "default_value2"
+        assert all(ord(_) < 128 for _ in ascii_enc_lit(asc_str))
 
     def test_camel_to_snake(self):
         assert camel_to_snake("AnyCamelCaseName") == "_Any_Camel_Case_Name"
@@ -382,11 +246,11 @@ class TestBaseHelpers:
         lst = ['a', 3, 'bb', 3, 'ccc', 3]
         assert duplicates(lst) == [3, 3]
 
-    def test_env_var_unconverted(self):
+    def test_env_str_unconverted(self):
         ev = 'PATH'
         assert env_str(ev)
 
-    def test_env_var_case_conversions(self):
+    def test_env_str_case_conversions(self):
         ev = 'path'
         assert env_str(ev, convert_name=True)
 
@@ -400,7 +264,7 @@ class TestBaseHelpers:
         os.environ['_CAMEL_CASE'] = vv
         assert env_str(ev, convert_name=True) == vv
 
-    def test_env_var_non_alpha_num_conversions(self):
+    def test_env_str_non_alpha_num_conversions(self):
         ev = 'non\talpha\\num/chars-69'
         vv = "test variable value"
         os.environ['NON_ALPHA_NUM_CHARS_69'] = vv
@@ -449,23 +313,24 @@ class TestBaseHelpers:
             force_encoding(bw)
 
     def test_force_encoding_umlaut(self):
-        s = 'äöü'
-        assert force_encoding(s) == '\\xe4\\xf6\\xfc'
+        tst_str = "äöü"
+        enc_str = "\\xe4\\xf6\\xfc"
+        assert force_encoding(tst_str) == enc_str
 
-        assert force_encoding(s, encoding='utf-8') == s
-        assert force_encoding(s, encoding='utf-16') == s
-        assert force_encoding(s, encoding='cp1252') == s
+        assert force_encoding(tst_str, encoding='utf-8') == tst_str
+        assert force_encoding(tst_str, encoding='utf-16') == tst_str
+        assert force_encoding(tst_str, encoding='cp1252') == tst_str
 
-        assert force_encoding(s, encoding='utf-8', errors='strict') == s
-        assert force_encoding(s, encoding='utf-8', errors='replace') == s
-        assert force_encoding(s, encoding='utf-8', errors='backslashreplace') == s
-        assert force_encoding(s, encoding='utf-8', errors='xmlcharrefreplace') == s
-        assert force_encoding(s, encoding='utf-8', errors='ignore') == s
-        assert force_encoding(s, encoding='utf-8', errors='') == s
+        assert force_encoding(tst_str, encoding='utf-8', errors='strict') == tst_str
+        assert force_encoding(tst_str, encoding='utf-8', errors='replace') == tst_str
+        assert force_encoding(tst_str, encoding='utf-8', errors='backslashreplace') == tst_str
+        assert force_encoding(tst_str, encoding='utf-8', errors='xmlcharrefreplace') == tst_str
+        assert force_encoding(tst_str, encoding='utf-8', errors='ignore') == tst_str
+        assert force_encoding(tst_str, encoding='utf-8', errors='') == tst_str
 
         with pytest.raises(TypeError):
             # noinspection PyInvalidCast
-            assert force_encoding(s, encoding=cast(str, None)) == '\\xe4\\xf6\\xfc'
+            assert force_encoding(tst_str, encoding=cast(str, None)) == enc_str
 
     def test_format_given(self):
         assert format_given("test text with {placeholder}", {}) == "test text with {placeholder}"
@@ -488,187 +353,12 @@ class TestBaseHelpers:
         with pytest.raises(ValueError):
             format_given("test text with placeholder}", {}, strict=True)     # missing opening curly bracket
 
-    def test_instantiate_config_parser(self):
-        cfg_parser = instantiate_config_parser()
-        assert isinstance(cfg_parser, ConfigParser)
-        assert cfg_parser.optionxform is str
-
     def test_in_wd(self, tmp_path):
         old_dir = os.getcwd()
         tst_dir = str(tmp_path)
         with in_wd(tst_dir):
             assert os.getcwd() == tst_dir
         assert os.getcwd() == old_dir
-
-    def test_late_env_var_resolver_errors_and_warnings(self):
-        # all branches in this follow-up/resolve function are already covered by the test_load_env_var_defaults*() tests
-        late_env_var_resolver({}, {}, {})
-
-        with warnings.catch_warnings(record=True) as warnings_list:
-
-            late_env_var_resolver({}, {}, {'unresolvable_var': [('', '$', '{NOT_EXISTENT_VAR}', 'NOT_EXISTENT_VAR')]})
-
-            assert warnings_list is not None
-            assert len(warnings_list) == 1
-            assert "has unresolved environment variables in its value" in str(warnings_list[0].message)
-
-        with warnings.catch_warnings(record=True) as warnings_list:
-            var_nam = "RECURSIVE_VAR_Name"
-            var_val = "infinite-val-grow$" + var_nam
-            late_resolved = {var_nam: DOTENV_VAR_IN_VAL_MATCHER.findall(var_val)}
-            env_vars = {var_nam: var_val}
-
-            late_env_var_resolver(env_vars, env_vars, late_resolved)
-
-            assert warnings_list is not None
-            assert len(warnings_list) == 1
-            assert "ignoring recursive environment variable" in str(warnings_list[0].message)
-
-    def test_load_dotenvs(self, os_env_test_env):
-        assert DOTENV_VAR_NAME not in os.environ
-        load_dotenvs()
-        assert DOTENV_VAR_NAME not in os.environ
-
-    def test_load_dotenvs_from_module_path(self, os_env_test_env):
-        assert DOTENV_VAR_NAME not in os.environ
-        load_dotenvs(from_module_path=True)
-        assert DOTENV_VAR_NAME not in os.environ
-
-    def test_load_env_var_defaults_errors(self):
-        with pytest.raises(TypeError):
-            # noinspection PyArgumentList
-            load_env_var_defaults()
-
-        with pytest.raises(TypeError):
-            # noinspection PyTypeChecker
-            load_env_var_defaults(None, None)   # STRANGE: raising TypeError in Python 3.9.21/local but not in 3.9.23/CI
-            # noinspection PyArgumentList
-            load_env_var_defaults(None)         # HOTFIX ensuring failure - could not find any changelog notes
-
-        # noinspection PyTypeChecker
-        load_env_var_defaults("inv:_ file path", ())  # NO ERROR EXCEPTIONS on these invalid arg values!!!
-
-    def test_load_env_var_defaults_not_loaded(self):
-        env_vars = {}
-
-        load_env_var_defaults('/', env_vars)
-        assert DOTENV_VAR_NAME not in env_vars
-
-        load_env_var_defaults('.', env_vars)
-        assert DOTENV_VAR_NAME not in env_vars
-
-    def test_load_env_var_defaults_not_loaded_in_os_environ(self, os_env_test_env):
-        assert DOTENV_VAR_NAME not in os.environ
-
-        load_env_var_defaults('/', os.environ)
-        assert DOTENV_VAR_NAME not in os.environ
-
-        load_env_var_defaults('.', os.environ)
-        assert DOTENV_VAR_NAME not in os.environ
-
-        load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME,) * 5)), os.environ)
-        assert DOTENV_VAR_NAME not in os.environ
-
-        load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME,) * 6)), os.environ)  # too-deep path
-        assert DOTENV_VAR_NAME not in os.environ
-
-    def test_load_env_var_defaults_load_start_parent_first_no_chain(self, monkeypatch, os_env_test_env):
-        monkeypatch.chdir(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME,) * 4)))
-
-        loaded = load_env_var_defaults("", os.environ)
-
-        assert DOTENV_VAR_NAME in loaded
-        assert loaded[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '3'
-        assert DOTENV_VAR_NAME in os.environ
-        assert os.environ[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '3'
-
-    def test_load_env_var_defaults_load_start_first_no_chain(self, os_env_test_env):
-        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME,) * 3)), os.environ)
-
-        assert DOTENV_VAR_NAME in loaded
-        assert loaded[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '3'
-        assert DOTENV_VAR_NAME in os.environ
-        assert os.environ[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '3'
-
-    def test_load_env_var_defaults_load_start_parent_first_in_chain(self, os_env_test_env):
-        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME,) * 2)), os.environ)
-
-        assert DOTENV_VAR_NAME in loaded
-        assert loaded[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '1'
-        assert DOTENV_VAR_NAME in os.environ
-        assert os.environ[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '1'
-
-    def test_load_env_var_defaults_load_start_no_parent_first_in_chain(self, os_env_test_env):
-        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME,) * 1)), os.environ)
-
-        assert DOTENV_VAR_NAME in loaded
-        assert loaded[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '1'
-        assert DOTENV_VAR_NAME in os.environ
-        assert os.environ[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '1'
-
-    def test_load_env_var_defaults_load_start_on_second_within_chain(self, os_env_test_env):
-        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME,) * 0)), os.environ)
-
-        assert DOTENV_VAR_NAME in loaded
-        assert loaded[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '0'
-        assert DOTENV_VAR_NAME in os.environ
-        assert os.environ[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '0'
-
-    def test_load_env_var_defaults_resolve_vars_late(self, os_env_test_env):
-        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME,) * 1)), os.environ)
-
-        assert DOTENV_LATE_VAR_PRE + '0' in loaded
-        assert DOTENV_LATE_VAR_PRE + '0' in os.environ
-        assert DOTENV_LATE_VAR_PRE + '1' in loaded
-        assert DOTENV_LATE_VAR_PRE + '1' in os.environ
-        assert DOTENV_LATE_VAR_PRE + '3' not in loaded
-        assert DOTENV_LATE_VAR_PRE + '3' not in os.environ
-        assert loaded[DOTENV_LATE_VAR_PRE + '0'] == DOTENV_LATE_VALUES[0]
-        assert os.environ[DOTENV_LATE_VAR_PRE + '0'] == DOTENV_LATE_VALUES[0]
-        assert loaded[DOTENV_LATE_VAR_PRE + '1'] == DOTENV_LATE_VALUES[1]
-        assert os.environ[DOTENV_LATE_VAR_PRE + '1'] == DOTENV_LATE_VALUES[1]
-
-    def test_load_env_var_defaults_resolve_vars_late_with_gap_and_closed_gap(self, os_env_test_env):
-        empty_env = {}
-
-        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME, ) * 3)), empty_env)
-
-        assert DOTENV_LATE_VAR_PRE + '0' not in loaded
-        assert DOTENV_LATE_VAR_PRE + '0' not in empty_env
-        assert DOTENV_LATE_VAR_PRE + '1' not in loaded
-        assert DOTENV_LATE_VAR_PRE + '1' not in empty_env
-        assert DOTENV_LATE_VAR_PRE + '3' in loaded
-        assert DOTENV_LATE_VAR_PRE + '3' in empty_env
-        assert loaded[DOTENV_LATE_VAR_PRE + '3'] == DOTENV_LIT_VALUES[3]
-        assert empty_env[DOTENV_LATE_VAR_PRE + '3'] == DOTENV_LIT_VALUES[3]
-
-        write_file(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME, ) * 2), DOTENV_FILE_NAME), "# closing level 2 gap")
-
-        loaded = load_env_var_defaults(os.path.join(os_env_test_env, *((DOTENV_DIR_NAME, ) * 3)), os.environ)
-
-        assert DOTENV_LATE_VAR_PRE + '0' in loaded
-        assert DOTENV_LATE_VAR_PRE + '0' in os.environ
-        assert DOTENV_LATE_VAR_PRE + '1' in loaded
-        assert DOTENV_LATE_VAR_PRE + '1' in os.environ
-        assert DOTENV_LATE_VAR_PRE + '3' in loaded
-        assert DOTENV_LATE_VAR_PRE + '3' in os.environ
-        assert loaded[DOTENV_LATE_VAR_PRE + '3'] == DOTENV_LATE_VALUES[3]
-        assert os.environ[DOTENV_LATE_VAR_PRE + '3'] == DOTENV_LATE_VALUES[3]
-
-    def test_main_file_paths_parts(self):
-        assert isinstance(main_file_paths_parts(""), tuple)
-        assert len(main_file_paths_parts(""))
-        assert isinstance(main_file_paths_parts("")[0], tuple)
-
-        assert ('main' + PY_EXT, ) in main_file_paths_parts("")
-        assert any(PY_MAIN in _ for _ in main_file_paths_parts(""))
-        assert any(PY_INIT in _ for _ in main_file_paths_parts(""))
-
-        por_name = "portion_tst_name"
-        assert ('main' + PY_EXT, ) in main_file_paths_parts(por_name)
-        assert (por_name, PY_INIT) in main_file_paths_parts(por_name)
-        assert any(por_name in _ for _ in main_file_paths_parts(por_name))
-        assert any(por_name + PY_EXT in _ for _ in main_file_paths_parts(por_name))
 
     def test_mask_secrets(self):
         assert mask_secrets({}) == {}
@@ -780,332 +470,6 @@ class TestBaseHelpers:
         monkeypatch.setenv('CI_PROJECT_ID', "any value")
         assert on_ci_host()
 
-    def test_os_host_name(self):
-        print(os_host_name())
-        assert os_host_name()
-
-    def test_os_local_ip(self):
-        assert os_local_ip() or os_local_ip() == ""
-
-    def test_os_platform_android(self):
-        try:
-            os.environ['ANDROID_ARGUMENT'] = 'tst'
-            assert _os_platform() == 'android'
-        finally:
-            os.environ.pop('ANDROID_ARGUMENT', None)
-
-        # noinspection PyUnreachableCode
-        try:
-            os.environ['KIVY_BUILD'] = 'android'
-            assert _os_platform() == 'android'
-        finally:
-            os.environ.pop('KIVY_BUILD', None)
-
-    def test_os_platform_cygwin(self):
-        old_platform = sys.platform
-        try:
-            sys.platform = 'cygwin'
-            assert _os_platform() == 'cygwin'
-        finally:
-            sys.platform = old_platform
-
-    def test_os_platform_darwin(self):
-        old_platform = sys.platform
-        try:
-            sys.platform = 'darwin'
-            assert _os_platform() == 'darwin'
-        finally:
-            sys.platform = old_platform
-
-    def test_os_platform_freebsd(self):
-        old_platform = sys.platform
-        try:
-            sys.platform = 'freebsd'
-            assert _os_platform() == 'freebsd'
-        finally:
-            sys.platform = old_platform
-
-    def test_os_platform_ios(self):
-        try:
-            os.environ['KIVY_BUILD'] = 'ios'
-            assert _os_platform() == 'ios'
-        finally:
-            os.environ.pop('KIVY_BUILD', None)
-
-    def test_os_platform_win32(self):
-        old_platform = sys.platform
-        try:
-            sys.platform = 'win32'
-            assert _os_platform() == 'win32'
-        finally:
-            sys.platform = old_platform
-
-    def test_os_user_name(self):
-        print(os_user_name())
-        assert os_user_name()
-
-    def test_parse_dotenv_dollar_char_does_not_cutoff_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write('declaredVar = DeclaredValue\n')
-            fp.write('replacedVar = beforeTheDollar$declaredVar\n')
-            fp.write('uncutVar=beforeTheDollar$afterTheDollar\n')
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'replacedVar' in loaded
-            assert 'uncutVar' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['replacedVar'] == "beforeTheDollarDeclaredValue"
-            assert loaded['uncutVar'] == "beforeTheDollar$afterTheDollar"
-
-    def test_parse_dotenv_double_quoted_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write('var_nam="var val"')
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == "var val"
-
-    def test_parse_dotenv_double_quote_in_single_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("""var_nam='"var val"'""")
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == '"var val"'
-
-    def test_parse_dotenv_exclude_vars_dict_arg(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("exc_var0=var val\nvar_nam=var val\nexc_var1='excluded var val'")
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {}, exclude_vars={'exc_var0': "not overwritten value", 'exc_var1': ""})
-
-            assert 'exc_var0' not in loaded
-            assert 'exc_var1' not in loaded
-            assert 'var_nam' in loaded
-
-    def test_parse_dotenv_exclude_vars_tuple_arg(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("exc_var0=var val\nvar_nam=var val\nexc_var1='excluded var val'")
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {}, exclude_vars=('exc_var0', 'exc_var1'))
-
-            assert 'exc_var0' not in loaded
-            assert 'exc_var1' not in loaded
-            assert 'var_nam' in loaded
-
-    def test_parse_dotenv_error_space_prefixed_var_name(self, recwarn):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write(' var_nam="var val"')
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' not in loaded
-            assert len(recwarn) == 1
-            assert f"doesn't match {DOTENV_FILE_NAME} format" in str(recwarn[0].message)
-
-    def test_parse_dotenv_literal_dict_with_list(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            var_val = "{'key': {'sub-key': ['list-item', 'list-item with = char', ]}}"
-            fp.write("var_nam=" + var_val)
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == var_val
-
-    def test_parse_dotenv_literal_dict_with_list_quoted(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            var_val = "{'key': {'sub-key': ['list-item', 'list-item with = char']}}"
-            fp.write('var_nam="' + var_val + '"')
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == var_val
-
-    def test_parse_dotenv_multi_line_var_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            var_val = "{'key': {'sub-key':\\\n    ['list-item',\\\n     'list-item with = char', ]}}"
-            fp.write("var_nam=" + var_val)
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == var_val.replace('\\\n', "")
-
-    def test_parse_dotenv_single_in_double_quoted_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write('''var_nam="'var val'"''')
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == "'var val'"
-
-    def test_parse_dotenv_single_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("var_nam='var val'")
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == "var val"
-
-    def test_parse_dotenv_start_parent_first_in_chain(self, os_env_test_env):
-        assert DOTENV_VAR_NAME not in os.environ
-        file_path = os.path.join(os_env_test_env, DOTENV_DIR_NAME, DOTENV_FILE_NAME)
-
-        loaded = parse_dotenv(file_path, {})
-
-        assert DOTENV_VAR_NAME in loaded
-        assert loaded[DOTENV_VAR_NAME] == DOTENV_VAR_VAL + '1'
-
-    def test_parse_dotenv_space_surrounded_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("var_nam   =   var val   ")
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == "var val"
-
-    def test_parse_dotenv_unquoted_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("var_nam=var val")
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == "var val"
-
-    def test_parse_dotenv_var_escaped_double_quote(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write('var_nam="escaped\\"val"')
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'var_nam' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['var_nam'] == 'escaped"val'
-
-    def test_parse_dotenv_var_empty_value(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("var_nam=")
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'var_nam' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['var_nam'] == ""
-
-    def test_parse_dotenv_var_expands_variables_found_in_values(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("env_var=var val\nvar_nam=$env_var")
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'var_nam' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['var_nam'] == "var val"
-            assert 'env_var' in loaded
-            assert loaded['env_var'] == "var val"
-
-    def test_parse_dotenv_var_expands_variable_wrapped_in_brackets(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("env_var=var val\n\n\nvar_nam=${env_var} tst")
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'var_nam' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['var_nam'] == "var val tst"
-            assert 'env_var' in loaded
-            assert loaded['env_var'] == "var val"
-
-    def test_parse_dotenv_var_expands_not_an_undefined_variable_to_empty_string(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("var_nam=$env_var")
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'env_var' not in loaded
-            assert 'var_nam' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['var_nam'] == "$env_var"
-
-    def test_parse_dotenv_var_expands_in_double_quoted_values(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("env_var=tst\nvar_nam=\"var val $env_var\"")
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'var_nam' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['var_nam'] == "var val tst"
-
-    def test_parse_dotenv_var_export_keyword(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("export var_nam=var val")
-            fp.seek(0)
-
-            loaded = parse_dotenv(fp.name, {})
-
-            assert 'var_nam' in loaded
-            assert loaded['var_nam'] == "var val"
-
-    def test_parse_dotenv_var_not_expands_in_single_quoted_values(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("var_nam='var val $env_var'")
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'var_nam' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['var_nam'] == "var val $env_var"
-
-    def test_parse_dotenv_var_not_expands_escaped_variables(self):
-        with tempfile.NamedTemporaryFile(mode="w") as fp:
-            fp.write("var_nam=var val \\$env_var \\${env_var}")
-            fp.seek(0)
-            late_resolved = {}
-
-            loaded = parse_dotenv(fp.name, late_resolved)
-
-            assert 'var_nam' in loaded
-            late_env_var_resolver(loaded, loaded, late_resolved)
-            assert loaded['var_nam'] == "var val $env_var ${env_var}"
-
     def test_pep8_format(self):
         assert pep8_format(3.690) == "3.69"
         assert pep8_format(99) == "99"
@@ -1162,23 +526,6 @@ class TestBaseHelpers:
                 True: False,
             }""")
 
-    def test_project_main_file(self, tmp_path):
-        assert project_main_file("not_existing_xy.tst") == ""
-
-        ae_base_main_file = norm_path(os.path.join("ae", "base" + PY_EXT))
-        assert project_main_file("ae.base") == ae_base_main_file
-        assert project_main_file("ae.base", norm_path("")) == ae_base_main_file
-
-        local_project_dir = os.path.join(str(tmp_path), "ae_base")
-        local_main_file = norm_path(os.path.join(local_project_dir, "main.py"))
-
-        os.makedirs(local_project_dir)
-        write_file(local_main_file, "# main file content")
-        assert project_main_file("ae.base") == ae_base_main_file
-        assert project_main_file("ae.base", norm_path("")) == ae_base_main_file
-        assert project_main_file("ae.base", local_project_dir) == local_main_file
-        assert project_main_file("ae.base", norm_path(local_project_dir)) == local_main_file
-
     def test_read_file(self):
         with open(__file__) as file_handle:
             content = file_handle.read()
@@ -1230,40 +577,26 @@ class TestBaseHelpers:
         assert snake_to_camel("any_name", back_convertible=True) == "anyName"
         assert snake_to_camel("@special/chars!") == "@special/chars!"
 
-    def test_sys_env_dict(self):
-        assert sys_env_dict().get('python ver')
-        assert sys_env_dict().get('cwd')
-        assert sys_env_dict().get('frozen') is False
-
-        assert sys_env_dict().get('bundle_dir') is None
-        sys.frozen = True
-        assert sys_env_dict().get('bundle_dir')
-        # noinspection PyUnresolvedReferences
-        del sys.__dict__['frozen']      # sys.__dict__.pop('frozen')
-        assert sys_env_dict().get('bundle_dir') is None
-
-    def test_sys_env_text(self):
-        assert isinstance(sys_env_text(), str)
-        assert 'python ver' in sys_env_text()
-        ret = sys_env_text(extra_sys_env_dict=dict(test_add='TstAdd'))
-        assert 'test_add' in ret
-        assert 'TstAdd' in ret
-
     def test_to_ascii(self):
-        assert to_ascii('áéí óú') == 'aei ou'
-        assert to_ascii('ÁÉÍ ÓÚ') == 'AEI OU'
+        assert to_ascii("áéí óú") == "aei ou"
+        assert to_ascii("ÁÉÍ ÓÚ") == "AEI OU"
 
-        assert to_ascii('àèì òù') == 'aei ou'
-        assert to_ascii('ÀÈÌ ÒÙ') == 'AEI OU'
+        assert to_ascii("àèì òù") == "aei ou"
+        assert to_ascii("ÀÈÌ ÒÙ") == "AEI OU"
 
-        assert to_ascii('äëï öü') == 'aei ou'
-        assert to_ascii('ÄËÏ ÖÜ') == 'AEI OU'
+        assert to_ascii("äëï öü") == "aei ou"
+        assert to_ascii("ÄËÏ ÖÜ") == "AEI OU"
 
-        assert to_ascii('âêî ôû') == 'aei ou'
-        assert to_ascii('ÂÊÎ ÔÛ') == 'AEI OU'
+        assert to_ascii("âêî ôû") == "aei ou"
+        assert to_ascii("ÂÊÎ ÔÛ") == "AEI OU"
 
-        assert to_ascii('ß') == 'ss'
-        assert to_ascii('€') == 'Euro'
+        assert to_ascii("ß") == "ss"
+        assert to_ascii("€") == "Euro"
+
+    def test_to_ascii_length(self):
+        assert to_ascii(tst_uni_str)
+        assert len(to_ascii(tst_uni_str)) == len(tst_uni_str) + 1   # +1 because "ß" gets converted into "ss"
+        assert len(to_ascii("€")) == 4  # == "Euro"
 
     @staticmethod
     def url_failure_httpbin_50x_retryer(url: str, timeout: Optional[float] = None) -> tuple[str, str]:
@@ -1500,363 +833,10 @@ class TestBaseHelpers:
         assert read_file(test_file) == content
 
 
-class TestModuleHelpers:
-    def test_module_attr_callable_with_args(self):
-        namespace = TESTS_FOLDER
-        mod_name = 'test_module_name'
-        att_name = 'test_module_func'
-        # noinspection PyUnnecessaryCast
-        module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
-        try:
-            write_file(module_file, f"def {att_name}(*args, **kwargs):\n    return args, kwargs\n")
-            args = (1, '2')
-            kwargs = dict(kwarg1=1, kwarg2='2')
-
-            ret = module_attr(namespace + '.' + mod_name, att_name)
-            assert ret
-            assert callable(type(ret))
-
-            call_ret = ret(*args, **kwargs)
-            assert call_ret
-            assert call_ret[0] == args
-            assert call_ret[1] == kwargs
-
-        finally:
-            if os.path.exists(module_file):
-                os.remove(module_file)
-
-        # test already imported module
-        # noinspection PyUnreachableCode
-        callee = module_attr('textwrap', 'indent')
-        assert callable(callee)
-        assert callee is textwrap.indent
-
-    def test_module_attr_callable_wrong_args(self):
-        namespace = TESTS_FOLDER
-        mod_name = 'test_module_name'
-        att_name = 'test_module_func'
-        # noinspection PyUnnecessaryCast
-        module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
-        try:
-            write_file(module_file, f"def {att_name}(arg1, args2, kwarg1='default'):\n    return arg1, arg2, kwarg1\n")
-
-            callee = module_attr(namespace + '.' + mod_name, att_name)
-            assert callable(callee)
-
-            args = (1, '2')
-            kwargs = dict(kwarg1=1, kwarg2='2')
-            with pytest.raises(TypeError):
-                callee(*args, **kwargs)
-
-        finally:
-            if os.path.exists(module_file):
-                os.remove(module_file)
-
-    def test_module_attr_imported(self):
-        """ test with module w/ and w/o namespace. """
-        assert isinstance(module_attr('os', 'path'), ModuleType)
-        assert module_attr('textwrap', 'dedent') is textwrap.dedent
-        assert callable(module_attr('ae.base', 'module_attr'))
-
-    def test_module_attr_module_ref(self, monkeypatch, tmp_path):
-        namespace = str(tmp_path)
-        mod_name = 'test_module_name'
-        attr_nam = 'module_var'
-        attr_val = 369
-        # noinspection PyUnnecessaryCast
-        module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
-
-        write_file(module_file, f"# unregistered tst module\n{attr_nam} = {attr_val}")
-
-        assert module_attr(namespace + '.' + mod_name, attr_nam) == attr_val
-
-        monkeypatch.chdir(namespace)
-
-        assert module_attr(mod_name, attr_nam) == attr_val
-
-    def test_module_attr_not_exists_attr(self, monkeypatch, tmp_path):
-        """ first test with a non-existing module, second test with a non-existing function. """
-        namespace = str(tmp_path)
-        mod_name = 'test_module_name'
-        att_name = 'test_module_func'
-        # noinspection PyUnnecessaryCast
-        module_file = cast(str, os.path.join(namespace, mod_name + PY_EXT))
-        write_file(module_file, f"""def {att_name}(*args, **kwargs):\n    pass\n""")
-
-        assert module_attr(namespace + '.' + mod_name, "not_existing_func_or_attr") is UNSET
-
-        assert callable(module_attr(namespace + '.' + mod_name, att_name))
-
-        monkeypatch.chdir(namespace)
-
-        assert module_attr(mod_name, "") is UNSET
-        assert module_attr(mod_name, "not-existing-attr-name") is UNSET
-
-    def test_module_attr_not_exists_module(self):
-        assert module_attr('non_existing_test_module_name', 'non_existing_test_module_func') is None
-
-    def test_module_file_path(self):
-        assert module_file_path() == __file__
-        assert module_file_path(lambda: 0) == __file__
-
-    def test_module_find_builtins(self):
-        path_or_err = module_find('textwrap')
-        assert isinstance(path_or_err, str)
-
-        path_or_err = module_find('os.path')
-        assert isinstance(path_or_err, str)
-
-        path_or_err = module_find('os')
-        assert isinstance(path_or_err, str)
-
-    def test_module_find_local_module(self, monkeypatch, tmp_path):
-        module = "tst_mod_nam"
-        mod_file = os.path.join(str(tmp_path), module + PY_EXT)
-        write_file(mod_file, f"# module_find test module\nsome_var = 'some_var_val'")
-
-        assert isinstance(module_find(module), list)    # not found because neither under sys.path nor in sys.modules
-
-        monkeypatch.syspath_prepend(str(tmp_path))
-
-        mod_path = module_find(module)
-
-        assert isinstance(mod_path, str)
-
-    def test_module_load_builtins(self):
-        assert isinstance(module_load('textwrap'), ModuleType)
-        assert isinstance(module_load('os.path'), ModuleType)
-        assert isinstance(module_load('os'), ModuleType)
-
-    def test_module_load_local_module(self, monkeypatch, tmp_path):
-        module = "mod_2_tst"
-        mod_file = os.path.join(str(tmp_path), module + PY_EXT)
-        write_file(mod_file, "mod_var = 'mod_var_val'")
-
-        mod_ref = module_load(module, path=os_path_dirname(mod_file))
-
-        assert isinstance(mod_ref, list)    # load error
-        assert isinstance(mod_ref[0], str)
-
-        mod_ref = module_load(str(tmp_path) + '.' + module)
-
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
-
-        mod_ref = module_load(module)
-
-        assert isinstance(mod_ref, list)    # load error
-        assert isinstance(mod_ref[0], str)
-
-        monkeypatch.chdir(str(tmp_path))
-
-        mod_ref = module_load(module, path=module + PY_EXT)
-
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
-
-        mod_ref = module_load(module)
-
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'mod_var') == 'mod_var_val'
-
-    def test_module_load_local_package(self, monkeypatch, tmp_path):
-        namespace = "zy"
-        portion = "por_2_tst"
-
-        pkg_path = os.path.join(str(tmp_path), namespace, portion)
-        pkg_file = os.path.join(pkg_path, PY_INIT)
-        write_file(pkg_file, "pkg_var = 'pkg_var_val'", make_dirs=True)
-
-        mod_ref = module_load(portion, path=pkg_path)
-
-        assert isinstance(mod_ref, list)
-        assert isinstance(mod_ref[0], str)
-
-        mod_ref = module_load(namespace + '.' + portion, path=os_path_dirname(pkg_path))
-
-        assert isinstance(mod_ref, list)
-        assert isinstance(mod_ref[0], str)
-
-        mod_ref = module_load(str(tmp_path) + '.' + namespace + '.' + portion, path=pkg_path)
-
-        assert isinstance(mod_ref, list)
-        assert isinstance(mod_ref[0], str)
-
-        mod_ref = module_load(str(tmp_path) + '.' + namespace + '.' + portion)
-
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-        monkeypatch.chdir(str(tmp_path))
-
-        mod_ref = module_load(namespace + '.' + portion)
-
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-        mod_ref = module_load(namespace + '.' + portion, path=os.path.relpath(pkg_file, str(tmp_path)))
-
-        assert isinstance(mod_ref, ModuleType)
-        assert getattr(mod_ref, 'pkg_var') == 'pkg_var_val'
-
-    def test_module_load_not_exists(self):
-        assert (err_or_mod := module_load('not_existing_import_name'))
-        assert isinstance(err_or_mod, list)
-
-    def test_module_name(self):
-        assert module_name() == 'test_base'
-        assert module_name('') == 'test_base'
-        # noinspection PyInvalidCast
-        assert module_name(cast(str, None)) == 'test_base'
-        assert module_name('_invalid_module_name') == 'test_base'
-        assert module_name('ae.base') == 'test_base'
-        assert module_name(depth=-30) == 'test_base'
-        assert module_name(depth=-2) == 'test_base'
-        assert module_name(depth=-1) == 'test_base'
-        # assert module_name(depth=0) == 'test_base'   # depth=0 is default value
-        # assert module_name(depth=1) == '_pytest.python'
-
-        assert module_name(__name__, depth=-30) == 'ae.base'
-        assert module_name(__name__, depth=-2) == 'ae.base'
-        assert module_name(__name__, depth=-1) == 'ae.base'
-
-        # assert module_name(__name__) == '_pytest.python'                  # depth=0 is the default
-        # assert module_name('test_base') == '_pytest.python'
-        # assert module_name(__name__, depth=1) == '_pytest.python'
-
-
-class TestStackHelpers:
-    def test_full_stack_trace(self):
-        local_var = 'test_local_variable_value'
-        try:
-            raise ValueError('tst val err')
-        except ValueError as ex:
-            assert full_stack_trace(ex)
-            assert 'ValueError' in full_stack_trace(ex)
-            assert 'tst val err' in full_stack_trace(ex)
-            assert 'test_full_stack_trace' in full_stack_trace(ex)
-            assert 'TestStackHelpers' in full_stack_trace(ex)
-            assert 'local_var' in full_stack_trace(ex)
-            assert local_var in full_stack_trace(ex)
-
-    def test_full_stack_trace_without_locals(self):
-        local_var = 'test_local_variable_value'
-        try:
-            raise SyntaxError('tst error xyz')
-        except SyntaxError as ex:
-            assert full_stack_trace(ex)
-            assert 'SyntaxError' in full_stack_trace(ex, frames_with_locals=0)
-            assert 'tst error xyz' in full_stack_trace(ex, frames_with_locals=0)
-            assert 'test_full_stack_trace_without_locals' in full_stack_trace(ex, frames_with_locals=0)
-
-            assert 'TestStackHelpers' not in full_stack_trace(ex, frames_with_locals=0)
-            assert 'local_var' not in full_stack_trace(ex, frames_with_locals=0)
-            assert local_var not in full_stack_trace(ex, frames_with_locals=0)
-
-    def test_stack_frames(self):
-        for frame in stack_frames():
-            assert frame
-            assert getattr(frame, 'f_globals')
-            # if pytest runs from terminal, then f_locals is missing in the highest frame:
-            # assert getattr(frame, 'f_locals')
-
-    def test_stack_var_module(self):
-        assert module_test_var
-        assert stack_var('module_test_var', depth=-1) == 'module_test_var_val'
-        assert stack_var('module_test_var', depth=0) == 'module_test_var_val'
-        assert stack_var('module_test_var', scope='globals', depth=0) == 'module_test_var_val'
-        assert stack_var('module_test_var', 'ae.base', depth=0) == 'module_test_var_val'
-
-        assert stack_var('module_test_var') is UNSET      # depth==1 (def)
-        assert stack_var('module_test_var', depth=2) is UNSET
-        assert stack_var('module_test_var', scope='locals', depth=0) is UNSET
-        assert stack_var('module_test_var', scope='locals') is UNSET
-        assert stack_var('module_test_var', 'test_base') is UNSET
-        assert stack_var('module_test_var', 'ae.base', 'test_base') is UNSET
-
-    def test_stack_var_func(self):
-        _func_var = 'func_var_val'
-
-        assert stack_var('_func_var', 'ae.base', scope='locals', depth=0) == 'func_var_val'
-        assert stack_var('_func_var', depth=0) == 'func_var_val'
-        assert stack_var('_func_var', scope='locals', depth=0) == 'func_var_val'
-
-        # assert stack_var('_func_var', scope='locals', depth=1) is UNSET
-        assert stack_var('_func_var') is UNSET
-        assert stack_var('_func_var', scope='globals', depth=0) is UNSET
-        assert stack_var('_func_var', 'test_base', scope='locals') is UNSET
-        assert stack_var('_func_var', 'ae.base', 'test_base', scope='locals') is UNSET
-        assert stack_var('_func_var', scope='locals', depth=3) is UNSET
-
-    def test_stack_var_inner_func(self):
-        def _inner_func():
-            _inner_var = 'inner_var_val'
-            assert stack_var('_inner_var', depth=-1) == 'inner_var_val'
-            assert stack_var('_inner_var', depth=0) == 'inner_var_val'
-            assert stack_var('_inner_var', scope='locals', depth=0) == 'inner_var_val'
-            assert stack_var('_inner_var', 'ae.base', scope='locals', depth=0) == 'inner_var_val'
-            assert stack_var('_inner_var', 'ae.base', 'xxx yyy', scope='locals', depth=0) == 'inner_var_val'
-
-            assert stack_var('_inner_var') is UNSET     # depth==1 (def)
-            assert stack_var('_inner_var', depth=2) is UNSET
-            assert stack_var('_inner_var', scope='globals', depth=0) is UNSET
-            assert stack_var('_inner_var', 'test_base', scope='locals', depth=0) is UNSET
-
-            assert stack_var('_outer_var') == 'outer_var_val'
-            assert stack_var('_outer_var', depth=0) == 'outer_var_val'
-            assert stack_var('_outer_var', 'ae.base', scope='locals') == 'outer_var_val'
-            assert stack_var('_outer_var', scope='locals') == 'outer_var_val'
-            assert stack_var('_outer_var', scope='locals', depth=0) == 'outer_var_val'
-
-            assert stack_var('_outer_var', scope='locals', depth=2) is UNSET
-            assert stack_var('_outer_var', 'test_base', scope='locals') is UNSET
-            assert stack_var('_outer_var', 'ae.base', 'test_base', scope='locals') is UNSET
-
-            assert stack_var('module_test_var') == 'module_test_var_val'
-            assert stack_var('module_test_var', scope='globals') == 'module_test_var_val'
-
-            assert stack_var('module_test_var', depth=2) is UNSET
-            assert stack_var('module_test_var', scope='locals') is UNSET
-            assert stack_var('module_test_var', 'test_base') is UNSET
-            assert stack_var('module_test_var', 'ae.base', 'test_base') is UNSET
-
-        _outer_var = 'outer_var_val'
-        _inner_func()
-
-        assert stack_var('_outer_var', depth=0) == 'outer_var_val'
-        assert stack_var('_outer_var', 'ae.base', scope='locals', depth=0) == 'outer_var_val'
-        assert stack_var('_outer_var', scope='locals', depth=0) == 'outer_var_val'
-
-        assert stack_var('_outer_var') is UNSET
-        assert stack_var('_outer_var', scope='locals') is UNSET
-        assert stack_var('_outer_var', scope='locals', depth=2) is UNSET
-        assert stack_var('_outer_var', 'test_base') is UNSET
-
-        assert stack_var('module_test_var', depth=0) == 'module_test_var_val'
-        assert stack_var('module_test_var', depth=0, scope='globals') == 'module_test_var_val'
-
-        assert stack_var('module_test_var') is UNSET
-        assert stack_var('module_test_var', depth=2) is UNSET
-        assert stack_var('module_test_var', depth=3) is UNSET
-        assert stack_var('module_test_var', scope='locals', depth=0) is UNSET
-        assert stack_var('module_test_var', 'test_base') is UNSET
-        assert stack_var('module_test_var', 'ae.base', 'test_base') is UNSET
-
-    def test_stack_vars(self):
-        local_var = "loc_var_val"
-        glo, loc, deep = stack_vars(min_depth=0, max_depth=1)
-        assert deep == 1
-        assert 'local_var' in loc
-        assert loc['local_var'] == local_var
-
-        glo, loc, deep = stack_vars(max_depth=3)
-        assert deep == 3
-
-        glo, loc, deep = stack_vars(min_depth=0, find_name='module_test_var')    # min_depth needed for this stack frame
-        assert glo.get('module_test_var') == 'module_test_var_val'
-
-        glo, loc, deep = stack_vars(find_name='module_test_var')                 # min_depth default == 1
-        assert glo.get('module_test_var') is None
-
-        glo, loc, deep = stack_vars(min_depth=2, find_name='module_test_var')    # min_depth needed for this stack frame
-        assert glo.get('module_test_var') is None
+class TestUnsetType:
+    def test_unset_truthiness(self):
+        assert bool(UNSET) is False
+        assert not UNSET
+
+    def test_unset_null_length(self):
+        assert len(UNSET) == 0
