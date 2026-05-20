@@ -40,11 +40,26 @@ helpers for working with lists, dictionaries, and other data structures.
   useful for logging.
 
 
+file, path & I/O operations
+---------------------------
+
+simplify file system interactions with wrappers and context managers.
+
+* :func:`extend_file`: append string to a file or create it if file not exists.
+* :func:`in_wd`: a context manager to temporarily switch/change the current working directory.
+* :func:`norm_path`: normalizes a path by expanding user home directories (`~`), resolving `.`, `..`, symbolic links,
+  and converting between absolute and relative paths.
+* :func:`read_bin_file`: reads the entire content of a binary file into a bytes object.
+* :func:`read_file`: reads the entire content of a text file into a string.
+* :func:`write_bin_file`: writes a bytes object to a file, overwriting existing content.
+* :func:`write_file`: writes a string into a file, overwriting existing content.
+
+
 networking utilities
 --------------------
 
-* :func:`url_failure`: determines if and why an HTTP|FTP target is unavailable.
 * :func:`mask_url`: hides or replaces the password/token portion of a URL for safe logging.
+* :func:`url_failure`: determines if and why an HTTP|FTP target is unavailable.
 
 
 general utilities & helpers
@@ -85,7 +100,7 @@ base types and classes
 base constants
 --------------
 
-predefined constants for project structure, file conventions, and default settings.
+predefined constants for defaults, project structure, file conventions, to decrease redundancy and increase performance.
 
 project & file structure
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -103,6 +118,7 @@ project & file structure
 * :data:`TESTS_FOLDER`: default name for a project's tests folder ('tests').
 * :data:`TEMPLATES_FOLDER`: default name for a folder containing file templates ('templates').
 
+
 formats & default settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -113,18 +129,6 @@ formats & default settings
 * :data:`NAME_PARTS_SEP`: the character used as a separator in name conversions ('_').
 * :data:`NOW_STR_FORMAT`: the datetime format string, used e.g. by :func:`now_str` for creating timestamps.
 * :data:`UNSET`: a singleton instance of :class:`UnsetType`, used where `None` is a valid data value.
-
-
-file, path & I/O operations
----------------------------
-
-simplify file system interactions with wrappers and context managers.
-
-* :func:`in_wd`: a context manager that temporarily switches the current working directory.
-* :func:`norm_path`: normalizes a path by expanding user home directories (`~`), resolving `.`, `..`, symbolic links,
-  and converting between absolute and relative paths.
-* :func:`read_file`: reads the entire content of a text or binary file into a string or bytes object.
-* :func:`write_file`: writes a string or bytes object to a file, overwriting existing content.
 
 
 os.path shortcuts
@@ -159,10 +163,10 @@ from contextlib import contextmanager
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
-from typing import Any, Generator, Iterable, Optional, Union
+from typing import Any, Generator, Iterable
 
 
-__version__ = '0.3.83'
+__version__ = '0.3.84'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -366,7 +370,7 @@ def duplicates(values: Iterable) -> list:
     return dup_list
 
 
-def env_str(name: str, convert_name: bool = False) -> Optional[str]:
+def env_str(name: str, convert_name: bool = False) -> str | None:
     """ determine the string value of an OS environment variable, optionally preventing invalid variable name.
 
     :param name:                name of an OS environment variable.
@@ -380,8 +384,7 @@ def env_str(name: str, convert_name: bool = False) -> Optional[str]:
     return os.environ.get(name)
 
 
-def evaluate_literal(literal_string: str
-                     ) -> Optional[Union[bool, bytes, dict, complex, float, int, list, set, str, tuple]]:
+def evaluate_literal(literal_string: str) -> bool | bytes | dict | complex | float | int | list | set | str | tuple:
     """ evaluates a Python expression while accepting unquoted strings as str type.
 
     :param literal_string:      any literal of the base types (like dict, list, set, tuple) which are recognized
@@ -395,7 +398,32 @@ def evaluate_literal(literal_string: str
         return literal_string
 
 
-def force_encoding(text: Union[str, bytes], encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
+def extend_file(file_path: str, content: str, encoding: str | None = None, make_dirs: bool = False):
+    """ create/extend the text file specified by :paramref:`~extend_file.file_path` with the specified content string.
+
+    :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
+    :param content:             new file content passed either as string or as `bytes`. if a byte array gets passed,
+                                then this method will automatically write the content as binary.
+    :param encoding:            encoding used to convert/interpret the string content to write.
+    :param make_dirs:           pass True to create not existing parent folders of the specified file path.
+    :raises IsADirectoryError:  file_path points to a directory instead of a file.
+    :raises LookupError:        unknown encoding name.
+    :raises NotADirectoryError: part of the path expected to be a directory is actually a file.
+    :raises OSError:            disk full, filename too long, too many open files, network or device disconnected,
+                                file_path is misspelled or contains invalid characters.
+    :raises PermissionError:    if the current OS user account lacks permissions to write the file content.
+    :raises TypeError:          content is not of type `str`.
+    :raises UnicodeEncodeError: content cannot be encoded using the selected encoding.
+    :raises ValueError:         other encoding errors, invalid mode or incompatible arguments.
+    """
+    if make_dirs and (dir_path := os_path_dirname(file_path)):
+        os.makedirs(dir_path, exist_ok=True)
+
+    with open(file_path, mode='a', encoding=encoding) as file_handle:
+        file_handle.write(content)
+
+
+def force_encoding(text: str | bytes, encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
     """ force/ensure the encoding of text (str or bytes) without any UnicodeDecodeError/UnicodeEncodeError.
 
     :param text:                text as str/bytes.
@@ -476,7 +504,7 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
         os.chdir(cur_dir)
 
 
-def mask_secrets(data: Union[dict, Iterable], fragments: Iterable[str] = ('password', 'pwd')) -> Union[dict, Iterable]:
+def mask_secrets(data: dict | Iterable, fragments: Iterable[str] = ('password', 'pwd')) -> dict | Iterable:
     """ partially-hide secret string values like passwords/credit-card-numbers in deeply nestable data structures.
 
     :param data:                iterable deep data structure wherein its item values get masked if their related dict
@@ -648,30 +676,43 @@ def pep8_format(value: Any, indent_level: int = 0):
     return os.linesep.join(parts)
 
 
-def read_file(file_path: str, extra_mode: str = "", encoding: Optional[str] = None, error_handling: str = 'ignore'
-              ) -> Union[str, bytes]:
-    """ returning content of the text/binary file specified by file_path argument as string.
+def read_bin_file(file_path: str) -> bytes:
+    """ returning the binary content of the specified by the :paramref:`~read_bin_file.file_path` argument.
 
     :param file_path:           path/name of the file to load the content from.
-    :param extra_mode:          extra open mode flag characters appended to "r" onto the :func:`open` mode argument.
-                                pass "b" to read the content of a binary file returned of the type `bytes`. in binary
-                                mode the argument passed in :paramref:`~read_file.error_handling` will be ignored.
+    :return:                    file content bytes array.
+    :raises FileNotFoundError:  if the file to read from does not exist.
+    :raises OSError:            if :paramref:`~read_bin_file.file_path` is misspelled or contains invalid characters.
+    :raises PermissionError:    if the current OS user account lacks permissions to read the file content.
+    """
+    with open(file_path, "rb") as file_handle:
+        return file_handle.read()
+
+
+def read_file(file_path: str, encoding: str | None = None, error_handling: str = 'ignore') -> str:
+    """ returning the string content of the text file specified by :paramref:`~read_file.file_path` argument.
+
+    :param file_path:           path/name of the file to load the content from.
     :param encoding:            encoding used to load and convert/interpret the file content.
-    :param error_handling:      for files opened in text mode, pass `'strict'` or ``None`` to return ``None`` (instead
+    :param error_handling:      pass `'strict'` or ``None`` to return ``None`` (instead
                                 of an empty string) for the cases where either a decoding `ValueError` exception or any
                                 `OSError`, `FileNotFoundError` or `PermissionError` exception got raised.
                                 the default value `'ignore'` will ignore any decoding errors (missing some characters)
                                 and will return an empty string on any file/os exception. this parameter will be ignored
                                 if the :paramref:`~read_file.extra_mode` argument contains the 'b' character (to read
                                 the file content as binary/bytes-array).
-    :return:                    file content string or bytes array.
+    :return:                    file content string.
     :raises FileNotFoundError:  if the file to read from does not exist.
-    :raises OSError:            if :paramref:`~read_file.file_path` is misspelled or contains invalid characters.
+    :raises IsADirectoryError:  file_path points to a directory instead of a file.
+    :raises LookupError:        unknown encoding name.
+    :raises NotADirectoryError: part of the path expected to be a directory is actually a file.
+    :raises OSError:            filename too long, too many open files, device/network error, file_path misspelled
+                                or contains invalid characters.
     :raises PermissionError:    if the current OS user account lacks permissions to read the file content.
-    :raises ValueError:         on decoding errors.
+    :raises UnicodeDecodeError: file content cannot be decoded with the specified encoding or error_handling.
+    :raises ValueError:         invalid error_handling argument.
     """
-    extra_kwargs = {} if "b" in extra_mode else {'errors': error_handling}
-    with open(file_path, "r" + extra_mode, encoding=encoding, **extra_kwargs) as file_handle:           # type: ignore
+    with open(file_path, "r", encoding=encoding, errors=error_handling) as file_handle:
         return file_handle.read()
 
 
@@ -728,8 +769,8 @@ def to_ascii(unicode_str: str) -> str:
 
 
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments,too-many-return-statements
-def url_failure(url: str, token: str = "", username: str = "", password: str = "", git_repo: bool = False,
-                timeout: Optional[float] = None) -> str:
+def url_failure(url: str, token: str = "", username: str = "", password: str = "",
+                git_repo: bool = False, timeout: float | None = None) -> str:
     """ determine if and why an FTP or HTTP[S] target is not available via a GET request.
 
     :param url:                 URL of a target|page|file to check (not downloaded, fetching only the header).
@@ -797,27 +838,47 @@ def utc_datetime() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
-def write_file(file_path: str, content: Union[str, bytes],
-               extra_mode: str = "", encoding: Optional[str] = None, make_dirs: bool = False):
-    """ (over)write the file specified by :paramref:`~write_file.file_path` with text or binary/bytes content.
+def write_bin_file(file_path: str, content: bytes, make_dirs: bool = False):
+    """ (over)write the file specified by :paramref:`~write_bin_file.file_path` with the specified binary/bytes content.
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
-    :param content:             new file content passed either as string or as `bytes`. if a byte array gets passed,
-                                then this method will automatically write the content as binary.
-    :param extra_mode:          additional open mode flag characters. passed to the `mode` argument of :func:`open` if
-                                this argument starts with 'a' or 'w', else this argument value will be appended to 'w'
-                                before it gets passed to the `mode` argument of :func:`open`.
-                                if the :paramref:`~write_file.content` is of the `bytes` type, then a 'b' character will
-                                be automatically added to the `mode` argument of :func:`open` (if not already specified
-                                in this argument).
-    :param encoding:            encoding used to write/convert/interpret the file content to write.
+    :param content:             new file content specified as `bytes`.
+    :param make_dirs:           pass True to automatically create not existing folders of the file path.
+    :raises FileExistsError:    if the file to write to exists already and is write-protected.
+    :raises FileNotFoundError:  if parts of the file path do not exist.
+    :raises IsADirectoryError:  file_path points to a directory instead of a file.
+    :raises NotADirectoryError: part of the path expected to be a directory is actually a file.
+    :raises OSError:            disk full, filename too long, too many open files, network or device disconnected,
+                                file_path is misspelled or contains invalid characters.
+    :raises PermissionError:    if the current OS user account lacks permissions to write the file content.
+    :raises TypeError:          content is not of type `bytes`.
+    """
+    if make_dirs and (dir_path := os_path_dirname(file_path)):
+        os.makedirs(dir_path, exist_ok=True)
+
+    with open(file_path, mode='wb') as file_handle:
+        file_handle.write(content)
+
+
+def write_file(file_path: str, content: str, encoding: str | None = None, make_dirs: bool = False):
+    """ (over)write the file specified by :paramref:`~write_file.file_path` with the specified string content.
+
+    :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
+    :param content:             new file content passed as string.
+    :param encoding:            encoding used to write/convert/interpret the file content to write (defaults to utf-8).
     :param make_dirs:           pass True to automatically create not existing folders of the file path (specified in
                                 :paramref:`~write_file.file_path`).
     :raises FileExistsError:    if the file to write to exists already and is write-protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
-    :raises OSError:            if :paramref:`~write_file.file_path` is misspelled or contains invalid characters.
-    :raises PermissionError:    if the current OS user account lacks permissions to read the file content.
-    :raises ValueError:         on decoding errors.
+    :raises IsADirectoryError:  file_path points to a directory instead of a file.
+    :raises LookupError:        unknown encoding name.
+    :raises NotADirectoryError: part of the path expected to be a directory is actually a file.
+    :raises OSError:            disk full, filename too long, too many open files, network or device disconnected,
+                                file_path is misspelled or contains invalid characters.
+    :raises PermissionError:    if the current OS user account lacks permissions to write the file content.
+    :raises TypeError:          content is not of type `str`.
+    :raises UnicodeEncodeError: content cannot be encoded using the selected encoding.
+    :raises ValueError:         other encoding errors, invalid mode or incompatible arguments.
 
     to extend this function for Android 14+, see `<https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>`__
     and `<https://gist.github.com/neonankiti/05922cf0a44108a2e2732671ed9ef386>`__
@@ -831,13 +892,7 @@ def write_file(file_path: str, content: Union[str, bytes],
     if make_dirs and (dir_path := os_path_dirname(file_path)):
         os.makedirs(dir_path, exist_ok=True)
 
-    if isinstance(content, bytes) and 'b' not in extra_mode:
-        extra_mode += 'b'
-
-    if extra_mode == '' or extra_mode[0] not in ('a', 'w'):
-        extra_mode = 'w' + extra_mode
-
-    with open(file_path, mode=extra_mode, encoding=encoding) as file_handle:
+    with open(file_path, mode='w', encoding=encoding) as file_handle:
         file_handle.write(content)
 
 
