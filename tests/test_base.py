@@ -25,10 +25,10 @@ from ae.base import (
     ASCII_TO_UNICODE, ASCII_UNICODE,
     TESTS_FOLDER, UNICODE_TO_ASCII, UNSET, URI_SEP_STR, URI_SEP_UNICODE_CHAR,
     ascii_dec_str, ascii_enc_lit, camel_to_snake, dedefuse, deep_dict_update, defuse, dummy_function, duplicates,
-    env_str, evaluate_literal, force_encoding, format_given, in_wd, mask_secrets, mask_url,
+    env_str, evaluate_literal, extend_file, force_encoding, format_given, in_wd, mask_secrets, mask_url,
     norm_line_sep, norm_name, norm_path, now_str, on_ci_host,
-    pep8_format, read_file, round_traditional, sign, snake_to_camel,
-    to_ascii, url_failure, utc_datetime, write_file)
+    pep8_format, read_bin_file, read_file, round_traditional, sign, snake_to_camel,
+    to_ascii, url_failure, utc_datetime, write_bin_file, write_file)
 
 
 tst_uni_str = "äáàâÄÁÀÂëéèêËÉÈÊïíìîÏÍÌÎńǹñŃǸÑöóòôÖÓÒÔßüúùûÜÚÙÛźẑŹẐ"
@@ -299,6 +299,33 @@ class TestBaseHelpers:
         # noinspection PyTypeChecker
         assert evaluate_literal(tst) is tst
 
+    def test_extend_file(self, tmp_path):
+        test_file = os.path.join(str(tmp_path), 'tst_file_written.ext')
+        content = "any content"
+        assert not os.path.exists(test_file)
+
+        extend_file(test_file, content)
+        assert os.path.exists(test_file)
+        assert os.path.isfile(test_file)
+        assert read_file(test_file) == content
+
+    def test_extend_file_make_dirs(self, tmp_path):
+        root_dir = os.path.join(str(tmp_path), 'root path of file')
+        test_dir = os.path.join(root_dir, '1st sub dir of file', 'subDir2')
+        test_file = os.path.join(test_dir, 'file in sub dir.ext')
+        content = "any content"
+        assert not os.path.exists(test_dir)
+        assert not os.path.exists(test_file)
+
+        with pytest.raises(FileNotFoundError):
+            extend_file(test_file, content)
+        extend_file(test_file, content, make_dirs=True)
+        assert os.path.exists(test_dir)
+        assert os.path.isdir(test_dir)
+        assert os.path.exists(test_file)
+        assert os.path.isfile(test_file)
+        assert read_file(test_file) == content
+
     def test_force_encoding_bytes(self):
         s = 'äöü'
 
@@ -526,11 +553,17 @@ class TestBaseHelpers:
                 True: False,
             }""")
 
+    def test_read_bin_file(self):
+        with open(__file__, mode='rb') as file_handle:
+            content = file_handle.read()
+        assert read_bin_file(__file__) == content
+        assert read_bin_file(__file__) == bytes(read_file(__file__), 'utf8')
+
     def test_read_file(self):
         with open(__file__) as file_handle:
             content = file_handle.read()
         assert read_file(__file__) == content
-        assert read_file(__file__, extra_mode="b") == bytes(content, 'utf8')
+        assert read_file(__file__) == read_bin_file(__file__).decode(encoding='utf8')
 
     def test_round_traditional(self):
         assert round_traditional(1.01) == 1
@@ -790,7 +823,40 @@ class TestBaseHelpers:
         dt2 = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         assert dt2 - dt1 < datetime.timedelta(seconds=1)
 
-    def test_write_file_as_text(self, tmp_path):
+    def test_write_bin_file(self, tmp_path):
+        test_file = os.path.join(str(tmp_path), 'bin_file_written.ext')
+        content = b"any content"
+        assert not os.path.exists(test_file)
+
+        write_bin_file(test_file, content)
+        assert os.path.exists(test_file)
+        assert os.path.isfile(test_file)
+        assert read_bin_file(test_file) == content
+
+        new_content = b"pre" + content + b"post"
+        write_bin_file(test_file, new_content)  # overwrite
+        assert os.path.exists(test_file)
+        assert os.path.isfile(test_file)
+        assert read_bin_file(test_file) == new_content
+
+    def test_write_bin_file_make_dirs(self, tmp_path):
+        root_dir = os.path.join(str(tmp_path), 'root path of file')
+        test_dir = os.path.join(root_dir, '1st sub dir of file', 'subDir2')
+        test_file = os.path.join(test_dir, 'file in sub dir.ext')
+        content = b"any binary content"
+        assert not os.path.exists(test_dir)
+        assert not os.path.exists(test_file)
+
+        with pytest.raises(FileNotFoundError):
+            write_bin_file(test_file, content)
+        write_bin_file(test_file, content, make_dirs=True)
+        assert os.path.exists(test_dir)
+        assert os.path.isdir(test_dir)
+        assert os.path.exists(test_file)
+        assert os.path.isfile(test_file)
+        assert read_bin_file(test_file) == content
+
+    def test_write_file(self, tmp_path):
         test_file = os.path.join(str(tmp_path), 'tst_file_written.ext')
         content = "any content"
         assert not os.path.exists(test_file)
@@ -799,21 +865,6 @@ class TestBaseHelpers:
         assert os.path.exists(test_file)
         assert os.path.isfile(test_file)
         assert read_file(test_file) == content
-
-    def test_write_file_as_binary(self, tmp_path):
-        test_file = os.path.join(str(tmp_path), 'bin_file_written.ext')
-        content = b"any content"
-        assert not os.path.exists(test_file)
-
-        write_file(test_file, content, extra_mode="b")
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
-        assert read_file(test_file, extra_mode="b") == content
-
-        write_file(test_file, content)      # 'b' in extra_mode arg is optional because content is bytes array
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
-        assert read_file(test_file, extra_mode="b") == content
 
     def test_write_file_make_dirs(self, tmp_path):
         root_dir = os.path.join(str(tmp_path), 'root path of file')
