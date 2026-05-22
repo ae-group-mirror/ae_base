@@ -163,10 +163,10 @@ from contextlib import contextmanager
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
-from typing import Any, Generator, Iterable
+from typing import Any, Final, Generator, Iterable
 
 
-__version__ = '0.3.84'
+__version__ = '0.3.85'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -689,19 +689,17 @@ def read_bin_file(file_path: str) -> bytes:
         return file_handle.read()
 
 
-def read_file(file_path: str, encoding: str | None = None, error_handling: str = 'ignore') -> str:
+def read_file(file_path: str, encoding: str | None = None, error_handling: str | None = 'ignore') -> str:
     """ returning the string content of the text file specified by :paramref:`~read_file.file_path` argument.
 
     :param file_path:           path/name of the file to load the content from.
-    :param encoding:            encoding used to load and convert/interpret the file content.
-    :param error_handling:      pass `'strict'` or ``None`` to return ``None`` (instead
-                                of an empty string) for the cases where either a decoding `ValueError` exception or any
-                                `OSError`, `FileNotFoundError` or `PermissionError` exception got raised.
-                                the default value `'ignore'` will ignore any decoding errors (missing some characters)
-                                and will return an empty string on any file/os exception. this parameter will be ignored
-                                if the :paramref:`~read_file.extra_mode` argument contains the 'b' character (to read
-                                the file content as binary/bytes-array).
-    :return:                    file content string.
+    :param encoding:            encoding used to load and convert/interpret the file content (passed onto the `encoding`
+                                parameter of the built-in `open` function).
+    :param error_handling:      pass `'strict'` or ``None`` to raise a `ValueError` exception on encoding errors.
+                                the default value `'ignore'` will ignore any decoding errors (resulting in missing
+                                characters in the return value). passed onto the `errors` parameter of the built-in
+                                `open` function.
+    :return:                    the content of the file as a string.
     :raises FileNotFoundError:  if the file to read from does not exist.
     :raises IsADirectoryError:  file_path points to a directory instead of a file.
     :raises LookupError:        unknown encoding name.
@@ -896,7 +894,6 @@ def write_file(file_path: str, content: str, encoding: str | None = None, make_d
         file_handle.write(content)
 
 
-# using only object() does not provide a proper representation string
 class UnsetType:
     """ (singleton) UNSET (type) object class. """
     def __bool__(self):
@@ -908,4 +905,4 @@ class UnsetType:
         return 0
 
 
-UNSET = UnsetType()     #: pseudo value used for attributes/arguments if ``None`` is needed as a valid value
+UNSET: Final = UnsetType()     #: pseudo value used for attributes/arguments if ``None`` is needed as a valid value
