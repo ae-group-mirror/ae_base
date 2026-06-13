@@ -452,25 +452,28 @@ class TestBaseHelpers:
 
     def test_norm_path(self):
         new_folder = "non_existent_folder"
+        tst_cwd = os.getcwd()
         
-        assert norm_path(".") == os.getcwd()
-        assert norm_path(".", resolve_sym_links=False) == os.getcwd()
-        assert norm_path(".", make_absolute=False) == os.getcwd()
-        assert norm_path(".", make_absolute=False, remove_base_path=os.getcwd()) == "."
+        assert norm_path(".") == tst_cwd
+        assert norm_path(".", resolve_sym_links=False) == tst_cwd
+        assert norm_path(".", make_absolute=False) == tst_cwd
+        assert norm_path(".", make_absolute=False, remove_base_path=tst_cwd) == "."
 
-        assert norm_path(new_folder) == os.path.join(os.getcwd(), new_folder)
-        assert norm_path(new_folder, resolve_sym_links=False) == os.path.join(os.getcwd(), new_folder)
-        assert norm_path(new_folder, make_absolute=False) == os.path.join(os.getcwd(), new_folder)
-        assert norm_path(new_folder, make_absolute=False, remove_base_path=os.getcwd()) == new_folder
+        assert norm_path(new_folder) == os.path.join(tst_cwd, new_folder)
+        assert norm_path(new_folder, resolve_sym_links=False) == os.path.join(tst_cwd, new_folder)
+        assert norm_path(new_folder, make_absolute=False) == os.path.join(tst_cwd, new_folder)
+        assert norm_path(new_folder, make_absolute=False, remove_base_path=tst_cwd) == new_folder
 
-        assert norm_path(os.path.join(TESTS_FOLDER, "..")) == os.getcwd()
-        assert norm_path(os.path.join(TESTS_FOLDER, ".."), resolve_sym_links=False) == os.getcwd()
-        assert norm_path(os.path.join(TESTS_FOLDER, ".."), make_absolute=False) == os.getcwd()
-        assert norm_path(os.path.join("ae", ".."), make_absolute=False, remove_base_path=os.getcwd()) == "."
+        assert norm_path(os.path.join(TESTS_FOLDER, "..")) == tst_cwd
+        assert norm_path(os.path.join(TESTS_FOLDER, ".."), resolve_sym_links=False) == tst_cwd
+        assert norm_path(os.path.join(TESTS_FOLDER, ".."), make_absolute=False) == tst_cwd
+        assert norm_path(os.path.join("ae", ".."), make_absolute=False, remove_base_path=tst_cwd) == "."
 
         assert norm_path("~") != ""
         assert norm_path(os.path.join("~", new_folder)).endswith(new_folder)
         assert norm_path(os.path.join("~", new_folder), remove_base_path="~").endswith(new_folder)
+
+        assert norm_path(TESTS_FOLDER + "\\" + "..") == tst_cwd
 
     def test_now_str(self):
         assert len(now_str()) == 20

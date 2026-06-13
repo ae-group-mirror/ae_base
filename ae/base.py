@@ -166,7 +166,7 @@ from urllib.request import Request, urlopen
 from typing import Any, Final, Generator, Iterable
 
 
-__version__ = '0.3.85'
+__version__ = '0.3.86'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -571,27 +571,32 @@ def norm_name(name: str, allow_num_prefix: bool = False) -> str:
 
 def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "", remove_dots: bool = True,
               resolve_sym_links: bool = True) -> str:
-    """ normalize a path, replacing `..`/`.` parts or the tilde character (home folder) and transform to relative/abs.
+    """ normalize a path, substituting special characters like `..`/`.`/`\\`/`~` and transforming it to relative/abs.
 
     :param path:                path string to normalize/transform.
-    :param make_absolute:       pass False to not convert the returned path to an absolute path.
+    :param make_absolute:       pass `False` to not convert the returned path to an absolute path.
     :param remove_base_path:    pass a valid base path to return a relative path, even if the argument values of
                                 :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links` are
                                 `True`.
-    :param remove_dots:         pass False to not replace/remove the `.` and `..` placeholders.
-    :param resolve_sym_links:   pass False to not resolve symbolic links, passing True implies a `True` value also for
-                                the :paramref:`~norm_path.make_absolute` argument.
+    :param remove_dots:         pass `False` to not replace/remove the relative path placeholders `.` and `..`.
+    :param resolve_sym_links:   pass `False` to not resolve symbolic links. passing `True` implies a `True` value
+                                also for the :paramref:`~norm_path.make_absolute` argument.
     :return:                    normalized path string: absolute if :paramref:`~norm_path.remove_base_path` is empty and
                                 either :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links`
                                 is `True`; relative if :paramref:`~norm_path.remove_base_path` is a base path of
                                 :paramref:`~norm_path.path` or if :paramref:`~norm_path.path` got specified as a
                                 relative path and neither :paramref:`~norm_path.make_absolute` nor
                                 :paramref:`~norm_path.resolve_sym_links` is `True`.
+                                characters like `.` and `..` in relative paths will get replaced (to prevent this
+                                specify `False` onto the :paramref:`~norm_path.remove_dots` argument).
+                                if the specified path string starts with the special shortcut character `~`, it will get
+                                substituted with the current users home directory (depending on the Operating System).
+                                the MS Windows path seperator character `\\` will always be converted into a slash.
 
     .. hint:: the :func:`~ae.paths.normalize` function additionally replaces :data:`~ae.paths.PATH_PLACEHOLDERS`.
 
     """
-    path = path or "."
+    path = path.replace("\\", "/") or "."
     if path[0] == "~":
         path = os_path_expanduser(path)
 
