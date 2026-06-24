@@ -159,14 +159,15 @@ import string
 import unicodedata
 
 from ast import literal_eval
+from collections.abc import Generator, Iterable
 from contextlib import contextmanager
+from typing import Any, Final
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
-from typing import Any, Final, Generator, Iterable
 
 
-__version__ = '0.3.86'
+__version__ = '0.3.87'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
