@@ -167,7 +167,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.87'
+__version__ = '0.3.88'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
