@@ -12,7 +12,7 @@ import timeit
 from collections import OrderedDict
 # noinspection PyProtectedMember
 from http.client import HTTPMessage
-from typing import cast, Any, Optional
+from typing import Any, cast
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 
@@ -635,7 +635,7 @@ class TestBaseHelpers:
         assert len(to_ascii("€")) == 4  # == "Euro"
 
     @staticmethod
-    def url_failure_httpbin_50x_retryer(url: str, timeout: Optional[float] = None) -> tuple[str, str]:
+    def url_failure_httpbin_50x_retryer(url: str, timeout: float | None = None) -> tuple[str, str]:
         """ retry if httpbin is unavailable with 503 error (sometimes 502) """
         retries = 9
         while True:
