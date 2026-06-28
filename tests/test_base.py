@@ -27,7 +27,7 @@ from ae.base import (
     ascii_dec_str, ascii_enc_lit, camel_to_snake, dedefuse, deep_dict_update, defuse, dummy_function, duplicates,
     env_str, evaluate_literal, extend_file, force_encoding, format_given, in_wd, mask_secrets, mask_url,
     norm_line_sep, norm_name, norm_path, now_str, on_ci_host,
-    pep8_format, read_bin_file, read_file, round_traditional, sign, snake_to_camel,
+    parse_date, pep8_format, read_bin_file, read_file, round_traditional, sign, snake_to_camel,
     to_ascii, url_failure, utc_datetime, write_bin_file, write_file)
 
 
@@ -499,6 +499,52 @@ class TestBaseHelpers:
 
         monkeypatch.setenv('CI_PROJECT_ID', "any value")
         assert on_ci_host()
+
+    def test_parse_date_only(self):
+        assert parse_date('2033-12-24') == datetime.datetime(year=2033, month=12, day=24)
+        assert parse_date('2033-12-24', ret_date=True) == datetime.date(year=2033, month=12, day=24)
+        assert parse_date('2033-12-24', ret_date=None) == datetime.date(year=2033, month=12, day=24)
+
+    def test_parse_date_hour_min(self):
+        assert parse_date('2033-12-24 12:59') == datetime.datetime(year=2033, month=12, day=24, hour=12, minute=59)
+        assert parse_date('2033-12-24 12:59', ret_date=True) == datetime.date(year=2033, month=12, day=24)
+        assert parse_date('2033-12-24 12:59', ret_date=None) == datetime.datetime(year=2033, month=12, day=24,
+                                                                                  hour=12, minute=59)
+
+        assert parse_date('2033-12-24T12:59') == datetime.datetime(year=2033, month=12, day=24, hour=12, minute=59)
+        assert parse_date('2033-12-24T12:59', ret_date=True) == datetime.date(year=2033, month=12, day=24)
+        assert parse_date('2033-12-24T12:59', ret_date=None) == datetime.datetime(year=2033, month=12, day=24,
+                                                                                  hour=12, minute=59)
+
+    def test_parse_date_hour_min_sec(self):
+        assert parse_date('2033-12-24 12:59:12') == datetime.datetime(year=2033, month=12, day=24, hour=12,
+                                                                      minute=59, second=12)
+        assert parse_date('2033-12-24 12:59:12', ret_date=True) == datetime.date(year=2033, month=12, day=24)
+        assert parse_date('2033-12-24 12:59:12', ret_date=None) == datetime.datetime(year=2033, month=12, day=24,
+                                                                                     hour=12, minute=59, second=12)
+
+        assert parse_date('2033-12-24T12:59:12') == datetime.datetime(year=2033, month=12, day=24,
+                                                                      hour=12, minute=59, second=12)
+        assert parse_date('2033-12-24T12:59:12', ret_date=True) == datetime.date(year=2033, month=12, day=24)
+        assert parse_date('2033-12-24T12:59:12', ret_date=None) == datetime.datetime(year=2033, month=12, day=24,
+                                                                                     hour=12, minute=59, second=12)
+
+        assert parse_date('2033-1-2 3:4:5') == datetime.datetime(year=2033, month=1, day=2, hour=3, minute=4, second=5)
+        assert parse_date('2033-1-2 3:4:5', ret_date=True) == datetime.date(year=2033, month=1, day=2)
+        assert parse_date('2033-1-2 3:4:5', ret_date=None) == datetime.datetime(year=2033, month=1, day=2,
+                                                                                hour=3, minute=4, second=5)
+
+        assert parse_date('2033-1-2 3:4:5.6') == datetime.datetime(
+            year=2033, month=1, day=2, hour=3, minute=4, second=5, microsecond=600000)
+        assert parse_date('2033-1-2 3:4:5.6', ret_date=True) == datetime.date(year=2033, month=1, day=2)
+        assert parse_date('2033-1-2 3:4:5.6', ret_date=None) == datetime.datetime(
+            year=2033, month=1, day=2, hour=3, minute=4, second=5, microsecond=600000)
+
+    def test_parse_date_invalid(self):
+        assert parse_date('2033-12-24 12:59:12:36') is None
+        assert parse_date('2033-12-24 12:59.678') is None
+        assert parse_date('xx-yy-zz a:b:c') is None
+        assert parse_date(cast(str, cast(object, None))) is None
 
     def test_pep8_format(self):
         assert pep8_format(3.690) == "3.69"
