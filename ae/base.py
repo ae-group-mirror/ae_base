@@ -75,8 +75,9 @@ mathematical
 
 date & time
 ^^^^^^^^^^^
-* :func:`utc_datetime`: Returns the current date and time as a timezone-naive `datetime` object in UTC.
+* :func:`parse_date`: parse an ISO date literal string, returning the represented date/datetime.
 * :func:`now_str`: creates a compact, sortable timestamp string from the current UTC time.
+* :func:`utc_datetime`: Returns the current date and time as a timezone-naive `datetime` object in UTC.
 
 miscellaneous
 ^^^^^^^^^^^^^
@@ -167,7 +168,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.88'
+__version__ = '0.3.89'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -649,6 +650,62 @@ os_path_realpath = os.path.realpath
 os_path_relpath = os.path.relpath
 os_path_sep = os.path.sep                       # pylint: disable=invalid-name
 os_path_splitext = os.path.splitext
+
+
+def parse_date(literal: str, ret_date: bool | None = False) -> datetime.date | datetime.datetime | None:
+    """ parse an ISO date literal string, returning the represented date/datetime or None if date literal is invalid.
+
+    this function extends Pythons standard function :meth:`~datetime.datetime.strptime`.
+    it checks/corrects the passed date/time literals to support a wider range of ISO
+    date/time formats as Pythons :func:`~datetime.datetime.strptime`.
+
+    .. hint::
+        Pythons :meth:`~datetime.datetime.strptime` to parse date and time strings into :class:`datetime.date`
+        or :class:`datetime.datetime` objects is very strict and does not respect the formatting alternatives of
+        ISO8601 (see https://bugs.python.org/issue15873 and https://github.com/boxed/iso8601).
+
+    additionally a :class:`datetime.date` object can be created/returned automatically if no time info is specified
+    in the date string/literal or if requested (via `False` as the :paramref:`~parse_date.ret_date` argument).
+
+    :param literal:             date/time literal string in the format of :data:`DATE_ISO` or :data:`DATE_TIME_ISO`
+                                (supporting also a "T" as separator between the date and the time literal, or
+                                datetime literals without the seconds and/or the microseconds).
+    :param ret_date:            request return value type: True=`datetime.date`, False=`datetime.datetime` (the default)
+                                or None=determine type from literal (`datetime.datetime` if literal contains a time).
+    :return:                    the date/datetime value of the specified literal, or `None` if the literal is invalid.
+    """
+    if not isinstance(literal, str):
+        return None
+
+    literal = literal.replace("T", " ")     # support "T" as alternative separator between date and time
+    lit_dt_sep_pos = literal.find(" ")
+    if ret_date and lit_dt_sep_pos != -1:
+        literal = literal[:lit_dt_sep_pos]  # cut time part if exists caller requested return of short date
+        lit_dt_sep = ""
+        lit_time_sep_cnt = 0
+    else:
+        lit_dt_sep = literal[lit_dt_sep_pos] if lit_dt_sep_pos != -1 else ""
+        lit_time_sep_cnt = literal.count(":")
+        if not 0 <= lit_time_sep_cnt <= 2:
+            return None
+
+    for mask in (DATE_TIME_ISO, DATE_ISO):
+        if mask == DATE_TIME_ISO:
+            if not lit_dt_sep:
+                continue
+            if not literal.find(".") != -1 and (msk_ms_pos := mask.rfind(".")) != -1:
+                mask = mask[:msk_ms_pos]    # no microseconds specified in literal, then remove ".%f" from mask
+            if lit_time_sep_cnt == 1:
+                mask = mask[:-3]            # no seconds specified in literal, then remove ":%S" from mask
+
+        try:
+            ret_val = datetime.datetime.strptime(literal, mask)
+        except (TypeError, ValueError):
+            continue
+
+        return ret_val.date() if ret_date or ret_date is None and not lit_dt_sep else ret_val
+
+    return None
 
 
 def pep8_format(value: Any, indent_level: int = 0):
