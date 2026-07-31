@@ -112,10 +112,10 @@ project & file structure
 * :data:`INI_EXT`: file extension for INI configuration files ('.ini').
 * :data:`PACKAGE_INCLUDE_FILES_PREFIX`: prefix for files/folders to be included in setup package data (used by
   :mod:`ae.updater` and :mod:`aedev.project_manager`)
-* :data:`PY_CACHE_FOLDER`: default name for Python's cache folder ('__pycache__').
+* :data:`PY_CACHE_FOLDER`: default name for Python's cache folder (``__pycache__``).
 * :data:`PY_EXT`: file extension for Python modules ('.py').
-* :data:`PY_INIT`: the filename for a Python package initializer ('__init__.py').
-* :data:`PY_MAIN`: the filename for a Python executable's main module ('__main__.py').
+* :data:`PY_INIT`: the filename for a Python package initializer (``__init__.py``).
+* :data:`PY_MAIN`: the filename for a Python executable's main module (``__main__.py``).
 * :data:`TESTS_FOLDER`: default name for a project's tests folder ('tests').
 * :data:`TEMPLATES_FOLDER`: default name for a folder containing file templates ('templates').
 
@@ -168,7 +168,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.89'
+__version__ = '0.3.90'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -470,7 +470,7 @@ def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = Fals
     :return:                    the specified :paramref:`~format_given.text` with only the placeholders specified in
                                 :paramref:`~format_given.placeholder_map` replaced with their respective map value.
 
-    inspired by the answer of CodeManX in `https://stackoverflow.com/questions/3536303`__
+    inspired by the answer of CodeManX in <https://stackoverflow.com/questions/3536303>.
     """
     formatter = GivenFormatter()
     try:
@@ -573,7 +573,8 @@ def norm_name(name: str, allow_num_prefix: bool = False) -> str:
 
 def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "", remove_dots: bool = True,
               resolve_sym_links: bool = True) -> str:
-    """ normalize a path, substituting special characters like `..`/`.`/`\\`/`~` and transforming it to relative/abs.
+    # noinspection GrazieInspection
+    """ normalize a path, substituting special characters (like `..` `.` `\\` `~`) and transforming it to relative/abs.
 
     :param path:                path string to normalize/transform.
     :param make_absolute:       pass `False` to not convert the returned path to an absolute path.
@@ -593,11 +594,11 @@ def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "",
                                 specify `False` onto the :paramref:`~norm_path.remove_dots` argument).
                                 if the specified path string starts with the special shortcut character `~`, it will get
                                 substituted with the current users home directory (depending on the Operating System).
-                                the MS Windows path seperator character `\\` will always be converted into a slash.
+                                the MS Windows path seperator backslash character will always be converted into a slash.
 
-    .. hint:: the :func:`~ae.paths.normalize` function additionally replaces :data:`~ae.paths.PATH_PLACEHOLDERS`.
+        .. hint:: the :func:`~ae.paths.normalize` function additionally replaces :data:`~ae.paths.PATH_PLACEHOLDERS`.
 
-    """
+        """
     path = path.replace("\\", "/") or "."
     if path[0] == "~":
         path = os_path_expanduser(path)
@@ -941,14 +942,14 @@ def write_file(file_path: str, content: str, encoding: str | None = None, make_d
     :raises UnicodeEncodeError: content cannot be encoded using the selected encoding.
     :raises ValueError:         other encoding errors, invalid mode or incompatible arguments.
 
-    to extend this function for Android 14+, see `<https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>`__
-    and `<https://gist.github.com/neonankiti/05922cf0a44108a2e2732671ed9ef386>`__
+    to extend this function for Android 14+, see <https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>
+    and <https://gist.github.com/neonankiti/05922cf0a44108a2e2732671ed9ef386>
     Yes, to use ACTION_CREATE_DOCUMENT, you don't supply a URI in the intent. You wait for the intent result, and that
     will contain a URI which you can write to.
-    See #1158 (comment - `<https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>`__) for a link to a Java
-    example, and #1158 (comment - `<https://github.com/beeware/toga/pull/1158#issuecomment-1446196973>`__) for how to
+    See #1158 (comment - <https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>) for a link to a Java
+    example, and #1158 (comment - <https://github.com/beeware/toga/pull/1158#issuecomment-1446196973>) for how to
     wait for an intent result.
-    Related german docs: `<https://developer.android.com/training/data-storage/shared/media?hl=de>`__
+    Related german docs: <https://developer.android.com/training/data-storage/shared/media?hl=de>.
     """
     if make_dirs and (dir_path := os_path_dirname(file_path)):
         os.makedirs(dir_path, exist_ok=True)
