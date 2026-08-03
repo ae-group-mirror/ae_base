@@ -552,8 +552,10 @@ class TestBaseHelpers:
         assert pep8_format(False) == "False"
         assert pep8_format(True) == "True"
 
-        assert pep8_format([]) == "[]"
         assert pep8_format({}) == "{}"
+        assert pep8_format([]) == "[]"
+        assert pep8_format(set()) == "set()"
+        assert pep8_format(tuple()) == "()"
 
         assert pep8_format({}, indent_level=1) == "{}"
         assert pep8_format({}, indent_level=2) == "{}"
@@ -563,6 +565,8 @@ class TestBaseHelpers:
 
         assert pep8_format([1, [2, 3], 4]) == "[\n    1,\n    [\n        2,\n        3,\n    ],\n    4,\n]"
         assert pep8_format([1, [2, 3], 4]) == f"[\n{sp}1,\n{sp}[\n{sp}{sp}2,\n{sp}{sp}3,\n{sp}],\n{sp}4,\n]"
+        assert pep8_format([1, {2, 3}, 4]) == f"[\n{sp}1,\n{sp}set(\n{sp}{sp}2,\n{sp}{sp}3,\n{sp}),\n{sp}4,\n]"
+        assert pep8_format([1, (2, 3), 4]) == f"[\n{sp}1,\n{sp}(\n{sp}{sp}2,\n{sp}{sp}3,\n{sp}),\n{sp}4,\n]"
 
         assert pep8_format([1, [2]], indent_level=1) == "[\n        1,\n        [\n            2,\n        ],\n    ]"
         assert pep8_format([1, [2]], indent_level=1) == f"[\n{sp}{sp}1,\n{sp}{sp}[\n{sp}{sp}{sp}2,\n{sp}{sp}],\n{sp}]"
@@ -596,6 +600,53 @@ class TestBaseHelpers:
                     'c',
                     3,
                     {
+                        'd': '',
+                    },
+                ],
+                True: False,
+            }""")
+
+    def test_pep8_format_deep_debug(self):
+        sp = " " * 4
+
+        assert pep8_format([1, [2, 3], "4"], debug_mode=True
+                           ) == f"[\n{sp}0: 1,\n{sp}1: [\n{sp}{sp}0: 2,\n{sp}{sp}1: 3,\n{sp}],\n{sp}2: '4',\n]"
+        assert pep8_format([1, {2, 3}, "4"], debug_mode=True
+                           ) == f"[\n{sp}0: 1,\n{sp}1: set(\n{sp}{sp}0: 2,\n{sp}{sp}1: 3,\n{sp}),\n{sp}2: '4',\n]"
+        assert pep8_format([1, (2, True), 4], debug_mode=True
+                           ) == f"[\n{sp}0: 1,\n{sp}1: (\n{sp}{sp}0: 2,\n{sp}{sp}1: True,\n{sp}),\n{sp}2: 4,\n]"
+
+        assert pep8_format([1, [2]], indent_level=1, debug_mode=True
+                           ) == f"[\n{sp}{sp}0: 1,\n{sp}{sp}1: [\n{sp}{sp}{sp}0: 2,\n{sp}{sp}],\n{sp}]"
+
+        value = {
+            'a': [
+                1,
+                {
+                    2: 3
+                },
+            ],
+            'b': [
+                'c',
+                3,
+                {
+                    'd': '',
+                },
+            ],
+            True: False,
+        }
+        assert pep8_format(value, debug_mode=True) == textwrap.dedent("""\
+            {
+                'a': [
+                    0: 1,
+                    1: {
+                        2: 3,
+                    },
+                ],
+                'b': [
+                    0: 'c',
+                    1: 3,
+                    2: {
                         'd': '',
                     },
                 ],

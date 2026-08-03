@@ -162,13 +162,14 @@ import unicodedata
 from ast import literal_eval
 from collections.abc import Generator, Iterable
 from contextlib import contextmanager
+from functools import partial
 from typing import Any, Final
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.90'
+__version__ = '0.3.91'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -242,7 +243,7 @@ def deep_dict_update(data: dict, update: dict, overwrite: bool = True):
 
     :param data:                dict to be updated/extended. non-existing keys of dict-subitems will be added.
     :param update:              dict with the [sub-]items to update in the :paramref:`~deep_dict_update.data` dict.
-    :param overwrite:           pass False to not overwrite an already existing value.
+    :param overwrite:           pass `False` to not overwrite an already existing value.
 
     .. hint:: see the module/portion :mod:`ae.deep` for more deep update helper functions.
     """
@@ -344,11 +345,11 @@ def defuse(value: str) -> str:
 
 
 def dummy_function(*_args, **_kwargs):
-    """ null function accepting any arguments and returning None.
+    """ null function accepting any arguments and returning `None`.
 
     :param _args:               ignored positional arguments.
     :param _kwargs:             ignored keyword arguments.
-    :return:                    always None.
+    :return:                    always `None`.
     """
 
 
@@ -376,10 +377,10 @@ def env_str(name: str, convert_name: bool = False) -> str | None:
     """ determine the string value of an OS environment variable, optionally preventing invalid variable name.
 
     :param name:                name of an OS environment variable.
-    :param convert_name:        pass True to prevent invalid variable names by converting
+    :param convert_name:        pass `True` to prevent invalid variable names by converting
                                 CamelCase names into SNAKE_CASE, lower-case into
                                 upper-case and all non-alpha-numeric characters into underscore characters.
-    :return:                    string value of OS environment variable if found, else None.
+    :return:                    string value of OS environment variable if found, else `None`.
     """
     if convert_name:
         name = norm_name(camel_to_snake(name)).upper()
@@ -407,7 +408,7 @@ def extend_file(file_path: str, content: str, encoding: str | None = None, make_
     :param content:             new file content passed either as string or as `bytes`. if a byte array gets passed,
                                 then this method will automatically write the content as binary.
     :param encoding:            encoding used to convert/interpret the string content to write.
-    :param make_dirs:           pass True to create not existing parent folders of the specified file path.
+    :param make_dirs:           pass `True` to create not existing parent folders of the specified file path.
     :raises IsADirectoryError:  file_path points to a directory instead of a file.
     :raises LookupError:        unknown encoding name.
     :raises NotADirectoryError: part of the path expected to be a directory is actually a file.
@@ -466,7 +467,7 @@ def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = Fals
                                 to :func:`str.format_map`, no KeyError will be raised for placeholders not specified in
                                 :paramref:`~format_given.placeholder_map`.
     :param placeholder_map:     dict with placeholder keys to be replaced in :paramref:`~format_given.text` argument.
-    :param strict:              pass True to raise an error for text templates containing unpaired curly brackets.
+    :param strict:              pass `True` to raise an error for text templates containing unpaired curly brackets.
     :return:                    the specified :paramref:`~format_given.text` with only the placeholders specified in
                                 :paramref:`~format_given.placeholder_map` replaced with their respective map value.
 
@@ -559,7 +560,7 @@ def norm_name(name: str, allow_num_prefix: bool = False) -> str:
     """ normalize name to start with a letter/alphabetic/underscore and to contain only alphanumeric/underscore chars.
 
     :param name:                any string to be converted into a valid variable/method/file/... name.
-    :param allow_num_prefix:    pass True to allow leading digits in the returned normalized name.
+    :param allow_num_prefix:    pass `True` to allow leading digits in the returned normalized name.
     :return:                    cleaned/normalized/converted name string (e.g., for a variable-/method-/file-name).
     """
     str_parts: list[str] = []
@@ -630,9 +631,9 @@ def now_str(sep: str = "") -> str:
 
 
 def on_ci_host() -> bool:
-    """ check and return True if it is running on the GitLab/GitHub CI host/server.
+    """ check and return `True` if it is running on the GitLab/GitHub CI host/server.
 
-    :return:                    True if running on CI host, else False.
+    :return:                    `True` if running on CI host, else `False`.
 
     .. note:: env vars always available: 'CI' on GitHub (Pre-pipeline); 'CI_PROJECT_ID' (internal ProjectId) on GitLab
     """
@@ -654,7 +655,7 @@ os_path_splitext = os.path.splitext
 
 
 def parse_date(literal: str, ret_date: bool | None = False) -> datetime.date | datetime.datetime | None:
-    """ parse an ISO date literal string, returning the represented date/datetime or None if date literal is invalid.
+    """ parse an ISO date literal string, returning the represented date/datetime or `None` if date literal is invalid.
 
     this function extends Pythons standard function :meth:`~datetime.datetime.strptime`.
     it checks/corrects the passed date/time literals to support a wider range of ISO
@@ -671,8 +672,8 @@ def parse_date(literal: str, ret_date: bool | None = False) -> datetime.date | d
     :param literal:             date/time literal string in the format of :data:`DATE_ISO` or :data:`DATE_TIME_ISO`
                                 (supporting also a "T" as separator between the date and the time literal, or
                                 datetime literals without the seconds and/or the microseconds).
-    :param ret_date:            request return value type: True=`datetime.date`, False=`datetime.datetime` (the default)
-                                or None=determine type from literal (`datetime.datetime` if literal contains a time).
+    :param ret_date:            request return value type: `True`=datetime.date, `False`=datetime.datetime (the default)
+                                or `None`=determine type from literal (`datetime.datetime` if literal contains a time).
     :return:                    the date/datetime value of the specified literal, or `None` if the literal is invalid.
     """
     if not isinstance(literal, str):
@@ -709,30 +710,35 @@ def parse_date(literal: str, ret_date: bool | None = False) -> datetime.date | d
     return None
 
 
-def pep8_format(value: Any, indent_level: int = 0):
-    """ PEP-8-conform representation code string of deep dict/list structures, superseding :func:`pprint.pformat`.
+def pep8_format(value: Any, indent_level: int = 0, debug_mode: bool = False) -> str:
+    """ representation code string of deep dict/list/set/tuple data structures, superseding :func:`pprint.pformat`.
 
-    :param value:               value to format PEP-8-conform (hanging indent always with 4 spaces)..
+    :param value:               value to format with hanging indent.
     :param indent_level:        level of indentation. pass e.g. 1 to indent the output with 4 spaces.
-    :return:                    representation string of the specified value.
+    :param debug_mode:          specify `True` to enable debug mode, adding key/index for list, set and tuple structures
+                                to return; then no longer convertable back to its value with :func:`ast.literal_eval`.
+    :return:                    value literal either in PEP-8-conform-representation or as a debug log/print string.
     """
-    spaces = " " * 4  # PEP-8: 4 spaces
-    indent_spaces = spaces * indent_level
+    indent_spaces = " " * 4  # PEP-8: 4 spaces per indent
+    level_spaces = indent_spaces * indent_level
+    is_dict = isinstance(value, dict)
+    show_key = debug_mode or is_dict
+
+    beg_ch, end_ch, iter_func = (
+        ("{", "}", value.items) if is_dict else
+        ("[", "]", partial(enumerate, value)) if isinstance(value, list) else
+        ("set(", ")", partial(enumerate, value)) if isinstance(value, set) else
+        ("(", ")", partial(enumerate, value)) if isinstance(value, tuple) else
+        ("", "", None))
 
     parts = []
-    if value and isinstance(value, dict):
-        parts.append("{")
-        for key, val in value.items():
-            formatted = pep8_format(val, indent_level=indent_level + 1)
-            parts.append(f"{indent_spaces}{spaces}{repr(key)}: {formatted},")
-        parts.append(indent_spaces + "}")
-
-    elif value and isinstance(value, list):
-        parts.append("[")
-        for item in value:
-            formatted = pep8_format(item, indent_level + 1)
-            parts.append(f"{indent_spaces}{spaces}{formatted},")
-        parts.append(indent_spaces + "]")
+    if value and iter_func:
+        parts.append(beg_ch)
+        for key, val in iter_func():
+            key_str = repr(key) + ": " if show_key else ""
+            formatted = pep8_format(val, indent_level=indent_level + 1, debug_mode=debug_mode)
+            parts.append(f"{level_spaces}{indent_spaces}{key_str}{formatted},")
+        parts.append(level_spaces + end_ch)
 
     else:
         parts.append(repr(value))
@@ -759,7 +765,7 @@ def read_file(file_path: str, encoding: str | None = None, error_handling: str |
     :param file_path:           path/name of the file to load the content from.
     :param encoding:            encoding used to load and convert/interpret the file content (passed onto the `encoding`
                                 parameter of the built-in `open` function).
-    :param error_handling:      pass `'strict'` or ``None`` to raise a `ValueError` exception on encoding errors.
+    :param error_handling:      pass `'strict'` or `None` to raise a `ValueError` exception on encoding errors.
                                 the default value `'ignore'` will ignore any decoding errors (resulting in missing
                                 characters in the return value). passed onto the `errors` parameter of the built-in
                                 `open` function.
@@ -905,7 +911,7 @@ def write_bin_file(file_path: str, content: bytes, make_dirs: bool = False):
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
     :param content:             new file content specified as `bytes`.
-    :param make_dirs:           pass True to automatically create not existing folders of the file path.
+    :param make_dirs:           pass `True` to automatically create not existing folders of the file path.
     :raises FileExistsError:    if the file to write to exists already and is write-protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
     :raises IsADirectoryError:  file_path points to a directory instead of a file.
@@ -928,7 +934,7 @@ def write_file(file_path: str, content: str, encoding: str | None = None, make_d
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
     :param content:             new file content passed as string.
     :param encoding:            encoding used to write/convert/interpret the file content to write (defaults to utf-8).
-    :param make_dirs:           pass True to automatically create not existing folders of the file path (specified in
+    :param make_dirs:           pass `True` to automatically create not existing folders of the file path (specified in
                                 :paramref:`~write_file.file_path`).
     :raises FileExistsError:    if the file to write to exists already and is write-protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
@@ -961,7 +967,7 @@ def write_file(file_path: str, content: str, encoding: str | None = None, make_d
 class UnsetType:
     """ (singleton) UNSET (type) object class. """
     def __bool__(self):
-        """ ensure to be evaluated as False, like None. """
+        """ ensure to be evaluated as `False`, like `None`. """
         return False
 
     def __len__(self):
@@ -969,4 +975,4 @@ class UnsetType:
         return 0
 
 
-UNSET: Final = UnsetType()     #: pseudo value used for attributes/arguments if ``None`` is needed as a valid value
+UNSET: Final = UnsetType()     #: pseudo value used for attributes/arguments if `None` is needed as a valid value

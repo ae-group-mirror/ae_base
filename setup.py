@@ -1,4 +1,4 @@
-# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.91
+# THIS FILE IS EXCLUSIVELY MAINTAINED by the project aedev.project_tpls v0.3.94
 """ setup of ae namespace module portion base: basic constants, helper functions, classes and context managers. """
 import pathlib
 import sys
@@ -72,7 +72,7 @@ setup_kwargs: dict[str, Any] = {
     },
     'python_requires': '>=3.12',
     'url': 'https://gitlab.com/ae-group/ae_base',
-    'version': '0.3.90',
+    'version': '0.3.91',
     'zip_safe': True,
 }
 
