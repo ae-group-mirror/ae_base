@@ -169,7 +169,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.91'
+__version__ = '0.3.92'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -736,7 +736,10 @@ def pep8_format(value: Any, indent_level: int = 0, debug_mode: bool = False) -> 
         parts.append(beg_ch)
         for key, val in iter_func():
             key_str = repr(key) + ": " if show_key else ""
-            formatted = pep8_format(val, indent_level=indent_level + 1, debug_mode=debug_mode)
+            if key == 'base_globals':  # prevent endless-recursion in conjunction with :data:`ae.dynamicod.base_globals`
+                formatted = repr(val)  # and :func:`ae.system.full_stack_trace`, e.g. in ``pjm show invalid_expression``
+            else:
+                formatted = pep8_format(val, indent_level=indent_level + 1, debug_mode=debug_mode)
             parts.append(f"{level_spaces}{indent_spaces}{key_str}{formatted},")
         parts.append(level_spaces + end_ch)
 

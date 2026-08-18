@@ -653,6 +653,12 @@ class TestBaseHelpers:
                 True: False,
             }""")
 
+        base_globals = {}
+        assert pep8_format({'base_globals': base_globals}) == textwrap.dedent("""\
+            {
+                'base_globals': {},
+            }""")
+
     def test_read_bin_file(self):
         with open(__file__, mode='rb') as file_handle:
             content = file_handle.read()
