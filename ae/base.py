@@ -169,7 +169,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.92'
+__version__ = '0.3.93'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -710,37 +710,47 @@ def parse_date(literal: str, ret_date: bool | None = False) -> datetime.date | d
     return None
 
 
-def pep8_format(value: Any, indent_level: int = 0, debug_mode: bool = False) -> str:
+def pep8_format(value: Any, indent_level: int = 0, debug_mode: bool = False, _printed: tuple = ()) -> str:
     """ representation code string of deep dict/list/set/tuple data structures, superseding :func:`pprint.pformat`.
 
     :param value:               value to format with hanging indent.
     :param indent_level:        level of indentation. pass e.g. 1 to indent the output with 4 spaces.
     :param debug_mode:          specify `True` to enable debug mode, adding key/index for list, set and tuple structures
                                 to return; then no longer convertable back to its value with :func:`ast.literal_eval`.
+    :param _printed:            used internally to prevent RecursionError, RuntimeError and ValueError for
+                                cyclic/recursive data structures in the :paramref:`~pep8_format.value` argument.
     :return:                    value literal either in PEP-8-conform-representation or as a debug log/print string.
     """
-    indent_spaces = " " * 4  # PEP-8: 4 spaces per indent
+    indent_spaces = ' ' * 4     # PEP-8: 4 spaces per indent
     level_spaces = indent_spaces * indent_level
     is_dict = isinstance(value, dict)
     show_key = debug_mode or is_dict
 
     beg_ch, end_ch, iter_func = (
-        ("{", "}", value.items) if is_dict else
-        ("[", "]", partial(enumerate, value)) if isinstance(value, list) else
-        ("set(", ")", partial(enumerate, value)) if isinstance(value, set) else
-        ("(", ")", partial(enumerate, value)) if isinstance(value, tuple) else
+        ('{', '}', value.items) if is_dict else
+        ('[', ']', partial(enumerate, value)) if isinstance(value, list) else
+        ('set(', ')', partial(enumerate, value)) if isinstance(value, set) else
+        ('(', ')', partial(enumerate, value)) if isinstance(value, tuple) else
         ("", "", None))
 
     parts = []
     if value and iter_func:
         parts.append(beg_ch)
         for key, val in iter_func():
-            key_str = repr(key) + ": " if show_key else ""
-            if key == 'base_globals':  # prevent endless-recursion in conjunction with :data:`ae.dynamicod.base_globals`
-                formatted = repr(val)  # and :func:`ae.system.full_stack_trace`, e.g. in ``pjm show invalid_expression``
-            else:
-                formatted = pep8_format(val, indent_level=indent_level + 1, debug_mode=debug_mode)
-            parts.append(f"{level_spaces}{indent_spaces}{key_str}{formatted},")
+            key_str = repr(key) + ': ' if show_key else ""
+            try:
+                if value in _printed:                   # can also throw RecursionError
+                    formatted = repr(value)
+                else:
+                    formatted = pep8_format(val, indent_level=indent_level + 1, debug_mode=debug_mode,
+                                            _printed=_printed + (value, ))
+            except (RecursionError, RuntimeError, ValueError):
+                if not debug_mode:
+                    return beg_ch + end_ch
+                formatted = '......'
+
+            parts.append(f"{level_spaces}{indent_spaces}{key_str}{formatted}" + ',')
+
         parts.append(level_spaces + end_ch)
 
     else:

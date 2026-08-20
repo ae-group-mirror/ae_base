@@ -653,11 +653,46 @@ class TestBaseHelpers:
                 True: False,
             }""")
 
-        base_globals = {}
-        assert pep8_format({'base_globals': base_globals}) == textwrap.dedent("""\
-            {
-                'base_globals': {},
-            }""")
+    def test_pep8_format_recursive_data(self):
+        """ although Python repr() is automatically putting '...' to prevent RecursionError on cyclic/recursive data
+        structures, there are cases where pep8_format() would throw such exception, like e.g.:
+        * data structures with a repr method that is not using the @reprlib.recursive_repr() decorator
+        * cyclic recursive data structures like e.g. the rec_a, rec_b and rec_c underneath, or in conjunction with
+          :func:`ae.dynamicod.try_eval` using the base globals mapping :data:`ae.dynamicod.base_globals` in the function
+          :func:`ae.system.full_stack_trace` (in executing ``pjm show_expression_value invalid_expression``).
+        """
+        sep = os.linesep
+        ind = ' ' * 4           # PEP-8: 4 spaces per indent
+
+        rec_a = [[]]
+        rec_b = [rec_a]
+        rec_a[0] = rec_b
+        rec_c = []
+        rec_c.append(rec_c)
+
+        assert pep8_format(rec_a) == '[' + sep + ind + '[' + ']' + ',' + sep + ']'
+        assert pep8_format(rec_b) == '[' + sep + ind + '[' + ']' + ',' + sep + ']'
+        assert pep8_format(rec_c) == (
+                '[' + sep + ind + '[' + sep + ind * 2 + '[' + '[' + "..." + ']' + ']' + ',' + sep +
+                ind + ']' + ',' + sep + ']')
+
+        assert pep8_format(rec_a).replace(sep, "").replace(ind, "") == '[' + '[' + ']' + ',' + ']' == '[[],]'
+
+        assert pep8_format(rec_a, debug_mode=True) == (
+            '[' + sep +
+            ind + "0" + ': ' + '[' + sep +
+            '        ' + "0" + ': ' + '......' + ',' + sep +
+            ind + ']' + ',' + sep +
+            ']') == textwrap.dedent(f"""\
+            [
+                0: [
+                    0: ......,
+                ],
+            ]""").replace("""
+            """[0], sep)
+
+        assert pep8_format(rec_a) == pep8_format(rec_b)
+        assert pep8_format(rec_a, debug_mode=True) == pep8_format(rec_b, debug_mode=True)
 
     def test_read_bin_file(self):
         with open(__file__, mode='rb') as file_handle:
