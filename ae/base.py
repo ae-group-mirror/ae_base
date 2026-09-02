@@ -169,7 +169,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.93'
+__version__ = '0.3.94'
 
 
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
@@ -207,8 +207,7 @@ def ascii_dec_str(encoded_str: str) -> str:
 
     :param encoded_str:         string literal to decode (covert contained ASCII-encoded characters back Unicode chars).
     :return:                    decoded Unicode string.
-    :raises:                    SyntaxError if invalid string literal got specified in
-                                :paramref:`~ascii_dec_str.encoded_str`.
+    :raises:                    SyntaxError if invalid string literal got specified in :paramref:`.encoded_str`.
     """
     return literal_eval(encoded_str).decode()
 
@@ -242,7 +241,7 @@ def deep_dict_update(data: dict, update: dict, overwrite: bool = True):
     """ update the optionally nested data dict in-place with the items and subitems from the update dict.
 
     :param data:                dict to be updated/extended. non-existing keys of dict-subitems will be added.
-    :param update:              dict with the [sub-]items to update in the :paramref:`~deep_dict_update.data` dict.
+    :param update:              dict with the [sub-]items to update in the :paramref:`.data` dict.
     :param overwrite:           pass `False` to not overwrite an already existing value.
 
     .. hint:: see the module/portion :mod:`ae.deep` for more deep update helper functions.
@@ -354,7 +353,7 @@ def dummy_function(*_args, **_kwargs):
 
 
 def duplicates(values: Iterable) -> list:
-    """ determine all duplicates in the iterable specified in the :paramref:`~duplicates.values` argument.
+    """ determine all duplicates in the iterable specified in the :paramref:`.values` argument.
 
     inspired by Ritesh Kumars answer to https://stackoverflow.com/questions/9835762.
 
@@ -402,7 +401,7 @@ def evaluate_literal(literal_string: str) -> bool | bytes | dict | complex | flo
 
 
 def extend_file(file_path: str, content: str, encoding: str | None = None, make_dirs: bool = False):
-    """ create/extend the text file specified by :paramref:`~extend_file.file_path` with the specified content string.
+    """ create/extend the text file specified by :paramref:`.file_path` with the specified content string.
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
     :param content:             new file content passed either as string or as `bytes`. if a byte array gets passed,
@@ -465,11 +464,11 @@ def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = Fals
 
     :param text:                text/template in which the given/specified placeholders will get replaced. in contrary
                                 to :func:`str.format_map`, no KeyError will be raised for placeholders not specified in
-                                :paramref:`~format_given.placeholder_map`.
-    :param placeholder_map:     dict with placeholder keys to be replaced in :paramref:`~format_given.text` argument.
+                                :paramref:`.placeholder_map`.
+    :param placeholder_map:     dict with placeholder keys to be replaced in :paramref:`.text` argument.
     :param strict:              pass `True` to raise an error for text templates containing unpaired curly brackets.
-    :return:                    the specified :paramref:`~format_given.text` with only the placeholders specified in
-                                :paramref:`~format_given.placeholder_map` replaced with their respective map value.
+    :return:                    the specified :paramref:`.text` with only the placeholders specified in
+                                :paramref:`.placeholder_map` replaced with their respective map value.
 
     inspired by the answer of CodeManX in <https://stackoverflow.com/questions/3536303>.
     """
@@ -511,7 +510,7 @@ def mask_secrets(data: dict | Iterable, fragments: Iterable[str] = ('password', 
     """ partially-hide secret string values like passwords/credit-card-numbers in deeply nestable data structures.
 
     :param data:                iterable deep data structure wherein its item values get masked if their related dict
-                                item key contains one of the fragments specified in :paramref:`~mask_secrets.fragments`.
+                                item key contains one of the fragments specified in :paramref:`.fragments`.
     :param fragments:           dict key string fragments of which the related value will be masked. each fragment has
                                 to be specified with lower case chars! defaults to ('password', 'pwd') if not passed.
     :return:                    specified data structure with the secrets masked (¡in-place!).
@@ -548,7 +547,7 @@ def mask_url(url: str, replacement: str = "¿¿¿") -> str:
 
 def norm_line_sep(text: str) -> str:
     # noinspection GrazieInspection
-    """ convert any combination of line separators in the :paramref:`~norm_line_sep.text` arg to new-line characters.
+    """ convert any combination of line separators in the :paramref:`.text` arg to new-line characters.
 
         :param text:                string containing any combination of line separators ('\\\\r\\\\n' or '\\\\r').
         :return:                    normalized/converted string with only new-line ('\\\\n') line separator characters.
@@ -580,19 +579,18 @@ def norm_path(path: str, make_absolute: bool = True, remove_base_path: str = "",
     :param path:                path string to normalize/transform.
     :param make_absolute:       pass `False` to not convert the returned path to an absolute path.
     :param remove_base_path:    pass a valid base path to return a relative path, even if the argument values of
-                                :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links` are
-                                `True`.
+                                :paramref:`.make_absolute` or :paramref:`.resolve_sym_links` are `True`.
     :param remove_dots:         pass `False` to not replace/remove the relative path placeholders `.` and `..`.
     :param resolve_sym_links:   pass `False` to not resolve symbolic links. passing `True` implies a `True` value
-                                also for the :paramref:`~norm_path.make_absolute` argument.
-    :return:                    normalized path string: absolute if :paramref:`~norm_path.remove_base_path` is empty and
-                                either :paramref:`~norm_path.make_absolute` or :paramref:`~norm_path.resolve_sym_links`
-                                is `True`; relative if :paramref:`~norm_path.remove_base_path` is a base path of
-                                :paramref:`~norm_path.path` or if :paramref:`~norm_path.path` got specified as a
-                                relative path and neither :paramref:`~norm_path.make_absolute` nor
-                                :paramref:`~norm_path.resolve_sym_links` is `True`.
+                                also for the :paramref:`.make_absolute` argument.
+    :return:                    normalized path string: absolute if :paramref:`.remove_base_path` is empty and
+                                either :paramref:`.make_absolute` or :paramref:`.resolve_sym_links` is `True`;
+                                relative if :paramref:`.remove_base_path` is a base path of
+                                :paramref:`.path` or if :paramref:`.path` got specified as a
+                                relative path and neither :paramref:`.make_absolute` nor
+                                :paramref:`.resolve_sym_links` is `True`.
                                 characters like `.` and `..` in relative paths will get replaced (to prevent this
-                                specify `False` onto the :paramref:`~norm_path.remove_dots` argument).
+                                specify `False` onto the :paramref:`.remove_dots` argument).
                                 if the specified path string starts with the special shortcut character `~`, it will get
                                 substituted with the current users home directory (depending on the Operating System).
                                 the MS Windows path seperator backslash character will always be converted into a slash.
@@ -667,7 +665,7 @@ def parse_date(literal: str, ret_date: bool | None = False) -> datetime.date | d
         ISO8601 (see https://bugs.python.org/issue15873 and https://github.com/boxed/iso8601).
 
     additionally a :class:`datetime.date` object can be created/returned automatically if no time info is specified
-    in the date string/literal or if requested (via `False` as the :paramref:`~parse_date.ret_date` argument).
+    in the date string/literal or if requested (via `False` as the :paramref:`.ret_date` argument).
 
     :param literal:             date/time literal string in the format of :data:`DATE_ISO` or :data:`DATE_TIME_ISO`
                                 (supporting also a "T" as separator between the date and the time literal, or
@@ -718,7 +716,7 @@ def pep8_format(value: Any, indent_level: int = 0, debug_mode: bool = False, _pr
     :param debug_mode:          specify `True` to enable debug mode, adding key/index for list, set and tuple structures
                                 to return; then no longer convertable back to its value with :func:`ast.literal_eval`.
     :param _printed:            used internally to prevent RecursionError, RuntimeError and ValueError for
-                                cyclic/recursive data structures in the :paramref:`~pep8_format.value` argument.
+                                cyclic/recursive data structures in the :paramref:`.value` argument.
     :return:                    value literal either in PEP-8-conform-representation or as a debug log/print string.
     """
     indent_spaces = ' ' * 4     # PEP-8: 4 spaces per indent
@@ -760,12 +758,12 @@ def pep8_format(value: Any, indent_level: int = 0, debug_mode: bool = False, _pr
 
 
 def read_bin_file(file_path: str) -> bytes:
-    """ returning the binary content of the specified by the :paramref:`~read_bin_file.file_path` argument.
+    """ returning the binary content of the specified by the :paramref:`.file_path` argument.
 
     :param file_path:           path/name of the file to load the content from.
     :return:                    file content bytes array.
     :raises FileNotFoundError:  if the file to read from does not exist.
-    :raises OSError:            if :paramref:`~read_bin_file.file_path` is misspelled or contains invalid characters.
+    :raises OSError:            if :paramref:`.file_path` is misspelled or contains invalid characters.
     :raises PermissionError:    if the current OS user account lacks permissions to read the file content.
     """
     with open(file_path, "rb") as file_handle:
@@ -773,7 +771,7 @@ def read_bin_file(file_path: str) -> bytes:
 
 
 def read_file(file_path: str, encoding: str | None = None, error_handling: str | None = 'ignore') -> str:
-    """ returning the string content of the text file specified by :paramref:`~read_file.file_path` argument.
+    """ returning the string content of the text file specified by :paramref:`.file_path` argument.
 
     :param file_path:           path/name of the file to load the content from.
     :param encoding:            encoding used to load and convert/interpret the file content (passed onto the `encoding`
@@ -860,7 +858,7 @@ def url_failure(url: str, token: str = "", username: str = "", password: str = "
     :param password:            optional password to authenticate (for HTTPS, together with the username argument).
     :param git_repo:            optimized check for Git repository HTTP servers/sites (like GitHub, GitLab, Bitbucket,
                                 Gitea, SourceHut, Mercury, etc. as long as they implement Smart HTTP). if specified
-                                then the :paramref:`~url_failure.url` has to point to a repository.
+                                then the :paramref:`.url` has to point to a repository.
     :param timeout:             connection timeout in seconds (see :func:`urllib.request.urlopen`).
     :return:                    empty string if target header is available, else an error description. if an
                                 FTP|HTTP response error occurred then the error/status code
@@ -920,7 +918,7 @@ def utc_datetime() -> datetime.datetime:
 
 
 def write_bin_file(file_path: str, content: bytes, make_dirs: bool = False):
-    """ (over)write the file specified by :paramref:`~write_bin_file.file_path` with the specified binary/bytes content.
+    """ (over)write the file specified by :paramref:`.file_path` with the specified binary/bytes content.
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
     :param content:             new file content specified as `bytes`.
@@ -942,13 +940,13 @@ def write_bin_file(file_path: str, content: bytes, make_dirs: bool = False):
 
 
 def write_file(file_path: str, content: str, encoding: str | None = None, make_dirs: bool = False):
-    """ (over)write the file specified by :paramref:`~write_file.file_path` with the specified string content.
+    """ (over)write the file specified by :paramref:`.file_path` with the specified string content.
 
     :param file_path:           file path/name to write the passed content into (overwriting any previous content!).
     :param content:             new file content passed as string.
     :param encoding:            encoding used to write/convert/interpret the file content to write (defaults to utf-8).
     :param make_dirs:           pass `True` to automatically create not existing folders of the file path (specified in
-                                :paramref:`~write_file.file_path`).
+                                :paramref:`.file_path`).
     :raises FileExistsError:    if the file to write to exists already and is write-protected.
     :raises FileNotFoundError:  if parts of the file path do not exist.
     :raises IsADirectoryError:  file_path points to a directory instead of a file.
