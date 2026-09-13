@@ -3,7 +3,7 @@ basic constants, helper functions, classes and context managers
 ===============================================================
 
 this module is pure python, has no external dependencies, and provides a comprehensive toolkit of base constants,
-common helper functions, useful classes, and context managers for a wide variety of programming tasks.
+common/enhanced helper functions, useful classes, and context managers for a wide variety of programming tasks.
 
 
 string manipulation
@@ -12,32 +12,18 @@ string manipulation
 functions for converting, cleaning, normalizing, and formatting strings.
 
 * :func:`ascii_dec_str`: decodes an ascii string literal converted by :func:`ascii_enc_lit` back to its Unicode form.
-* :func:`ascii_enc_lit`: encodes a Unicode string into a reversible 7-bit ASCII representation, useful for transport
-  protocol/HTTP headers.
+* :func:`ascii_enc_lit`: encodes a Unicode string into a reversible 7-bit ASCII representation.
 * :func:`camel_to_snake`: converts a string from CamelCase to snake_case.
-* :func:`snake_to_camel`: converts a string from snake_case to CamelCase.
-* :func:`norm_name`: normalizes a string to be a valid identifier (e.g., for variable-, method-, or file-names).
-* :func:`norm_line_sep`: converts all line separator combinations (CRLF, CR) in a string to a single newline (LF).
-* :func:`defuse`: converts special characters in string to Unicode alternatives, making it safe for use as
-  a URL slug, path or filename.
 * :func:`dedefuse`: reverses the operation of :func:`defuse`, restoring the original string.
+* :func:`defuse`: converts special characters in string to Unicode alternatives.
+* :func:`evaluate_literal`: an enhanced :func:`ast.literal_eval` that also recognizes unquoted strings as `str` type.
 * :func:`force_encoding`: ensures text is in a specific encoding without raising errors, replacing characters as needed.
+* :func:`format_given`: an enhanced `str.format_map` leaving placeholders intact if they are not found in the mapping.
+* :func:`norm_line_sep`: converts all line separator combinations (CRLF, CR) in a string to a single newline (LF).
+* :func:`norm_name`: normalizes a string to be a valid identifier (e.g., for variable-, method-, or file-names).
+* :func:`pep8_format`: a better :func:`pprint.pformat` creating a :pep:`8`-conform code literal of any data structure.
+* :func:`snake_to_camel`: converts a string from snake_case to CamelCase.
 * :func:`to_ascii`: converts a Unicode string into its closest ASCII representation by removing accents and diacritics.
-* :func:`format_given`: a replacement for `str.format_map` that formats a string but leaves placeholders intact if they
-  are not found in the provided mapping.
-
-
-data structure utilities
-------------------------
-
-helpers for working with lists, dictionaries, and other data structures.
-
-* :func:`evaluate_literal`: replacement for :func:`ast.literal_eval` that also interprets/recognizes unquoted strings
-  as `str` type.
-* :func:`duplicates`: returns a list of all duplicate items found in any type of iterable.
-* :func:`deep_dict_update`: recursively updates a dictionary in-place with values from another dictionary.
-* :func:`mask_secrets`: hides sensitive string values (e.g., passwords, API keys) in deeply nested data structures,
-  useful for logging.
 
 
 file, path & I/O operations
@@ -47,55 +33,40 @@ simplify file system interactions with wrappers and context managers.
 
 * :func:`extend_file`: append string to a file or create it if file not exists.
 * :func:`in_wd`: a context manager to temporarily switch/change the current working directory.
-* :func:`norm_path`: normalizes a path by expanding user home directories (`~`), resolving `.`, `..`, symbolic links,
-  and converting between absolute and relative paths.
+* :func:`norm_path`: normalizes a file or directory path.
 * :func:`read_bin_file`: reads the entire content of a binary file into a bytes object.
 * :func:`read_file`: reads the entire content of a text file into a string.
 * :func:`write_bin_file`: writes a bytes object to a file, overwriting existing content.
 * :func:`write_file`: writes a string into a file, overwriting existing content.
 
 
-networking utilities
---------------------
-
-* :func:`mask_url`: hides or replaces the password/token portion of a URL for safe logging.
-* :func:`url_failure`: determines if and why an HTTP|FTP target is unavailable.
-
-
 general utilities & helpers
 ---------------------------
 
-a collection of miscellaneous mathematical, date/time, and other standalone helper functions.
+a collection of miscellaneous data structure, date/time, mathematical, networking and other standalone helper functions.
 
-mathematical
-^^^^^^^^^^^^
-
-* :func:`sign`: returns the sign of a number (-1 for negative, 0 for zero, 1 for positive).
-* :func:`round_traditional`: rounds a float value using traditional rounding rules (e.g., `0.5` rounds up).
-
-date & time
-^^^^^^^^^^^
-* :func:`parse_date`: parse an ISO date literal string, returning the represented date/datetime.
-* :func:`now_str`: creates a compact, sortable timestamp string from the current UTC time.
-* :func:`utc_datetime`: Returns the current date and time as a timezone-naive `datetime` object in UTC.
-
-miscellaneous
-^^^^^^^^^^^^^
+* :func:`deep_dict_update`: recursively updates a dictionary in-place with values from another dictionary.
 * :func:`dummy_function`: a null function that accepts any arguments and returns `None`.
-* :func:`env_str`: retrieves the string value of an OS environment variable, with an option to automatically convert the
-  variable name to the conventional format.
+* :func:`duplicates`: returns a list of all duplicate items found in any type of iterable.
+* :func:`env_str`: determines OS environment variable value.
+* :func:`list_find`: performant list item finder, searching for first/consecutive item(s) in a list instance.
+* :func:`mask_secrets`: hides sensitive string values (e.g., passwords, API keys) in deeply nested data structures.
+* :func:`mask_url`: hides or replaces the password/token portion of a URL for safe logging.
+* :func:`now_str`: creates a compact, sortable timestamp string from the current UTC time.
 * :func:`on_ci_host`: detects if it is running on the CI of a Git repository server (GitHub or GitLab).
+* :func:`parse_date`: parse an ISO date literal string, returning the represented date/datetime.
+* :func:`round_traditional`: rounds a float value using traditional rounding rules (rounding `0.5` up to `1.0`).
+* :func:`sign`: returns the sign of a number (-1 for negative, 0 for zero, 1 for positive).
+* :func:`url_failure`: determines if and why an HTTP|FTP target is unavailable.
+* :func:`utc_datetime`: returns the current date and time as a timezone-naive `datetime` object in UTC.
 
 
 base types and classes
 ----------------------
 
-* :class:`UnsetType`: the class for the :data:`UNSET` singleton object, useful as a sentinel value when `None` is a
-  valid input.
-* :class:`UnformattedValue`: a helper class for :func:`format_given` to represent a placeholder that was not found in
-  the formatting map.
-* :class:`GivenFormatter`: a helper class for :func:`format_given` that overrides default formatting behavior to keep
-  missing placeholders.
+* :class:`GivenFormatter`: overrides default formatting behavior to keep missing placeholders.
+* :class:`UnformattedValue`: represent a placeholder that was not found in the formatting map.
+* :class:`UnsetType`: the class for the :data:`UNSET` singleton object.
 
 
 base constants
@@ -110,14 +81,13 @@ project & file structure
 * :data:`DEF_PROJECT_PARENT_FOLDER`: default directory name for grouping source code projects ('src').
 * :data:`DOCS_FOLDER`: default name for a project's documentation folder ('docs').
 * :data:`INI_EXT`: file extension for INI configuration files ('.ini').
-* :data:`PACKAGE_INCLUDE_FILES_PREFIX`: prefix for files/folders to be included in setup package data (used by
-  :mod:`ae.updater` and :mod:`aedev.project_manager`)
+* :data:`PACKAGE_INCLUDE_FILES_PREFIX`: prefix for files/folders to be included in setup package data.
 * :data:`PY_CACHE_FOLDER`: default name for Python's cache folder (``__pycache__``).
 * :data:`PY_EXT`: file extension for Python modules ('.py').
 * :data:`PY_INIT`: the filename for a Python package initializer (``__init__.py``).
 * :data:`PY_MAIN`: the filename for a Python executable's main module (``__main__.py``).
-* :data:`TESTS_FOLDER`: default name for a project's tests folder ('tests').
 * :data:`TEMPLATES_FOLDER`: default name for a folder containing file templates ('templates').
+* :data:`TESTS_FOLDER`: default name for a project's tests folder ('tests').
 
 
 formats & default settings
@@ -126,7 +96,6 @@ formats & default settings
 * :data:`DATE_ISO`: ISO format string for dates ("%Y-%m-%d").
 * :data:`DATE_TIME_ISO`: ISO format string for :mod:`datetime.datetime` dates ("%Y-%m-%d %H:%M:%S.%f").
 * :data:`DEF_ENCODE_ERRORS`: the default error handling strategy for encoding ('backslashreplace').
-* :data:`DEF_ENCODING`: the default encoding used for string operations ('ascii').
 * :data:`NAME_PARTS_SEP`: the character used as a separator in name conversions ('_').
 * :data:`NOW_STR_FORMAT`: the datetime format string, used e.g. by :func:`now_str` for creating timestamps.
 * :data:`UNSET`: a singleton instance of :class:`UnsetType`, used where `None` is a valid data value.
@@ -169,37 +138,25 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.94'
+__version__ = '0.3.95'
 
 
+CFG_EXT = '.cfg'                                #: CFG config file extension
+DATE_ISO = "%Y-%m-%d"                           #: ISO string format for date values (e.g. in config files/variables)
+DATE_TIME_ISO = "%Y-%m-%d %H:%M:%S.%f"          #: ISO string format for datetime values
+DEF_PROJECT_PARENT_FOLDER = 'src'               #: default directory name to put code project roots underneath of it
+DEF_ENCODE_ERRORS = 'backslashreplace'          #: default encode error handling for UnicodeEncodeErrors
 DOCS_FOLDER = 'docs'                            #: project documentation root folder name
-TESTS_FOLDER = 'tests'                          #: name of project folder to store unit/integration tests
-TEMPLATES_FOLDER = 'templates'
-""" template folder name, used in template and namespace root projects to maintain and provide common file templates """
-
-PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: file/folder names prefix included in setup package_data/ae_updater
-
+INI_EXT = '.ini'                                #: INI config file extension
+NAME_PARTS_SEP = '_'                            #: variable name parts separator character (see :func:`norm_name`)
+NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"  #: timestamp format of :func:`now_str`
+PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: names prefix (for :mod:`ae.updater`, :mod:`aedev.project_vars`, ...)
 PY_CACHE_FOLDER = '__pycache__'                 #: python cache folder name
 PY_EXT = '.py'                                  #: file extension for modules and hooks
 PY_INIT = '__init__' + PY_EXT                   #: init-module file name of a python package
 PY_MAIN = '__main__' + PY_EXT                   #: main-module file name of a python executable
-
-CFG_EXT = '.cfg'                                #: CFG config file extension
-INI_EXT = '.ini'                                #: INI config file extension
-
-DATE_ISO = "%Y-%m-%d"                           #: ISO string format for date values (e.g. in config files/variables)
-DATE_TIME_ISO = "%Y-%m-%d %H:%M:%S.%f"          #: ISO string format for datetime values
-
-DEF_PROJECT_PARENT_FOLDER = 'src'               #: default directory name to put code project roots underneath of it
-
-DEF_ENCODE_ERRORS = 'backslashreplace'          #: default encode error handling for UnicodeEncodeErrors
-DEF_ENCODING = 'ascii'
-""" encoding for :func:`force_encoding` that will always work independent from destination (console, file sys, ...).
-"""
-
-NAME_PARTS_SEP = '_'                                #: name parts separator character, e.g. for :func:`norm_name`
-
-NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"    #: timestamp format of :func:`now_str`
+TESTS_FOLDER = 'tests'                          #: name of project folder to store unit/integration tests
+TEMPLATES_FOLDER = 'templates'                  #: template folder name, used in template and namespace root projects
 
 
 def ascii_dec_str(encoded_str: str) -> str:
@@ -425,17 +382,27 @@ def extend_file(file_path: str, content: str, encoding: str | None = None, make_
         file_handle.write(content)
 
 
-def force_encoding(text: str | bytes, encoding: str = DEF_ENCODING, errors: str = DEF_ENCODE_ERRORS) -> str:
+def force_encoding(text: str | bytes, encoding: str = 'ascii', errors: str = DEF_ENCODE_ERRORS) -> str:
     """ force/ensure the encoding of text (str or bytes) without any UnicodeDecodeError/UnicodeEncodeError.
 
     :param text:                text as str/bytes.
-    :param encoding:            encoding (def= :data:`DEF_ENCODING`).
-    :param errors:              encode error handling (def= :data:`DEF_ENCODE_ERRORS`).
+    :param encoding:            encoding (default='ascii').
+    :param errors:              encode error handling (default=:data:`DEF_ENCODE_ERRORS`).
 
     :return:                    text as str (with all characters checked/converted/replaced to be encode-able).
     """
     enc_str: bytes = text.encode(encoding=encoding, errors=errors) if isinstance(text, str) else text
     return enc_str.decode(encoding=encoding)
+
+
+class GivenFormatter(string.Formatter):
+    """ helper class for :func:`~ae.base.format_given` to keep placeholder with format unchanged if not found. """
+    def get_value(self, key, args, kwargs):
+        """ overriding to keep placeholder unchanged if not found """
+        try:
+            return super().get_value(key, args, kwargs)
+        except KeyError:
+            return UnformattedValue(key)
 
 
 class UnformattedValue:                     # pylint: disable=too-few-public-methods
@@ -447,16 +414,6 @@ class UnformattedValue:                     # pylint: disable=too-few-public-met
         """ overriding Python object class method to return placeholder unchanged, including the curly brackets. """
         # pylint: disable=consider-using-f-string
         return "{{{}{}}}".format(self.key, ":" + format_spec if format_spec else "")
-
-
-class GivenFormatter(string.Formatter):
-    """ helper class for :func:`~ae.base.format_given` to keep placeholder with format unchanged if not found. """
-    def get_value(self, key, args, kwargs):
-        """ overriding to keep placeholder unchanged if not found """
-        try:
-            return super().get_value(key, args, kwargs)
-        except KeyError:
-            return UnformattedValue(key)
 
 
 def format_given(text: str, placeholder_map: dict[str, Any], strict: bool = False):
@@ -504,6 +461,41 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
         yield
     finally:
         os.chdir(cur_dir)
+
+
+def list_find(searched: list, *items: Any) -> int:
+    """ find first/consecutive item(s) in a list instance.
+
+    :param searched:            list to be searched for an item specified by :paramref:`.value`.
+    :param items:               list item(s) to search for. use packing operator (*items) to specify a sequence
+                                as consecutive item values, e.g.: `list_find(searched, *items_to_find)`.
+    :return:                    list index of found item(s), 0 if no items, or -1 if not found in :paramref:`.searched`.
+    """
+    items_len = len(items)
+    if items_len == 1:          # performance optimized for single item search
+        try:                    # see <https://gitlab.com/aedev-group/python_playground/find_index_perf.py>
+            return searched.index(items[0])
+        except ValueError:
+            return -1
+    if items_len == 0:
+        return 0                # if no items got specified then return 0, similar to :func:`str.find`
+
+    limit = len(searched) - items_len
+    items_list = list(items)
+    first_item = items[0]
+    first_index = 0
+    while first_index <= limit:
+        try:
+            first_index = searched.index(first_item, first_index)
+        except ValueError:
+            return -1
+
+        if searched[first_index:first_index + items_len] == items_list:
+            return first_index
+
+        first_index += 1
+
+    return -1
 
 
 def mask_secrets(data: dict | Iterable, fragments: Iterable[str] = ('password', 'pwd')) -> dict | Iterable:
@@ -847,15 +839,14 @@ def to_ascii(unicode_str: str) -> str:
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('ß', "ss").replace('€', "Euro")
 
 
-# pylint: disable-next=too-many-arguments,too-many-positional-arguments,too-many-return-statements
-def url_failure(url: str, token: str = "", username: str = "", password: str = "",
+def url_failure(url: str, username: str = "", password_or_token: str = "",
                 git_repo: bool = False, timeout: float | None = None) -> str:
     """ determine if and why an FTP or HTTP[S] target is not available via a GET request.
 
     :param url:                 URL of a target|page|file to check (not downloaded, fetching only the header).
-    :param token:               optional bearer token to authenticate (only for HTTPS protocol).
-    :param username:            optional username to authenticate (for HTTPS, together with the password argument).
-    :param password:            optional password to authenticate (for HTTPS, together with the username argument).
+    :param username:            optional username on the server specified via the :paramref:`.url` argument.
+    :param password_or_token:   optional password|token to authenticate. if :paramref:`.username` is not specified/empty
+                                then this argument gets used as bearer token to authenticate against an HTTPS server.
     :param git_repo:            optimized check for Git repository HTTP servers/sites (like GitHub, GitLab, Bitbucket,
                                 Gitea, SourceHut, Mercury, etc. as long as they implement Smart HTTP). if specified
                                 then the :paramref:`.url` has to point to a repository.
@@ -875,11 +866,10 @@ def url_failure(url: str, token: str = "", username: str = "", password: str = "
         url += "/info/refs?service=git-upload-pack"
 
     headers = {}
-    if token:
-        assert not username and not password, "url_failure accepts either a token or username/password, not both"
-        headers['Authorization'] = "Bearer " + token
-    elif username or password:
-        creds = f"{username}:{password}".encode('utf-8')
+    if password_or_token and not username:
+        headers['Authorization'] = "Bearer " + password_or_token
+    elif username or password_or_token:
+        creds = f"{username}:{password_or_token}".encode('utf-8')
         headers['Authorization'] = "Basic " + base64.b64encode(creds).decode('utf-8')
 
     # noinspection PyBroadException
@@ -887,26 +877,29 @@ def url_failure(url: str, token: str = "", username: str = "", password: str = "
         request = Request(url, method='GET', headers=headers)
         with urlopen(request, timeout=timeout) as response:         # open connection and only read the header
             status = response.getcode()                             # no need to call response.read()
-            return "" if 200 <= status < 300 else f"{status} {mask_url(url)} {response.reason=}"
+            ret = "" if 200 <= status < 300 else f"{status} {mask_url(url)} {response.reason=}"
 
     except HTTPError as exception:
-        return f"{exception.code} {mask_url(url)} raised HTTPError {exception.reason=}"
+        ret = f"{exception.code} {mask_url(url)} raised HTTPError {exception.reason=}"
 
     except URLError as exception:
         err_msg = f" {mask_url(url)} raised {exception.errno=} {exception.reason=};"
         if isinstance(exception.reason, socket.gaierror):
-            return '995' + f"{err_msg} could not resolve hostname"
-        if isinstance(exception.reason, ssl.SSLCertVerificationError):
-            return '996' + f"{err_msg} SSL certificate verification failed"
-        if isinstance(exception.reason, socket.timeout):
-            return '997' + f"{err_msg} connection timed out after {timeout} seconds"
-        return '998' + f"{err_msg} could not reach the server"
+            ret = '995' + f"{err_msg} could not resolve hostname"
+        elif isinstance(exception.reason, ssl.SSLCertVerificationError):
+            ret = '996' + f"{err_msg} SSL certificate verification failed"
+        elif isinstance(exception.reason, socket.timeout):
+            ret = '997' + f"{err_msg} connection timed out after {timeout} seconds"
+        else:
+            ret = '998' + f"{err_msg} could not reach the server"
 
     except socket.timeout as _exception:    # noqa: F841 # str(_exception) could contain password|token
-        return '997' + f" {mask_url(url)} raised socket-timeout exception after {timeout} seconds"
+        ret = '997' + f" {mask_url(url)} raised socket-timeout exception after {timeout} seconds"
 
     except Exception as _exception:         # noqa: F841 # pylint: disable=broad-exception-caught
-        return '999' + f" {mask_url(url)} raised unexpected exception"   # str(_exception) COULD contain password
+        ret = '999' + f" {mask_url(url)} raised unexpected exception"   # str(_exception) could contain password|token
+
+    return ret
 
 
 def utc_datetime() -> datetime.datetime:

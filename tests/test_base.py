@@ -25,7 +25,7 @@ from ae.base import (
     ASCII_TO_UNICODE, ASCII_UNICODE,
     TESTS_FOLDER, UNICODE_TO_ASCII, UNSET, URI_SEP_STR, URI_SEP_UNICODE_CHAR,
     ascii_dec_str, ascii_enc_lit, camel_to_snake, dedefuse, deep_dict_update, defuse, dummy_function, duplicates,
-    env_str, evaluate_literal, extend_file, force_encoding, format_given, in_wd, mask_secrets, mask_url,
+    env_str, evaluate_literal, extend_file, force_encoding, format_given, in_wd, list_find, mask_secrets, mask_url,
     norm_line_sep, norm_name, norm_path, now_str, on_ci_host,
     parse_date, pep8_format, read_bin_file, read_file, round_traditional, sign, snake_to_camel,
     to_ascii, url_failure, utc_datetime, write_bin_file, write_file)
@@ -387,6 +387,34 @@ class TestBaseHelpers:
             assert os.getcwd() == tst_dir
         assert os.getcwd() == old_dir
 
+    def test_list_find(self):
+        assert list_find([], 69) == -1
+        assert list_find([], 'a') == -1
+        assert list_find(['a', 2, True], 'd') == -1
+
+        assert list_find(['a', 'b', 'c'], 'a') == 0
+        assert list_find(['a', 'b', 'c'], 'b') == 1
+        assert list_find(['a', 'b', 'c'], 'c') == 2
+        assert list_find(['a', 2, True], 2) == 1
+        assert list_find(['a', 2, True], True) == 2
+
+    def test_list_find_consecutive(self):
+        assert list_find([], 6, 'b', True) == -1
+        assert list_find([6, False], 6, True) == -1
+        assert list_find([6, False], 6, False, 'c') == -1
+        assert list_find(['a', 'b'], 'a', 'b', 3) == -1
+        assert list_find([1, 2, 3, 9], 'a', 'b', 3) == -1
+
+        assert list_find([]) == 0
+        assert list_find([1, '2', True]) == 0
+
+        assert list_find(['a', 'b', 'c'], 'a', 'b') == 0
+        assert list_find(['a', 'b', 'c'], 'a', 'b', 'c') == 0
+        assert list_find(['a', 'b', 'c'], 'b', 'c') == 1
+        assert list_find(['a', 'b', 3, True, 'c'], *[3, True]) == 2
+        assert list_find(['a', 'b', 'a', 'a', 'b', 3], *('a', 'b', 3)) == 3
+        assert list_find(['a', 'b', 'a', 'a', 'b', 3, 4], *('a', 'b', 3)) == 3
+
     def test_mask_secrets(self):
         assert mask_secrets({}) == {}
         assert mask_secrets([]) == []
@@ -404,14 +432,14 @@ class TestBaseHelpers:
 
         untouched = 'untouched_Pw_d_p_a_s_s_word'
         dat = {'key1': {'subKey1': (
-                                    {'host_Pwd': "secret"},
-                                    untouched,
-                                    ),
-                        'passWord___': "secRet",
-                        },
-               'any_PASSWORD_to_hide': "Se",
-               untouched: untouched,
-               }
+            {'host_Pwd': "secret"},
+            untouched,
+        ),
+            'passWord___': "secRet",
+        },
+            'any_PASSWORD_to_hide': "Se",
+            untouched: untouched,
+        }
         assert mask_secrets(dat) is dat
         # noinspection PyTypeChecker
         assert dat['key1']['subKey1'][0]['host_Pwd'] == "sec*********"
@@ -453,7 +481,7 @@ class TestBaseHelpers:
     def test_norm_path(self):
         new_folder = "non_existent_folder"
         tst_cwd = os.getcwd()
-        
+
         assert norm_path(".") == tst_cwd
         assert norm_path(".", resolve_sym_links=False) == tst_cwd
         assert norm_path(".", make_absolute=False) == tst_cwd
@@ -679,11 +707,11 @@ class TestBaseHelpers:
         assert pep8_format(rec_a).replace(sep, "").replace(ind, "") == '[' + '[' + ']' + ',' + ']' == '[[],]'
 
         assert pep8_format(rec_a, debug_mode=True) == (
-            '[' + sep +
-            ind + "0" + ': ' + '[' + sep +
-            '        ' + "0" + ': ' + '......' + ',' + sep +
-            ind + ']' + ',' + sep +
-            ']') == textwrap.dedent(f"""\
+                '[' + sep +
+                ind + "0" + ': ' + '[' + sep +
+                '        ' + "0" + ': ' + '......' + ',' + sep +
+                ind + ']' + ',' + sep +
+                ']') == textwrap.dedent(f"""\
             [
                 0: [
                     0: ......,
@@ -802,7 +830,7 @@ class TestBaseHelpers:
         url = f"https://username:{password}@{domain}/{path}"
         err_msg = "raised exception error message"
 
-        ret = url_failure(url, token=password)
+        ret = url_failure(url, password_or_token=password)
 
         assert ret
         assert int(ret[:3]) > 0
@@ -810,7 +838,7 @@ class TestBaseHelpers:
         assert domain in ret
         assert path in ret
 
-        ret = url_failure(url, username="any user name", password=password)
+        ret = url_failure(url, username="any user name", password_or_token=password)
 
         assert ret
         assert int(ret[:3]) > 0
