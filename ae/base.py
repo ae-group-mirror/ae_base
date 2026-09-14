@@ -138,7 +138,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.95'
+__version__ = '0.3.96'
 
 
 CFG_EXT = '.cfg'                                #: CFG config file extension
@@ -486,7 +486,7 @@ def list_find(searched: list, *items: Any) -> int:
     first_index = 0
     while first_index <= limit:
         try:
-            first_index = searched.index(first_item, first_index)
+            first_index = searched.index(first_item, first_index, limit + 1)
         except ValueError:
             return -1
 
