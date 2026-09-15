@@ -138,7 +138,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.96'
+__version__ = '0.3.97'
 
 
 CFG_EXT = '.cfg'                                #: CFG config file extension
@@ -254,13 +254,13 @@ ASCII_UNICODE = (
 """ transformation table of special ASCII characters to a similar/alternative non-functional/-escaping Unicode char,
 see https://www.compart.com/en/unicode/category/Po and https://xahlee.info/comp/unicode_naming_slash.html (http!) """
 
-URI_SEP_STR = '://'             #: separator between service and address(host/path) in URIs
-URI_SEP_UNICODE_CHAR = '⫻'      #: single Unicode char for :data:`URI_SEP_STR`  U+2AFB: TRIPLE SOLIDUS BINARY RELATION
+URI_SVC_SEP = "://"             #: separator between service and address(host/path) in URIs/URLs
+SVC_SEP_UNICODE_CHAR = '⫻'      #: single Unicode char for :data:`URI_SVC_SEP`  U+2AFB: TRIPLE SOLIDUS BINARY RELATION
 
 ASCII_TO_UNICODE = str.maketrans(dict(ASCII_UNICODE))
 """ :func:`str.translate` map to convert ASCII to an alternative defused Unicode character - used by :func:`defuse` """
 UNICODE_TO_ASCII = str.maketrans({unicode_char: ascii_char for ascii_char, unicode_char in
-                                  ASCII_UNICODE + ((URI_SEP_STR, URI_SEP_UNICODE_CHAR), )})
+                                  ASCII_UNICODE + ((URI_SVC_SEP, SVC_SEP_UNICODE_CHAR), )})
 """ :func:`str.translate` Unicode to ASCII map - used by :func:`dedefuse` """
 
 
@@ -294,10 +294,14 @@ def defuse(value: str) -> str:
 
     file name length is not restricted/shortened by this function, although the maximum is 255 characters on most OSs.
 
+    .. note::
+        a defused URL/URI is getting marked and is resulting as 2 characters shorter by replacing the 3 characters
+        of the service separator (:data:`URI_SVC_SEP`) with a single unicode character (:data:`SVC_SEP_UNICODE_CHAR`).
+
     .. hint:: use the :func:`dedefuse` function to convert the defused string back to the corresponding URI/file-path.
 
     """
-    return value.replace(URI_SEP_STR, URI_SEP_UNICODE_CHAR).translate(ASCII_TO_UNICODE)  # replace makes URIs shorter
+    return value.replace(URI_SVC_SEP, SVC_SEP_UNICODE_CHAR).translate(ASCII_TO_UNICODE)  # replace makes URIs shorter
 
 
 def dummy_function(*_args, **_kwargs):

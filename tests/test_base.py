@@ -23,7 +23,7 @@ from tests.conftest import skip_gitlab_ci
 
 from ae.base import (
     ASCII_TO_UNICODE, ASCII_UNICODE,
-    TESTS_FOLDER, UNICODE_TO_ASCII, UNSET, URI_SEP_STR, URI_SEP_UNICODE_CHAR,
+    TESTS_FOLDER, UNICODE_TO_ASCII, UNSET, URI_SVC_SEP, SVC_SEP_UNICODE_CHAR,
     ascii_dec_str, ascii_enc_lit, camel_to_snake, dedefuse, deep_dict_update, defuse, dummy_function, duplicates,
     env_str, evaluate_literal, extend_file, force_encoding, format_given, in_wd, list_find, mask_secrets, mask_url,
     norm_line_sep, norm_name, norm_path, now_str, on_ci_host,
@@ -225,9 +225,9 @@ class TestBaseHelpers:
 
     def test_defuse_maps_integrity(self):
         assert len(ASCII_TO_UNICODE) == len(ASCII_UNICODE)      # duplicates check in ASCII_UNICODE map
-        assert len(UNICODE_TO_ASCII) == len(ASCII_UNICODE) + 1  # -"-, having also the ord(URI_SEP_UNICODE_CHAR) key
-        assert ord(URI_SEP_UNICODE_CHAR) in UNICODE_TO_ASCII
-        assert UNICODE_TO_ASCII[ord(URI_SEP_UNICODE_CHAR)] == URI_SEP_STR
+        assert len(UNICODE_TO_ASCII) == len(ASCII_UNICODE) + 1  # -"-, having also the ord(SVC_SEP_UNICODE_CHAR) key
+        assert ord(SVC_SEP_UNICODE_CHAR) in UNICODE_TO_ASCII
+        assert UNICODE_TO_ASCII[ord(SVC_SEP_UNICODE_CHAR)] == URI_SVC_SEP
 
     def test_defuse_maps_not_touching_chars_allowed_as_slug_and_filename(self):
         assert ord('-') not in ASCII_TO_UNICODE
