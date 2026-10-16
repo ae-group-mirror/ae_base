@@ -74,29 +74,12 @@ base constants
 
 predefined constants for defaults, project structure, file conventions, to decrease redundancy and increase performance.
 
-project & file structure
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-* :data:`CFG_EXT`: file extension for CFG/INI configuration files ('.cfg').
-* :data:`DEF_PROJECT_PARENT_FOLDER`: default directory name for grouping source code projects ('src').
-* :data:`DOCS_FOLDER`: default name for a project's documentation folder ('docs').
-* :data:`INI_EXT`: file extension for INI configuration files ('.ini').
-* :data:`PACKAGE_INCLUDE_FILES_PREFIX`: prefix for files/folders to be included in setup package data.
-* :data:`PY_CACHE_FOLDER`: default name for Python's cache folder (``__pycache__``).
-* :data:`PY_EXT`: file extension for Python modules ('.py').
-* :data:`PY_INIT`: the filename for a Python package initializer (``__init__.py``).
-* :data:`PY_MAIN`: the filename for a Python executable's main module (``__main__.py``).
-* :data:`TEMPLATES_FOLDER`: default name for a folder containing file templates ('templates').
-* :data:`TESTS_FOLDER`: default name for a project's tests folder ('tests').
-
-
 formats & default settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * :data:`DATE_ISO`: ISO format string for dates ("%Y-%m-%d").
 * :data:`DATE_TIME_ISO`: ISO format string for :mod:`datetime.datetime` dates ("%Y-%m-%d %H:%M:%S.%f").
 * :data:`DEF_ENCODE_ERRORS`: the default error handling strategy for encoding ('backslashreplace').
-* :data:`NAME_PARTS_SEP`: the character used as a separator in name conversions ('_').
 * :data:`NOW_STR_FORMAT`: the datetime format string, used e.g. by :func:`now_str` for creating timestamps.
 * :data:`UNSET`: a singleton instance of :class:`UnsetType`, used where `None` is a valid data value.
 
@@ -106,19 +89,21 @@ os.path shortcuts
 
 the following are direct references to functions in the :mod:`os.path` module for convenient and quicker access:
 
-* :data:`os_path_abspath`: :func:`os.path.abspath`
-* :data:`os_path_basename`: :func:`os.path.basename`
-* :data:`os_path_dirname`: :func:`os.path.dirname`
-* :data:`os_path_expanduser`: :func:`os.path.expanduser`
-* :data:`os_path_isdir`: :func:`os.path.isdir`
-* :data:`os_path_isfile`: :func:`os.path.isfile`
-* :data:`os_path_join`: :func:`os.path.join`
-* :data:`os_path_normpath`: :func:`os.path.normpath`
-* :data:`os_path_realpath`: :func:`os.path.realpath`
-* :data:`os_path_relpath`: :func:`os.path.relpath`
-* :data:`os_path_sep`: :data:`os.path.sep`
-* :data:`os_path_splitext`: :func:`os.path.splitext`
+* :data:`OS_PATH_SEP`: :data:`os.path.sep`
 
+* :func:`os_path_abspath`: :func:`os.path.abspath`
+* :func:`os_path_basename`: :func:`os.path.basename`
+* :func:`os_path_dirname`: :func:`os.path.dirname`
+* :func:`os_path_expanduser`: :func:`os.path.expanduser`
+* :func:`os_path_getmtime`: :func:`os.path.getmtime`
+* :func:`os_path_isdir`: :func:`os.path.isdir`
+* :func:`os_path_isfile`: :func:`os.path.isfile`
+* :func:`os_path_join`: :func:`os.path.join`
+* :func:`os_path_normpath`: :func:`os.path.normpath`
+* :func:`os_path_realpath`: :func:`os.path.realpath`
+* :func:`os_path_relpath`: :func:`os.path.relpath`
+* :func:`os_path_splitext`: :func:`os.path.splitext`
+* :func:`os_path_split`: :func:`os.path.split`
 """
 import base64
 import datetime
@@ -138,25 +123,13 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.97'
+__version__ = '0.3.98'
 
 
-CFG_EXT = '.cfg'                                #: CFG config file extension
-DATE_ISO = "%Y-%m-%d"                           #: ISO string format for date values (e.g. in config files/variables)
-DATE_TIME_ISO = "%Y-%m-%d %H:%M:%S.%f"          #: ISO string format for datetime values
-DEF_PROJECT_PARENT_FOLDER = 'src'               #: default directory name to put code project roots underneath of it
-DEF_ENCODE_ERRORS = 'backslashreplace'          #: default encode error handling for UnicodeEncodeErrors
-DOCS_FOLDER = 'docs'                            #: project documentation root folder name
-INI_EXT = '.ini'                                #: INI config file extension
-NAME_PARTS_SEP = '_'                            #: variable name parts separator character (see :func:`norm_name`)
-NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"  #: timestamp format of :func:`now_str`
-PACKAGE_INCLUDE_FILES_PREFIX = 'ae_'            #: names prefix (for :mod:`ae.updater`, :mod:`aedev.project_vars`, ...)
-PY_CACHE_FOLDER = '__pycache__'                 #: python cache folder name
-PY_EXT = '.py'                                  #: file extension for modules and hooks
-PY_INIT = '__init__' + PY_EXT                   #: init-module file name of a python package
-PY_MAIN = '__main__' + PY_EXT                   #: main-module file name of a python executable
-TESTS_FOLDER = 'tests'                          #: name of project folder to store unit/integration tests
-TEMPLATES_FOLDER = 'templates'                  #: template folder name, used in template and namespace root projects
+DATE_ISO = "%Y-%m-%d"                               #: ISO string format for date literal
+DATE_TIME_ISO = "%Y-%m-%d %H:%M:%S.%f"              #: ISO string format for datetime literals
+DEF_ENCODE_ERRORS = 'backslashreplace'              #: default encode error handling for UnicodeEncodeErrors
+NOW_STR_FORMAT = "{sep}%Y%m%d{sep}%H%M%S{sep}%f"    #: timestamp format of :func:`now_str`
 
 
 def ascii_dec_str(encoded_str: str) -> str:
@@ -188,7 +161,7 @@ def camel_to_snake(name: str) -> str:
     str_parts = []
     for char in name:
         if char.isupper():
-            str_parts.append(NAME_PARTS_SEP + char)
+            str_parts.append('_' + char)
         else:
             str_parts.append(char)
     return "".join(str_parts)
@@ -249,18 +222,16 @@ ASCII_UNICODE = (
                     # ' ' U+202F: Narrow No-Break Space (NNBSP); ' ' U+205F Medium Mathematical Space;
                     # '␠' U+2420 symbol for space; '␣' U+2423 Open Box; '　' U+3000: Ideographic Space
     (chr(127), '␡'),  # U+2421: DELETE SYMBOL
-    # ('_', '𛲖'),     # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
+    # ('://', '⫻'), # U+2AFB: TRIPLE SOLIDUS BINARY RELATION (:func:`str.maketrans` supports only single-chars/ordinals)
+    # ('_', '𛲖'),   # U+1BC96: Duployan Affix Low Line; '＿' U+FF3F Fullwidth Low Line
 ) + tuple((chr(low_asc_ord), chr(0x2400 + low_asc_ord)) for low_asc_ord in range(32))
-""" transformation table of special ASCII characters to a similar/alternative non-functional/-escaping Unicode char,
+""" transformation table of special ASCII characters to a similar/alternative non-functional/-escaping Unicode char/str,
 see https://www.compart.com/en/unicode/category/Po and https://xahlee.info/comp/unicode_naming_slash.html (http!) """
-
-URI_SVC_SEP = "://"             #: separator between service and address(host/path) in URIs/URLs
-SVC_SEP_UNICODE_CHAR = '⫻'      #: single Unicode char for :data:`URI_SVC_SEP`  U+2AFB: TRIPLE SOLIDUS BINARY RELATION
 
 ASCII_TO_UNICODE = str.maketrans(dict(ASCII_UNICODE))
 """ :func:`str.translate` map to convert ASCII to an alternative defused Unicode character - used by :func:`defuse` """
 UNICODE_TO_ASCII = str.maketrans({unicode_char: ascii_char for ascii_char, unicode_char in
-                                  ASCII_UNICODE + ((URI_SVC_SEP, SVC_SEP_UNICODE_CHAR), )})
+                                  ASCII_UNICODE + (('://', '⫻'), )})
 """ :func:`str.translate` Unicode to ASCII map - used by :func:`dedefuse` """
 
 
@@ -280,7 +251,7 @@ def defuse(value: str) -> str:
     :param value:               any string to defuse (replace special chars with Unicode alternatives).
     :return:                    string with its special characters replaced by its pure presentational alternatives.
 
-    the ASCII character range 0..31 gets converted to the Unicode range U+2400 + ord(char): 0==U+2400 ... 31==U+241F.
+    the ASCII character range 0..31 gets converted to the Unicode range U+2400 + ord(char): 0==U+2400 till 31==U+241F.
 
     in most unix variants only the slash and the ASCII 0 characters are not allowed in file names.
 
@@ -296,12 +267,12 @@ def defuse(value: str) -> str:
 
     .. note::
         a defused URL/URI is getting marked and is resulting as 2 characters shorter by replacing the 3 characters
-        of the service separator (:data:`URI_SVC_SEP`) with a single unicode character (:data:`SVC_SEP_UNICODE_CHAR`).
+        of the service separator ('://') with a single unicode character ('⫻').
 
     .. hint:: use the :func:`dedefuse` function to convert the defused string back to the corresponding URI/file-path.
 
     """
-    return value.replace(URI_SVC_SEP, SVC_SEP_UNICODE_CHAR).translate(ASCII_TO_UNICODE)  # replace makes URIs shorter
+    return value.replace('://', '⫻').translate(ASCII_TO_UNICODE)  # replace makes URIs shorter
 
 
 def dummy_function(*_args, **_kwargs):
@@ -318,7 +289,7 @@ def duplicates(values: Iterable) -> list:
 
     inspired by Ritesh Kumars answer to https://stackoverflow.com/questions/9835762.
 
-    :param values:              iterable (list, tuple, str, ...) to search for duplicate items.
+    :param values:              iterable to be searched for duplicate items.
     :return:                    list of the duplicate items found (can contain the same duplicate multiple times).
     """
     seen_set: set = set()
@@ -554,7 +525,7 @@ def norm_line_sep(text: str) -> str:
 def norm_name(name: str, allow_num_prefix: bool = False) -> str:
     """ normalize name to start with a letter/alphabetic/underscore and to contain only alphanumeric/underscore chars.
 
-    :param name:                any string to be converted into a valid variable/method/file/... name.
+    :param name:                any string to be converted into a valid variable, method or file name.
     :param allow_num_prefix:    pass `True` to allow leading digits in the returned normalized name.
     :return:                    cleaned/normalized/converted name string (e.g., for a variable-/method-/file-name).
     """
@@ -634,18 +605,21 @@ def on_ci_host() -> bool:
     return 'CI' in os.environ or 'CI_PROJECT_ID' in os.environ
 
 
+OS_PATH_SEP = os.path.sep
+
 os_path_abspath = os.path.abspath
 os_path_basename = os.path.basename
 os_path_dirname = os.path.dirname
 os_path_expanduser = os.path.expanduser
+os_path_getmtime = os.path.getmtime
 os_path_isdir = os.path.isdir
 os_path_isfile = os.path.isfile
 os_path_join = os.path.join
 os_path_normpath = os.path.normpath
 os_path_realpath = os.path.realpath
 os_path_relpath = os.path.relpath
-os_path_sep = os.path.sep                       # pylint: disable=invalid-name
 os_path_splitext = os.path.splitext
+os_path_split = os.path.split
 
 
 def parse_date(literal: str, ret_date: bool | None = False) -> datetime.date | datetime.datetime | None:
@@ -817,15 +791,14 @@ def sign(number: float) -> int:
 def snake_to_camel(name: str, back_convertible: bool = False) -> str:
     """ convert name from snake_case to CamelCase.
 
-    :param name:                name string composed of parts separated by an underscore character
-                                (:data:`NAME_PARTS_SEP`).
+    :param name:                name string composed of parts separated by an underscore character/'_'.
     :param back_convertible:    pass `True` to get the first character of the returned name in lower-case
                                 if the snake name has no leading underscore character (and to allow
                                 the conversion between snake and camel case without information loss).
     :return:                    name in camel case.
     """
-    ret = "".join(part.capitalize() for part in name.split(NAME_PARTS_SEP))
-    if back_convertible and name[0] != NAME_PARTS_SEP:
+    ret = "".join(part.capitalize() for part in name.split('_'))
+    if back_convertible and name[0] != '_':
         ret = ret[0].lower() + ret[1:]
     return ret
 
@@ -837,7 +810,8 @@ def to_ascii(unicode_str: str) -> str:
     in: https://stackoverflow.com/questions/517923/what-is-the-best-way-to-remove-accents-in-a-python-unicode-string
 
     :param unicode_str:         string to convert.
-    :return:                    converted string (replaced accents, diacritics, ... into normal ascii characters).
+    :return:                    converted string (replaced accents, diacritics, and other special characters
+                                into normal ascii characters).
     """
     nfkd_form = unicodedata.normalize('NFKD', unicode_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('ß', "ss").replace('€', "Euro")

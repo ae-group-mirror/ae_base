@@ -22,11 +22,11 @@ from tests.conftest import skip_gitlab_ci
 
 
 from ae.base import (
-    ASCII_TO_UNICODE, ASCII_UNICODE,
-    TESTS_FOLDER, UNICODE_TO_ASCII, UNSET, URI_SVC_SEP, SVC_SEP_UNICODE_CHAR,
+    ASCII_TO_UNICODE, ASCII_UNICODE, UNICODE_TO_ASCII, UNSET,
     ascii_dec_str, ascii_enc_lit, camel_to_snake, dedefuse, deep_dict_update, defuse, dummy_function, duplicates,
     env_str, evaluate_literal, extend_file, force_encoding, format_given, in_wd, list_find, mask_secrets, mask_url,
     norm_line_sep, norm_name, norm_path, now_str, on_ci_host,
+    os_path_isdir, os_path_isfile, os_path_join,
     parse_date, pep8_format, read_bin_file, read_file, round_traditional, sign, snake_to_camel,
     to_ascii, url_failure, utc_datetime, write_bin_file, write_file)
 
@@ -64,11 +64,11 @@ def test_proof_os_path_sep_shortcut_performance_win():
     """)
     sho_call_setup = att_call_setup + textwrap.dedent("""
     import os
-    os_path_sep = os.path.sep
+    OS_PATH_SEP = os.path.sep
     """)
 
     att_call_code = "var = os.path.sep"
-    sho_call_code = "var = os_path_sep"
+    sho_call_code = "var = OS_PATH_SEP"
 
     time_att = timeit.timeit(att_call_code, setup=att_call_setup, number=3_000_000)
     time_sho = timeit.timeit(sho_call_code, setup=sho_call_setup, number=3_000_000)
@@ -211,23 +211,24 @@ class TestBaseHelpers:
         assert defuse(dedefuse(tst_fna1)) == tst_fna1
         assert defuse(dedefuse(tst_fna2)) == tst_fna2
 
-    def test_defuse_os_file_name(self):
-        try:
-            write_file(tst_fna1, "tst uri file content1")
-            assert os.path.exists(tst_fna1)
-            write_file(tst_fna2, "tst uri file content2")
-            assert os.path.exists(tst_fna2)
-        finally:
-            if os.path.exists(tst_fna1):
-                os.remove(tst_fna1)
-            if os.path.exists(tst_fna2):
-                os.remove(tst_fna2)
+    def test_defuse_os_file_name(self, tmp_path):
+        write_file(os_path_join(tmp_path, tst_fna1), 'tst uri file content1')
+        assert read_file(os_path_join(tmp_path, tst_fna1)) == 'tst uri file content1'
+        assert os_path_isfile(os_path_join(tmp_path, tst_fna1))
+        os.remove(os_path_join(tmp_path, tst_fna1))
+        assert not os_path_isfile(os_path_join(tmp_path, tst_fna1))
+
+        write_file(os_path_join(tmp_path, tst_fna2), 'tst uri file content2')
+        assert read_file(os_path_join(tmp_path, tst_fna2)) == 'tst uri file content2'
+        assert os_path_isfile(os_path_join(tmp_path, tst_fna2))
+        os.remove(os_path_join(tmp_path, tst_fna2))
+        assert not os_path_isfile(os_path_join(tmp_path, tst_fna2))
 
     def test_defuse_maps_integrity(self):
         assert len(ASCII_TO_UNICODE) == len(ASCII_UNICODE)      # duplicates check in ASCII_UNICODE map
-        assert len(UNICODE_TO_ASCII) == len(ASCII_UNICODE) + 1  # -"-, having also the ord(SVC_SEP_UNICODE_CHAR) key
-        assert ord(SVC_SEP_UNICODE_CHAR) in UNICODE_TO_ASCII
-        assert UNICODE_TO_ASCII[ord(SVC_SEP_UNICODE_CHAR)] == URI_SVC_SEP
+        assert len(UNICODE_TO_ASCII) == len(ASCII_UNICODE) + 1  # -"-, having also the ord('⫻') key
+        assert ord('⫻') in UNICODE_TO_ASCII
+        assert UNICODE_TO_ASCII[ord('⫻')] == '://'
 
     def test_defuse_maps_not_touching_chars_allowed_as_slug_and_filename(self):
         assert ord('-') not in ASCII_TO_UNICODE
@@ -300,30 +301,27 @@ class TestBaseHelpers:
         assert evaluate_literal(tst) is tst
 
     def test_extend_file(self, tmp_path):
-        test_file = os.path.join(str(tmp_path), 'tst_file_written.ext')
+        test_file = os_path_join(str(tmp_path), 'tst_file_written.ext')
         content = "any content"
-        assert not os.path.exists(test_file)
+        assert not os_path_isfile(test_file) and not os_path_isdir(test_file)
 
         extend_file(test_file, content)
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
+        assert os_path_isfile(test_file)
         assert read_file(test_file) == content
 
     def test_extend_file_make_dirs(self, tmp_path):
-        root_dir = os.path.join(str(tmp_path), 'root path of file')
-        test_dir = os.path.join(root_dir, '1st sub dir of file', 'subDir2')
-        test_file = os.path.join(test_dir, 'file in sub dir.ext')
+        root_dir = os_path_join(str(tmp_path), 'root path of file')
+        test_dir = os_path_join(root_dir, '1st sub dir of file', 'subDir2')
+        test_file = os_path_join(test_dir, 'file in sub dir.ext')
         content = "any content"
-        assert not os.path.exists(test_dir)
-        assert not os.path.exists(test_file)
+        assert not os_path_isdir(test_dir)
+        assert not os_path_isfile(test_file)
 
         with pytest.raises(FileNotFoundError):
             extend_file(test_file, content)
         extend_file(test_file, content, make_dirs=True)
-        assert os.path.exists(test_dir)
-        assert os.path.isdir(test_dir)
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
+        assert os_path_isdir(test_dir)
+        assert os_path_isfile(test_file)
         assert read_file(test_file) == content
 
     def test_force_encoding_bytes(self):
@@ -487,21 +485,21 @@ class TestBaseHelpers:
         assert norm_path(".", make_absolute=False) == tst_cwd
         assert norm_path(".", make_absolute=False, remove_base_path=tst_cwd) == "."
 
-        assert norm_path(new_folder) == os.path.join(tst_cwd, new_folder)
-        assert norm_path(new_folder, resolve_sym_links=False) == os.path.join(tst_cwd, new_folder)
-        assert norm_path(new_folder, make_absolute=False) == os.path.join(tst_cwd, new_folder)
+        assert norm_path(new_folder) == os_path_join(tst_cwd, new_folder)
+        assert norm_path(new_folder, resolve_sym_links=False) == os_path_join(tst_cwd, new_folder)
+        assert norm_path(new_folder, make_absolute=False) == os_path_join(tst_cwd, new_folder)
         assert norm_path(new_folder, make_absolute=False, remove_base_path=tst_cwd) == new_folder
 
-        assert norm_path(os.path.join(TESTS_FOLDER, "..")) == tst_cwd
-        assert norm_path(os.path.join(TESTS_FOLDER, ".."), resolve_sym_links=False) == tst_cwd
-        assert norm_path(os.path.join(TESTS_FOLDER, ".."), make_absolute=False) == tst_cwd
-        assert norm_path(os.path.join("ae", ".."), make_absolute=False, remove_base_path=tst_cwd) == "."
+        assert norm_path(os_path_join("any_not_existing_sub_folder", "..")) == tst_cwd
+        assert norm_path(os_path_join("any_not_existing_sub_folder", ".."), resolve_sym_links=False) == tst_cwd
+        assert norm_path(os_path_join("any_not_existing_sub_folder", ".."), make_absolute=False) == tst_cwd
+        assert norm_path(os_path_join('ae', ".."), make_absolute=False, remove_base_path=tst_cwd) == "."
 
         assert norm_path("~") != ""
-        assert norm_path(os.path.join("~", new_folder)).endswith(new_folder)
-        assert norm_path(os.path.join("~", new_folder), remove_base_path="~").endswith(new_folder)
+        assert norm_path(os_path_join("~", new_folder)).endswith(new_folder)
+        assert norm_path(os_path_join("~", new_folder), remove_base_path="~").endswith(new_folder)
 
-        assert norm_path(TESTS_FOLDER + "\\" + "..") == tst_cwd
+        assert norm_path("any_not_existing_subfolder" + "\\" + "..") == tst_cwd
 
     def test_now_str(self):
         assert len(now_str()) == 20
@@ -993,63 +991,56 @@ class TestBaseHelpers:
         assert dt2 - dt1 < datetime.timedelta(seconds=1)
 
     def test_write_bin_file(self, tmp_path):
-        test_file = os.path.join(str(tmp_path), 'bin_file_written.ext')
+        test_file = os_path_join(str(tmp_path), 'bin_file_written.ext')
         content = b"any content"
-        assert not os.path.exists(test_file)
+        assert not os_path_isfile(test_file)
 
         write_bin_file(test_file, content)
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
+        assert os_path_isfile(test_file)
         assert read_bin_file(test_file) == content
 
         new_content = b"pre" + content + b"post"
         write_bin_file(test_file, new_content)  # overwrite
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
+        assert os_path_isfile(test_file)
         assert read_bin_file(test_file) == new_content
 
     def test_write_bin_file_make_dirs(self, tmp_path):
-        root_dir = os.path.join(str(tmp_path), 'root path of file')
-        test_dir = os.path.join(root_dir, '1st sub dir of file', 'subDir2')
-        test_file = os.path.join(test_dir, 'file in sub dir.ext')
+        root_dir = os_path_join(str(tmp_path), 'root path of file')
+        test_dir = os_path_join(root_dir, '1st sub dir of file', 'subDir2')
+        test_file = os_path_join(test_dir, 'file in sub dir.ext')
         content = b"any binary content"
-        assert not os.path.exists(test_dir)
-        assert not os.path.exists(test_file)
+        assert not os_path_isdir(test_dir)
+        assert not os_path_isfile(test_file)
 
         with pytest.raises(FileNotFoundError):
             write_bin_file(test_file, content)
         write_bin_file(test_file, content, make_dirs=True)
-        assert os.path.exists(test_dir)
-        assert os.path.isdir(test_dir)
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
+        assert os_path_isdir(test_dir)
+        assert os_path_isfile(test_file)
         assert read_bin_file(test_file) == content
 
     def test_write_file(self, tmp_path):
-        test_file = os.path.join(str(tmp_path), 'tst_file_written.ext')
+        test_file = os_path_join(str(tmp_path), 'tst_file_written.ext')
         content = "any content"
-        assert not os.path.exists(test_file)
+        assert not os_path_isfile(test_file)
 
         write_file(test_file, content)
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
+        assert os_path_isfile(test_file)
         assert read_file(test_file) == content
 
     def test_write_file_make_dirs(self, tmp_path):
-        root_dir = os.path.join(str(tmp_path), 'root path of file')
-        test_dir = os.path.join(root_dir, '1st sub dir of file', 'subDir2')
-        test_file = os.path.join(test_dir, 'file in sub dir.ext')
+        root_dir = os_path_join(str(tmp_path), 'root path of file')
+        test_dir = os_path_join(root_dir, '1st sub dir of file', 'subDir2')
+        test_file = os_path_join(test_dir, 'file in sub dir.ext')
         content = "any content"
-        assert not os.path.exists(test_dir)
-        assert not os.path.exists(test_file)
+        assert not os_path_isdir(test_dir)
+        assert not os_path_isfile(test_file)
 
         with pytest.raises(FileNotFoundError):
             write_file(test_file, content)
         write_file(test_file, content, make_dirs=True)
-        assert os.path.exists(test_dir)
-        assert os.path.isdir(test_dir)
-        assert os.path.exists(test_file)
-        assert os.path.isfile(test_file)
+        assert os_path_isdir(test_dir)
+        assert os_path_isfile(test_file)
         assert read_file(test_file) == content
 
 
