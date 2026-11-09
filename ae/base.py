@@ -4,106 +4,6 @@ basic constants, helper functions, classes and context managers
 
 this module is pure python, has no external dependencies, and provides a comprehensive toolkit of base constants,
 common/enhanced helper functions, useful classes, and context managers for a wide variety of programming tasks.
-
-
-string manipulation
--------------------
-
-functions for converting, cleaning, normalizing, and formatting strings.
-
-* :func:`ascii_dec_str`: decodes an ascii string literal converted by :func:`ascii_enc_lit` back to its Unicode form.
-* :func:`ascii_enc_lit`: encodes a Unicode string into a reversible 7-bit ASCII representation.
-* :func:`camel_to_snake`: converts a string from CamelCase to snake_case.
-* :func:`dedefuse`: reverses the operation of :func:`defuse`, restoring the original string.
-* :func:`defuse`: converts special characters in string to Unicode alternatives.
-* :func:`evaluate_literal`: an enhanced :func:`ast.literal_eval` that also recognizes unquoted strings as `str` type.
-* :func:`force_encoding`: ensures text is in a specific encoding without raising errors, replacing characters as needed.
-* :func:`format_given`: an enhanced `str.format_map` leaving placeholders intact if they are not found in the mapping.
-* :func:`norm_line_sep`: converts all line separator combinations (CRLF, CR) in a string to a single newline (LF).
-* :func:`norm_name`: normalizes a string to be a valid identifier (e.g., for variable-, method-, or file-names).
-* :func:`pep8_format`: a better :func:`pprint.pformat` creating a :pep:`8`-conform code literal of any data structure.
-* :func:`snake_to_camel`: converts a string from snake_case to CamelCase.
-* :func:`to_ascii`: converts a Unicode string into its closest ASCII representation by removing accents and diacritics.
-
-
-file, path & I/O operations
----------------------------
-
-simplify file system interactions with wrappers and context managers.
-
-* :func:`extend_file`: append string to a file or create it if file not exists.
-* :func:`in_wd`: a context manager to temporarily switch/change the current working directory.
-* :func:`norm_path`: normalizes a file or directory path.
-* :func:`read_bin_file`: reads the entire content of a binary file into a bytes object.
-* :func:`read_file`: reads the entire content of a text file into a string.
-* :func:`write_bin_file`: writes a bytes object to a file, overwriting existing content.
-* :func:`write_file`: writes a string into a file, overwriting existing content.
-
-
-general utilities & helpers
----------------------------
-
-a collection of miscellaneous data structure, date/time, mathematical, networking and other standalone helper functions.
-
-* :func:`deep_dict_update`: recursively updates a dictionary in-place with values from another dictionary.
-* :func:`dummy_function`: a null function that accepts any arguments and returns `None`.
-* :func:`duplicates`: returns a list of all duplicate items found in any type of iterable.
-* :func:`env_str`: determines OS environment variable value.
-* :func:`list_find`: performant list item finder, searching for first/consecutive item(s) in a list instance.
-* :func:`mask_secrets`: hides sensitive string values (e.g., passwords, API keys) in deeply nested data structures.
-* :func:`mask_url`: hides or replaces the password/token portion of a URL for safe logging.
-* :func:`now_str`: creates a compact, sortable timestamp string from the current UTC time.
-* :func:`on_ci_host`: detects if it is running on the CI of a Git repository server (GitHub or GitLab).
-* :func:`parse_date`: parse an ISO date literal string, returning the represented date/datetime.
-* :func:`round_traditional`: rounds a float value using traditional rounding rules (rounding `0.5` up to `1.0`).
-* :func:`sign`: returns the sign of a number (-1 for negative, 0 for zero, 1 for positive).
-* :func:`url_failure`: determines if and why an HTTP|FTP target is unavailable.
-* :func:`utc_datetime`: returns the current date and time as a timezone-naive `datetime` object in UTC.
-
-
-base types and classes
-----------------------
-
-* :class:`GivenFormatter`: overrides default formatting behavior to keep missing placeholders.
-* :class:`UnformattedValue`: represent a placeholder that was not found in the formatting map.
-* :class:`UnsetType`: the class for the :data:`UNSET` singleton object.
-
-
-base constants
---------------
-
-predefined constants for defaults, project structure, file conventions, to decrease redundancy and increase performance.
-
-formats & default settings
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-* :data:`DATE_ISO`: ISO format string for dates ("%Y-%m-%d").
-* :data:`DATE_TIME_ISO`: ISO format string for :mod:`datetime.datetime` dates ("%Y-%m-%d %H:%M:%S.%f").
-* :data:`DEF_ENCODE_ERRORS`: the default error handling strategy for encoding ('backslashreplace').
-* :data:`NOW_STR_FORMAT`: the datetime format string, used e.g. by :func:`now_str` for creating timestamps.
-* :data:`UNSET`: a singleton instance of :class:`UnsetType`, used where `None` is a valid data value.
-
-
-os.path shortcuts
-^^^^^^^^^^^^^^^^^
-
-the following are direct references to functions in the :mod:`os.path` module for convenient and quicker access:
-
-* :data:`OS_PATH_SEP`: :data:`os.path.sep`
-
-* :func:`os_path_abspath`: :func:`os.path.abspath`
-* :func:`os_path_basename`: :func:`os.path.basename`
-* :func:`os_path_dirname`: :func:`os.path.dirname`
-* :func:`os_path_expanduser`: :func:`os.path.expanduser`
-* :func:`os_path_getmtime`: :func:`os.path.getmtime`
-* :func:`os_path_isdir`: :func:`os.path.isdir`
-* :func:`os_path_isfile`: :func:`os.path.isfile`
-* :func:`os_path_join`: :func:`os.path.join`
-* :func:`os_path_normpath`: :func:`os.path.normpath`
-* :func:`os_path_realpath`: :func:`os.path.realpath`
-* :func:`os_path_relpath`: :func:`os.path.relpath`
-* :func:`os_path_splitext`: :func:`os.path.splitext`
-* :func:`os_path_split`: :func:`os.path.split`
 """
 import base64
 import datetime
@@ -123,7 +23,7 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
-__version__ = '0.3.98'
+__version__ = '0.4.98'
 
 
 DATE_ISO = "%Y-%m-%d"                               #: ISO string format for date literal
@@ -371,7 +271,7 @@ def force_encoding(text: str | bytes, encoding: str = 'ascii', errors: str = DEF
 
 
 class GivenFormatter(string.Formatter):
-    """ helper class for :func:`~ae.base.format_given` to keep placeholder with format unchanged if not found. """
+    """ helper class for :func:`format_given` to keep placeholder with format unchanged if not found. """
     def get_value(self, key, args, kwargs):
         """ overriding to keep placeholder unchanged if not found """
         try:
@@ -381,7 +281,7 @@ class GivenFormatter(string.Formatter):
 
 
 class UnformattedValue:                     # pylint: disable=too-few-public-methods
-    """ helper class for :func:`~ae.base.format_given` to keep placeholder with format unchanged if not found. """
+    """ helper class for :func:`format_given` to keep placeholder with format unchanged if not found. """
     def __init__(self, key: int | str):
         self.key = key
 
@@ -441,10 +341,11 @@ def in_wd(new_cwd: str) -> Generator[None, None, None]:
 def list_find(searched: list, *items: Any) -> int:
     """ find first/consecutive item(s) in a list instance.
 
-    :param searched:            list to be searched for an item specified by :paramref:`.value`.
-    :param items:               list item(s) to search for. use packing operator (*items) to specify a sequence
-                                as consecutive item values, e.g.: `list_find(searched, *items_to_find)`.
-    :return:                    list index of found item(s), 0 if no items, or -1 if not found in :paramref:`.searched`.
+    :param searched:            list to be searched for an item specified by :paramref:`.items`.
+    :param items:               list item(s) to search for. use unpacking operator (``*items``) to specify a sequence
+                                as consecutive item values.
+    :return:                    index of the 1st found item, 0 if :paramref:`.items` is empty (or not specified),
+                                or -1 if :paramref:`.items` are not found in :paramref:`.searched`.
     """
     items_len = len(items)
     if items_len == 1:          # performance optimized for single item search
@@ -453,7 +354,7 @@ def list_find(searched: list, *items: Any) -> int:
         except ValueError:
             return -1
     if items_len == 0:
-        return 0                # if no items got specified then return 0, similar to :func:`str.find`
+        return 0                # if no items got specified then return 0, similar to ``str.find``
 
     limit = len(searched) - items_len
     items_list = list(items)
@@ -929,15 +830,6 @@ def write_file(file_path: str, content: str, encoding: str | None = None, make_d
     :raises TypeError:          content is not of type `str`.
     :raises UnicodeEncodeError: content cannot be encoded using the selected encoding.
     :raises ValueError:         other encoding errors, invalid mode or incompatible arguments.
-
-    to extend this function for Android 14+, see <https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>
-    and <https://gist.github.com/neonankiti/05922cf0a44108a2e2732671ed9ef386>
-    Yes, to use ACTION_CREATE_DOCUMENT, you don't supply a URI in the intent. You wait for the intent result, and that
-    will contain a URI which you can write to.
-    See #1158 (comment - <https://github.com/beeware/toga/pull/1158#issuecomment-2254564657>) for a link to a Java
-    example, and #1158 (comment - <https://github.com/beeware/toga/pull/1158#issuecomment-1446196973>) for how to
-    wait for an intent result.
-    Related german docs: <https://developer.android.com/training/data-storage/shared/media?hl=de>.
     """
     if make_dirs and (dir_path := os_path_dirname(file_path)):
         os.makedirs(dir_path, exist_ok=True)
@@ -947,7 +839,7 @@ def write_file(file_path: str, content: str, encoding: str | None = None, make_d
 
 
 class UnsetType:
-    """ (singleton) UNSET (type) object class. """
+    """ (singleton) :data:`~ae.base.UNSET` (type) object class. """
     def __bool__(self):
         """ ensure to be evaluated as `False`, like `None`. """
         return False
